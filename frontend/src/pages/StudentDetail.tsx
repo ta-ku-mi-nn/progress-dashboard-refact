@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -73,32 +74,36 @@ export default function StudentDetail() {
     };
 
     const handleSaveProgress = async () => {
-        try {
-            // Prepare payload: Map editingProgress to ProgressUpdate schema
-            // Schema: { subject, level, book_name, duration, is_planned, is_done, completed_units, total_units }
-            // modifying endpoint: /students/{id}/progress expects List[ProgressUpdate]
+        // Optimistic Update
+        const previousProgress = [...progress];
+        const newProgress = editingProgress;
 
-            const payload = editingProgress.map(p => ({
+        // Update local state immediately
+        setProgress(newProgress);
+        setIsUpdateModalOpen(false);
+        toast.success("Progress updated successfully!");
+
+        try {
+            const payload = newProgress.map(p => ({
                 subject: p.subject,
                 level: p.level,
                 book_name: p.book_name,
                 is_done: p.is_done,
                 completed_units: p.completed_units,
                 total_units: p.total_units
-                // duration, is_planned are optional/not in interface yet, keeping existing if possible or ignoring
             }));
 
             await api.post(`/students/${id}/progress`, payload);
 
-            // Refresh data
+            // Background refresh to ensure consistency (optional, but good practice)
             const res = await api.get(`/students/${id}/progress`);
             setProgress(res.data);
 
-            setIsUpdateModalOpen(false);
-            alert("Progress updated successfully!"); // Replace with toast if available
         } catch (error) {
             console.error("Failed to update progress", error);
-            alert("Failed to update progress.");
+            toast.error("Failed to save progress. Reverting changes.");
+            // Revert changes on error
+            setProgress(previousProgress);
         }
     };
 
