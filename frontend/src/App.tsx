@@ -7,6 +7,11 @@ import DashboardLayout from './DashboardLayout';
 import Dashboard from './pages/DashboardHome';
 import StudentDetail from './pages/StudentDetail';
 import Admin from './pages/Admin';
+import PastExam from './pages/PastExam';
+import RootTable from './pages/RootTable';
+import Statistics from './pages/Statistics';
+import BugReport from './pages/BugReport';
+import Changelog from './pages/Changelog';
 import { Toaster } from 'sonner';
 
 function App() {
@@ -22,12 +27,16 @@ function App() {
           }>
             <Route index element={<Dashboard />} />
             <Route path="students/:id" element={<StudentDetail />} />
+            <Route path="past-exam" element={<PastExam />} />
+            <Route path="root-table" element={<RootTable />} />
+            <Route path="statistics" element={<Statistics />} />
+            <Route path="bug-report" element={<BugReport />} />
+            <Route path="changelog" element={<Changelog />} />
             <Route path="admin" element={
               <ProtectedRoute roles={['admin']}>
                 <Admin />
               </ProtectedRoute>
             } />
-            {/* Add more routes here */}
           </Route>
         </Routes>
         <Toaster />

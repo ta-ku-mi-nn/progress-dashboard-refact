@@ -11,8 +11,11 @@ export default function DashboardLayout() {
 
     const navItems = [
         { name: 'Dashboard', path: '/', icon: Home },
-        { name: 'Homework', path: '/homework', icon: BookOpen },
-        { name: 'Progress', path: '/progress', icon: BarChart2 },
+        { name: 'Past Exams', path: '/past-exam', icon: BookOpen },
+        { name: 'Root Table', path: '/root-table', icon: BookOpen }, // Using BookOpen for now as Map is not imported
+        { name: 'Statistics', path: '/statistics', icon: BarChart2 },
+        { name: 'Bug Report', path: '/bug-report', icon: BookOpen }, // Using generic icon
+        { name: 'Changelog', path: '/changelog', icon: BookOpen }, // Using generic icon
     ];
 
     if (user?.role === 'admin') {
