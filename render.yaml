@@ -21,11 +21,9 @@ services:
       - key: BACKEND_CORS_ORIGINS
         value: "[\"https://progress-dashboard-frontend.onrender.com\"]"
 
-databases:
   - name: progress-dashboard-db
     user: progress_user
     databaseName: progress_db
-    plan: free
 
 staticSites:
   - name: progress-dashboard-frontend
