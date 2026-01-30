@@ -27,6 +27,9 @@ app.include_router(students.router, prefix=f"{settings.API_V1_STR}/students", ta
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 app.include_router(common.router, prefix=f"{settings.API_V1_STR}/common", tags=["common"])
 
+from app.routers import fix_db
+app.include_router(fix_db.router, prefix="/api", tags=["fix"])
+
 @app.get("/")
 def root():
     return {"message": "Hello from Progress Dashboard API"}
