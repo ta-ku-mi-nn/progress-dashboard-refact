@@ -6,5 +6,5 @@ pydantic
 pydantic-settings
 python-dotenv
 python-multipart
-pyjwt
+python-jose[cryptography]
 werkzeug
