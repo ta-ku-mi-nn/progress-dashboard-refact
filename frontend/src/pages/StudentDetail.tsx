@@ -10,6 +10,7 @@ interface Student {
     id: number;
     name: string;
     school: string;
+    grade?: string;
 }
 
 interface Progress {
