@@ -21,11 +21,16 @@ services:
       - key: BACKEND_CORS_ORIGINS
         value: "[\"https://progress-dashboard-frontend.onrender.com\"]"
 
-  # React Frontend Service (Static Site)
-  - type: static
-    name: progress-dashboard-frontend
+databases:
+  - name: progress-dashboard-db
+    user: progress_user
+    databaseName: progress_db
+    plan: free
+
+staticSites:
+  - name: progress-dashboard-frontend
     buildCommand: cd frontend && npm install && npm run build
-    publish: frontend/dist
+    publishPath: frontend/dist
     routes:
       - type: rewrite
         source: "/*"
@@ -35,16 +40,6 @@ services:
         value: 20.11.0
       - key: VITE_API_BASE_URL
         value: https://progress-dashboard-backend.onrender.com/api/v1
-    
-  # Database
-  - type: psql
-    name: progress-dashboard-db
-    envVars:
-      - key: POSTGRES_USER
-        value: progress_user
-      - key: POSTGRES_DB
-        value: progress_db
-
 # Static Site Alternative (Recommended for Vite/React)
 #   - type: static
 #     name: progress-dashboard-frontend-static
