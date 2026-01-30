@@ -38,6 +38,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 18.17.1
+      - key: VITE_API_BASE_URL
+        value: https://progress-dashboard-backend.onrender.com/api/v1
     # If we want to serve it as a static site proper in Render, type: static
     # But here we use web service for simplicity or SPA routing handling if needed
     # Better to use type: static for frontend
