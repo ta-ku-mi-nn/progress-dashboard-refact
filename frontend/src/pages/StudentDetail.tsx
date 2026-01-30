@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 import api from '../lib/api';
 
 interface Student {
@@ -55,6 +57,51 @@ export default function StudentDetail() {
     // Extract unique subjects
     const subjects = Array.from(new Set(progress.map(p => p.subject)));
 
+    // State for modal
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [editingProgress, setEditingProgress] = useState<Progress[]>([]);
+
+    const handleUpdateClick = () => {
+        setEditingProgress(JSON.parse(JSON.stringify(progress))); // Deep copy
+        setIsUpdateModalOpen(true);
+    };
+
+    const handleProgressChange = (id: number, field: keyof Progress, value: any) => {
+        setEditingProgress(prev => prev.map(p =>
+            p.id === id ? { ...p, [field]: value } : p
+        ));
+    };
+
+    const handleSaveProgress = async () => {
+        try {
+            // Prepare payload: Map editingProgress to ProgressUpdate schema
+            // Schema: { subject, level, book_name, duration, is_planned, is_done, completed_units, total_units }
+            // modifying endpoint: /students/{id}/progress expects List[ProgressUpdate]
+
+            const payload = editingProgress.map(p => ({
+                subject: p.subject,
+                level: p.level,
+                book_name: p.book_name,
+                is_done: p.is_done,
+                completed_units: p.completed_units,
+                total_units: p.total_units
+                // duration, is_planned are optional/not in interface yet, keeping existing if possible or ignoring
+            }));
+
+            await api.post(`/students/${id}/progress`, payload);
+
+            // Refresh data
+            const res = await api.get(`/students/${id}/progress`);
+            setProgress(res.data);
+
+            setIsUpdateModalOpen(false);
+            alert("Progress updated successfully!"); // Replace with toast if available
+        } catch (error) {
+            console.error("Failed to update progress", error);
+            alert("Failed to update progress.");
+        }
+    };
+
     if (!student) return <div>Loading...</div>;
 
     return (
@@ -66,7 +113,7 @@ export default function StudentDetail() {
                 </div>
                 <div className="flex space-x-2">
                     <Button variant="outline">Print Report</Button>
-                    <Button>Update Progress</Button>
+                    <Button onClick={handleUpdateClick}>Update Progress</Button>
                 </div>
             </div>
 
@@ -136,6 +183,58 @@ export default function StudentDetail() {
                     </TabsContent>
                 ))}
             </Tabs>
+
+            <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Update Learning Progress</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Subject</TableHead>
+                                    <TableHead>Textbook</TableHead>
+                                    <TableHead>Completed Units</TableHead>
+                                    <TableHead>Total Units</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {editingProgress.map((p) => (
+                                    <TableRow key={p.id}>
+                                        <TableCell>{p.subject}</TableCell>
+                                        <TableCell>{p.book_name}</TableCell>
+                                        <TableCell>
+                                            <Input
+                                                type="number"
+                                                value={p.completed_units}
+                                                onChange={(e) => handleProgressChange(p.id, 'completed_units', parseInt(e.target.value) || 0)}
+                                                className="w-20"
+                                            />
+                                        </TableCell>
+                                        <TableCell>{p.total_units}</TableCell>
+                                        <TableCell>
+                                            <select
+                                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                value={p.is_done ? "true" : "false"}
+                                                onChange={(e) => handleProgressChange(p.id, 'is_done', e.target.value === "true")}
+                                            >
+                                                <option value="false">In Progress</option>
+                                                <option value="true">Completed</option>
+                                            </select>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsUpdateModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveProgress}>Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
