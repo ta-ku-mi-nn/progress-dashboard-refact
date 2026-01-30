@@ -22,27 +22,19 @@ services:
         value: "[\"https://progress-dashboard-frontend.onrender.com\"]"
 
   # React Frontend Service (Static Site)
-  - type: web
+  - type: static
     name: progress-dashboard-frontend
-    runtime: node
-    buildCommand: |
-      cd frontend
-      npm install
-      npm run build
-    startCommand: |
-      cd frontend
-      npm run preview -- --host --port $PORT
-    # Or use static site hosting if preferring that
-    # For 'web' service type acting as static server:
-    # startCommand: "serve -s frontend/dist"
+    buildCommand: cd frontend && npm install && npm run build
+    publish: frontend/dist
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
     envVars:
       - key: NODE_VERSION
-        value: 18.17.1
+        value: 20.11.0
       - key: VITE_API_BASE_URL
         value: https://progress-dashboard-backend.onrender.com/api/v1
-    # If we want to serve it as a static site proper in Render, type: static
-    # But here we use web service for simplicity or SPA routing handling if needed
-    # Better to use type: static for frontend
     
   # Database
   - type: psql
