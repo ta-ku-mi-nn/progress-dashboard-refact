@@ -29,7 +29,6 @@ class Student(Base):
 
     instructors = relationship("StudentInstructor", back_populates="student", cascade="all, delete-orphan")
     progress = relationship("Progress", back_populates="student", cascade="all, delete-orphan")
-    homework = relationship("Homework", back_populates="student", cascade="all, delete-orphan")
     past_exam_results = relationship("PastExamResult", back_populates="student", cascade="all, delete-orphan")
     university_acceptances = relationship("UniversityAcceptance", back_populates="student", cascade="all, delete-orphan")
     mock_exam_results = relationship("MockExamResult", back_populates="student", cascade="all, delete-orphan")
@@ -57,8 +56,6 @@ class MasterTextbook(Base):
     duration = Column(Float)
 
     __table_args__ = (UniqueConstraint('subject', 'level', 'book_name', name='_subject_level_book_uc'),)
-    
-    homework = relationship("Homework", back_populates="master_textbook")
 
 class Progress(Base):
     __tablename__ = "progress"
@@ -78,22 +75,7 @@ class Progress(Base):
 
     student = relationship("Student", back_populates="progress")
 
-class Homework(Base):
-    __tablename__ = "homework"
 
-    id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
-    master_textbook_id = Column(Integer, ForeignKey("master_textbooks.id", ondelete="SET NULL"))
-    custom_textbook_name = Column(String)
-    subject = Column(String, nullable=False)
-    task = Column(String, nullable=False)
-    task_date = Column(String, nullable=False) # Keep as String to match existing schema if needed, or change to Date. Existing is TEXT.
-    task_group_id = Column(String)
-    status = Column(String, nullable=False, default='未着手')
-    other_info = Column(Text)
-
-    student = relationship("Student", back_populates="homework")
-    master_textbook = relationship("MasterTextbook", back_populates="homework")
 
 class BulkPreset(Base):
     __tablename__ = "bulk_presets"

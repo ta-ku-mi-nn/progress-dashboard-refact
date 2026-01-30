@@ -33,19 +33,16 @@ export default function StudentDetail() {
     const { id } = useParams<{ id: string }>();
     const [student, setStudent] = useState<Student | null>(null);
     const [progress, setProgress] = useState<Progress[]>([]);
-    const [homework, setHomework] = useState<Homework[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [studentRes, progressRes, homeworkRes] = await Promise.all([
+                const [studentRes, progressRes] = await Promise.all([
                     api.get(`/students/${id}`),
-                    api.get(`/students/${id}/progress`),
-                    api.get(`/students/${id}/homework`)
+                    api.get(`/students/${id}/progress`)
                 ]);
                 setStudent(studentRes.data);
                 setProgress(progressRes.data);
-                setHomework(homeworkRes.data);
             } catch (error) {
                 console.error("Failed to fetch data", error);
             }
@@ -59,68 +56,33 @@ export default function StudentDetail() {
         <div className="space-y-6">
             <h2 className="text-3xl font-bold tracking-tight">{student.name} - {student.school}</h2>
 
-            <Tabs defaultValue="progress" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="progress">Progress</TabsTrigger>
-                    <TabsTrigger value="homework">Homework</TabsTrigger>
-                </TabsList>
-                <TabsContent value="progress" className="space-y-4">
-                    <Card>
-                        <CardHeader><CardTitle>Learning Progress</CardTitle></CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Subject</TableHead>
-                                        <TableHead>Level</TableHead>
-                                        <TableHead>Textbook</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Progress</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {progress.map((p) => (
-                                        <TableRow key={p.id}>
-                                            <TableCell>{p.subject}</TableCell>
-                                            <TableCell>{p.level}</TableCell>
-                                            <TableCell>{p.book_name}</TableCell>
-                                            <TableCell>{p.is_done ? "Completed" : "In Progress"}</TableCell>
-                                            <TableCell>{p.completed_units} / {p.total_units}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="homework" className="space-y-4">
-                    <Card>
-                        <CardHeader><CardTitle>Homework Tasks</CardTitle></CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Task</TableHead>
-                                        <TableHead>Textbook</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {homework.map((h) => (
-                                        <TableRow key={h.id}>
-                                            <TableCell>{h.task_date}</TableCell>
-                                            <TableCell>{h.task}</TableCell>
-                                            <TableCell>{h.textbook_name || '-'}</TableCell>
-                                            <TableCell>{h.status}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+            <Card>
+                <CardHeader><CardTitle>Learning Progress</CardTitle></CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Subject</TableHead>
+                                <TableHead>Level</TableHead>
+                                <TableHead>Textbook</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Progress</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {progress.map((p) => (
+                                <TableRow key={p.id}>
+                                    <TableCell>{p.subject}</TableCell>
+                                    <TableCell>{p.level}</TableCell>
+                                    <TableCell>{p.book_name}</TableCell>
+                                    <TableCell>{p.is_done ? "Completed" : "In Progress"}</TableCell>
+                                    <TableCell>{p.completed_units} / {p.total_units}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
     );
 }

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.routers import deps
-from app.crud import crud_student, crud_progress, crud_homework
+from app.crud import crud_student, crud_progress
 from app.schemas import schemas
 from app.models.models import User
 
@@ -82,53 +82,3 @@ def update_student_progress(
 ):
     count = crud_progress.update_student_progress(db, student_id, progress)
     return {"message": f"Updated {count} records"}
-
-@router.get("/{student_id}/homework", response_model=List[schemas.Homework])
-def read_student_homework(
-    student_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
-):
-    raw_results = crud_homework.get_student_homework(db, student_id)
-    results = []
-    for hw, mt in raw_results:
-        hw_dict = {
-            "id": hw.id,
-            "student_id": hw.student_id,
-            "master_textbook_id": hw.master_textbook_id,
-            "custom_textbook_name": hw.custom_textbook_name,
-            "subject": hw.subject,
-            "task": hw.task,
-            "task_date": hw.task_date,
-            "task_group_id": hw.task_group_id,
-            "status": hw.status,
-            "other_info": hw.other_info,
-            "textbook_name": mt.book_name if mt else hw.custom_textbook_name
-        }
-        results.append(hw_dict)
-    return results
-
-@router.post("/{student_id}/homework")
-def update_student_homework(
-    student_id: int,
-    textbook_id: Optional[int] = None,
-    custom_textbook_name: Optional[str] = None,
-    homework: List[schemas.HomeworkCreate] = [],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
-):
-    # This endpoint mimics 'add_or_update_homework'
-    # Request body should probably be a wrapper object containing `homework_list`, `textbook_id`, `custom_name`
-    # checking the schema... `homework` argument is List[HomeworkCreate].
-    # But we need textbook_id/custom_textbook_name which apply to the whole batch usually?
-    # The frontend usually sends a batch for a specific book.
-    # We will accept query params for textbook ID/Name for now, or expect them in the body if we change the schema.
-    # Current design: arguments match query params or body.
-    # Let's assume they are passed as query params or we define a Pydantic model for the wrapper.
-    # For now, using query params for `textbook_id` and `custom_textbook_name` for simplicity with the List body.
-    
-    success = crud_homework.update_homework(db, student_id, textbook_id, custom_textbook_name, homework)
-    if success:
-        return {"message": "Homework updated"}
-    else:
-        raise HTTPException(status_code=400, detail="Failed to update homework")

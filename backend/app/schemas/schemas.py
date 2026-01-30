@@ -103,26 +103,7 @@ class Progress(ProgressBase):
         orm_mode = True
 
 # --- Homework Schemas ---
-class HomeworkBase(BaseModel):
-    student_id: int
-    master_textbook_id: Optional[int] = None
-    custom_textbook_name: Optional[str] = None
-    subject: str
-    task: str
-    task_date: str
-    task_group_id: Optional[str] = None
-    status: str = '未着手'
-    other_info: Optional[str] = None
 
-class HomeworkCreate(HomeworkBase):
-    pass
-
-class Homework(HomeworkBase):
-    id: int
-    textbook_name: Optional[str] = None # Helper field for frontend
-
-    class Config:
-        orm_mode = True
 
 # --- Past Exam Result Schemas ---
 class PastExamResultBase(BaseModel):
