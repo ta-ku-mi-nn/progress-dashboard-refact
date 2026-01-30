@@ -16,7 +16,11 @@ class Settings(BaseSettings):
     FORM_API_KEY: str = os.getenv("FORM_API_KEY", "YOUR_SECRET_API_KEY")
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:5173", "http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "https://progress-dashboard-frontend.onrender.com"
+    ]
 
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
