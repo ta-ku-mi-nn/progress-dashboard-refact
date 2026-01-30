@@ -16,8 +16,6 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
-      - key: BACKEND_CORS_ORIGINS
-        value: "[\"https://progress-dashboard-frontend.onrender.com\"]"
 
   # React Frontend Service (configured as static site)
   - type: web
