@@ -1,0 +1,13 @@
+# requirements.txt
+dash
+dash-table
+dash-bootstrap-components
+pandas
+gunicorn
+plotly
+plotly-express
+werkzeug
+Jinja2
+psycopg2-binary
+python-dotenv
+SQLAlchemy

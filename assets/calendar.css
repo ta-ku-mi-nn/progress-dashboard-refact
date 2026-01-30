@@ -1,0 +1,221 @@
+/* assets/calendar.css */
+
+/* --- Web表示用スタイル --- */
+.multi-month-vertical-wrapper { /* 縦並び用ラッパー */
+    width: 100%;
+}
+.single-month-wrapper {
+    margin-bottom: 2rem;
+}
+.calendar-month-header {
+     font-weight: bold;
+     margin-bottom: 0.5rem;
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto; /* ★ auto に戻す */
+    margin-bottom: 0;
+    font-size: 0.8rem;
+    border: 1px solid #dee2e6;
+}
+
+.calendar-table th {
+    border: 1px solid #dee2e6;
+    padding: 6px 4px;
+    text-align: center;
+    background-color: #f8f9fa;
+    font-weight: normal;
+    font-size: 0.75rem;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+.calendar-info-header-cell {
+    width: 180px;
+    background-color: #e9ecef;
+    font-weight: bold;
+    /* sticky 関連削除 */
+}
+
+.calendar-header-cell {
+     min-width: 40px;
+     /* width 関連削除 */
+}
+
+.calendar-table th br {
+    display: block; /* 曜日表示 */
+    content: "";
+    margin-top: 2px;
+}
+
+.calendar-table th.saturday { background-color: #dcedfc; color: #006eda; }
+.calendar-table th.sunday { background-color: #ffe8d9; color: #e57300; }
+
+.calendar-info-cell {
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+    font-size: 0.75rem;
+    white-space: normal;
+    line-height: 1.3;
+    width: 180px;
+    background-color: #f8f9fa;
+    /* sticky 関連削除 */
+}
+
+.calendar-date-cell {
+    border: 1px solid #dee2e6;
+    padding: 4px;
+    text-align: center;
+    vertical-align: middle;
+    height: 50px;
+    font-size: 1rem;
+    position: relative;
+    box-sizing: border-box;
+    min-width: 40px;
+     /* width 関連削除 */
+}
+
+.calendar-date-cell.saturday { background-color: #f0f8ff; }
+.calendar-date-cell.sunday { background-color: #fff7f0; }
+
+/* イベントセル (変更なし) */
+.app-deadline-cell { background-color: #ffff7f !important; }
+.exam-date-cell { background-color: #ff7f7f !important; }
+.announcement-date-cell { background-color: #7fff7f !important; }
+.proc-deadline-cell { background-color: #bf7fff !important; }
+/* ... 複合スタイル ... */
+
+/* --- ↓↓↓ 印刷時の表示制御クラスを追加 ↓↓↓ --- */
+.printable-only {
+    display: none; /* 通常は非表示 */
+}
+.printable-hide {
+    /* 通常は表示 (スタイル指定なし) */
+}
+/* --- ↑↑↑ ここまで追加 ↑↑↑ --- */
+
+/* --- ↓↓↓ @media print 内を修正 ↓↓↓ --- */
+@media print {
+    /* 非表示要素 */
+    #navbar-container, #school-dropdown-container, #student-dropdown-container,
+    #past-exam-tabs, #tab-past-exam, #tab-acceptance,
+    #calendar-header-row #calendar-action-buttons, #calendar-print-hide-text,
+    #success-toast, ._dash-loading,
+    .printable-hide
+    {
+        display: none !important;
+    }
+
+    /* 表示要素 */
+    body, #page-content, #calendar-tab-content-wrapper, #tab-gantt,
+    .printable-only /* ★ 印刷用エリアを表示 */
+     {
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 印刷用カレンダーエリア内のスタイル */
+    #printable-calendar-area .single-month-wrapper {
+         page-break-inside: avoid !important;
+         margin-bottom: 15px !important;
+    }
+    #printable-calendar-area .calendar-month-header {
+        page-break-before: auto;
+        page-break-after: avoid;
+        font-size: 11pt !important;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 5px !important;
+    }
+
+    #printable-calendar-area .calendar-table {
+        width: 100% !important;
+        font-size: 7pt !important;
+        border: 1px solid #ccc !important;
+        table-layout: fixed !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 0 !important;
+        border-collapse: collapse !important;
+    }
+
+    #printable-calendar-area .calendar-table th,
+    #printable-calendar-area .calendar-table td {
+        border: 1px solid #ccc !important;
+        padding: 2px !important;
+        white-space: normal !important;
+        word-wrap: break-word;
+        vertical-align: middle !important;
+        height: 22px !important;
+        text-align: center !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        box-sizing: border-box;
+    }
+
+    #printable-calendar-area .calendar-info-header-cell,
+    #printable-calendar-area .calendar-info-cell {
+        width: 80px !important;
+        font-size: 6pt !important;
+        vertical-align: top !important;
+        white-space: normal !important;
+        height: auto !important;
+        position: static !important; /* sticky 解除 */
+        left: auto !important;
+        z-index: auto !important;
+        background-color: #f8f9fa !important;
+    }
+     #printable-calendar-area .calendar-info-header-cell {
+         vertical-align: middle !important;
+         font-weight: bold;
+         background-color: #e9ecef !important;
+    }
+
+    #printable-calendar-area .calendar-header-cell,
+    #printable-calendar-area .calendar-date-cell {
+         width: auto !important; /* 自動幅 */
+         min-width: 0 !important; /* 最小幅リセット */
+         font-size: 7pt !important;
+    }
+    #printable-calendar-area .calendar-header-cell {
+         font-size: 6pt !important;
+    }
+     #printable-calendar-area .calendar-table th br { /* 曜日表示 */
+        display: block !important;
+    }
+
+    /* セル背景色 (変更なし) */
+    #printable-calendar-area .saturday { background-color: #f0f8ff !important; }
+    #printable-calendar-area .sunday { background-color: #fff7f0 !important; }
+    #printable-calendar-area .app-deadline-cell { background-color: #ffff7f !important; }
+    #printable-calendar-area .exam-date-cell { background-color: #ff7f7f !important; }
+    #printable-calendar-area .announcement-date-cell { background-color: #7fff7f !important; }
+    #printable-calendar-area .proc-deadline-cell { background-color: #bf7fff !important; }
+
+    #printable-calendar-area .app-deadline-cell,
+    #printable-calendar-area .exam-date-cell,
+    #printable-calendar-area .announcement-date-cell,
+    #printable-calendar-area .proc-deadline-cell,
+    #printable-calendar-area .saturday,
+    #printable-calendar-area .sunday {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+
+    /* ページ設定 (変更なし) */
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+}
+/* --- ↑↑↑ 印刷用スタイルここまで ↑↑↑ --- */
