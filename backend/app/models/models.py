@@ -32,6 +32,7 @@ class Student(Base):
     past_exam_results = relationship("PastExamResult", back_populates="student", cascade="all, delete-orphan")
     university_acceptances = relationship("UniversityAcceptance", back_populates="student", cascade="all, delete-orphan")
     mock_exam_results = relationship("MockExamResult", back_populates="student", cascade="all, delete-orphan")
+    eiken_results = relationship("EikenResult", back_populates="student", cascade="all, delete-orphan")
 
 class StudentInstructor(Base):
     __tablename__ = "student_instructors"
@@ -198,18 +199,14 @@ class MockExamResult(Base):
 
     student = relationship("Student", back_populates="mock_exam_results")
 
-class EikenResult(SQLModel, table=True):
-    # add_eiken_table.py で作成したテーブル名を指定 (通常はクラス名のスネークケースですが、明示すると確実です)
-    __tablename__: str = "eiken_results" 
+class EikenResult(Base):
+    __tablename__ = "eiken_results" # add_eiken_table.py のテーブル名に合わせる
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    student_id: int = Field(foreign_key="student.id")
-    
-    # 以下のフィールド名は add_eiken_table.py の定義と合わせてください
-    exam_date: date
-    grade: str      # 例: "2級", "準1級"
-    score: int      # CSEスコア
-    result: str     # 例: "合格", "不合格"
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    grade = Column(String, nullable=False)
+    cse_score = Column(Integer)  # add_eiken_table.py の定義に合わせて 'score' ではなく 'cse_score' に
+    exam_date = Column(Date)
+    result = Column(String)
 
-    # 必要であればリレーション
-    # student: Optional["Student"] = Relationship(back_populates="eiken_results")
+    student = relationship("Student", back_populates="eiken_results")
