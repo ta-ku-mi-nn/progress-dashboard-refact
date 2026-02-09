@@ -6,7 +6,7 @@ from app.models.models import Progress
 
 router = APIRouter()
 
-@router.get("/charts/progress/{student_id}")
+@router.get("/progress/{student_id}")
 def get_progress_chart(
     student_id: int,
     subject: Optional[str] = Query(None),

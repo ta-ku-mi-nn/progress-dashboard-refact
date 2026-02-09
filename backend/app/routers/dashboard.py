@@ -12,7 +12,7 @@ router = APIRouter()
 class ProgressUpdate(BaseModel):
     completed_units: int
 
-@router.get("/dashboard/summary/{student_id}")
+@router.get("/summary/{student_id}")
 def get_dashboard_summary(student_id: int, session: Session = Depends(get_db)) -> Dict[str, Any]:
     # 1. 全体進捗率の計算
     # SQLAlchemyの書き方: session.query(Model).filter(...).all()
