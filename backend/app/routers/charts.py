@@ -1,20 +1,33 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 from app.db.database import get_db
 from app.models.models import Progress
 
 router = APIRouter()
 
+# 科目リスト取得APIはそのまま維持
+@router.get("/subjects/{student_id}")
+def get_student_subjects(
+    student_id: int,
+    session: Session = Depends(get_db)
+) -> List[str]:
+    results = (
+        session.query(Progress.subject)
+        .filter(Progress.student_id == student_id)
+        .distinct()
+        .all()
+    )
+    subjects = [r[0] for r in results]
+    return ["全体"] + subjects
+
+# ★修正: グラフ用データを「参考書ごとのリスト」に変更
 @router.get("/progress/{student_id}")
 def get_progress_chart(
     student_id: int,
     subject: Optional[str] = Query(None),
     session: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """
-    進捗チャート用データを生成します。
-    """
+) -> List[Dict[str, Any]]: # 返り値をListに変更
     query = session.query(Progress).filter(Progress.student_id == student_id)
     
     if subject and subject != "全体":
@@ -22,34 +35,27 @@ def get_progress_chart(
     
     progress_list = query.all()
     
-    labels = []
-    actual_data = []
-    remaining_data = []
+    response_data = []
     
     for item in progress_list:
-        # ★修正: item.reference_book -> item.book_name
-        book_name = item.book_name 
+        book_name = item.book_name
         
-        completed = item.completed_units
-        total = item.total_units
-        remaining = max(0, total - completed)
+        # 時間(duration)が設定されていれば時間を計算、なければ単位数(units)を使用
+        if item.duration and item.total_units > 0:
+            # 完了時間 = (完了単位 / 全単位) * 目安時間
+            total_val = item.duration
+            completed_val = (item.completed_units / item.total_units) * item.duration
+            unit_label = "時間 (h)"
+        else:
+            total_val = item.total_units
+            completed_val = item.completed_units
+            unit_label = "単位数"
+
+        response_data.append({
+            "book_name": book_name,
+            "completed": completed_val,
+            "total": total_val,
+            "unit": unit_label
+        })
         
-        labels.append(book_name)
-        actual_data.append(completed)
-        remaining_data.append(remaining)
-        
-    return {
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "完了",
-                "data": actual_data,
-                "color": "#4caf50" 
-            },
-            {
-                "label": "未完了",
-                "data": remaining_data,
-                "color": "#e0e0e0" 
-            }
-        ]
-    }
+    return response_data
