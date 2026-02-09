@@ -8,7 +8,7 @@ import api from '../lib/api';
 interface ProgressItem {
   id: number;
   subject: string;
-  reference_book: string;
+  book_name: string; // ★修正: reference_book -> book_name
   completed_units: number;
   total_units: number;
 }
@@ -20,19 +20,17 @@ export default function ProgressList({ studentId }: { studentId: number }) {
 
   const fetchList = async () => {
     try {
-      // 便宜上チャートと同じAPIからデータ加工、または専用APIを使用
-      // ここではチャートAPIを再利用してリスト化する例です（必要に応じて専用APIを作成推奨）
-      const res = await api.get(`/charts/progress/${studentId}`); 
-      // APIの形式に合わせて変換が必要です。
-      // もしリスト取得API (/progress/list) があればそちらを使ってください。
-      // 今回は簡易的に「空配列」で初期化し、別途実装済みのリスト取得APIがあればURLを修正してください。
-       setList([]); 
-    } catch (e) { console.error(e); }
+      // ★修正: リスト専用のAPIエンドポイントを使用
+      const res = await api.get(`/dashboard/list/${studentId}`);
+      setList(res.data);
+    } catch (e) {
+      console.error("Failed to fetch progress list", e);
+    }
   };
-  
-  // もしリスト取得用のAPIがない場合は、charts APIの結果を使うか、
-  // backend/routers/charts.py にリスト取得用エンドポイントを追加してください。
-  // ここでは仮実装としておきます。
+
+  useEffect(() => {
+    if (studentId) fetchList();
+  }, [studentId]);
 
   return (
     <div className="h-full flex flex-col">
@@ -49,12 +47,13 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             {list.length === 0 ? (
                 <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
-                        データがありません (API実装を確認してください)
+                        データがありません
                     </TableCell>
                 </TableRow>
             ) : list.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.reference_book}</TableCell>
+                {/* ★修正: item.book_name を表示 */}
+                <TableCell className="font-medium">{item.book_name}</TableCell>
                 <TableCell className="text-center">
                   {item.completed_units} / {item.total_units}
                 </TableCell>
@@ -72,14 +71,14 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </Table>
       </div>
 
-      {/* 更新ダイアログ */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>進捗を更新</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-                <p className="mb-2 text-sm text-muted-foreground">{editingItem?.reference_book}</p>
+                {/* ★修正: editingItem.book_name */}
+                <p className="mb-2 text-sm text-muted-foreground">{editingItem?.book_name}</p>
                 <div className="flex items-center gap-2">
                     <Input 
                         type="number" 
@@ -93,7 +92,8 @@ export default function ProgressList({ studentId }: { studentId: number }) {
                 <Button variant="outline" onClick={() => setEditingItem(null)}>キャンセル</Button>
                 <Button onClick={async () => {
                     if(!editingItem) return;
-                    await api.patch(`/progress/${editingItem.id}`, { completed_units: newCompleted });
+                    // APIパスは dashboard.py の update_progress に合わせる
+                    await api.patch(`/dashboard/progress/${editingItem.id}`, { completed_units: newCompleted });
                     setEditingItem(null);
                     fetchList();
                 }}>保存</Button>
