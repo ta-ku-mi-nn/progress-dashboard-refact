@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
-from sqlmodel import Session, select
+from sqlalchemy.orm import Session  # ★修正: sqlmodel ではなく sqlalchemy.orm から Session をインポート
 from typing import List, Optional, Dict, Any
 from app.db.database import get_session
-from app.models.models import Progress  # Progressモデルが定義されていると仮定
+from app.models.models import Progress
 
 router = APIRouter()
 
@@ -17,13 +17,14 @@ def get_progress_chart(
     subject が指定された場合はその科目でフィルタリングします。
     積み上げ棒グラフ（完了 vs 未完了）用のデータを返します。
     """
-    query = select(Progress).where(Progress.student_id == student_id)
+    # ★修正: session.query(...) を使用する書き方に変更
+    query = session.query(Progress).filter(Progress.student_id == student_id)
     
     # "全体" 以外が選択された場合にフィルタリング
     if subject and subject != "全体":
-        query = query.where(Progress.subject == subject)
+        query = query.filter(Progress.subject == subject)
     
-    progress_list = session.exec(query).all()
+    progress_list = query.all()
     
     # チャート用データの加工
     labels = []
@@ -31,7 +32,6 @@ def get_progress_chart(
     remaining_data = []
     
     for item in progress_list:
-        # Progressモデルに reference_book, completed_units, total_units があると仮定
         book_name = item.reference_book
         completed = item.completed_units
         total = item.total_units
@@ -47,12 +47,12 @@ def get_progress_chart(
             {
                 "label": "完了",
                 "data": actual_data,
-                "color": "#4caf50" # 完了は緑
+                "color": "#4caf50" 
             },
             {
                 "label": "未完了",
                 "data": remaining_data,
-                "color": "#e0e0e0" # 未完了はグレー
+                "color": "#e0e0e0" 
             }
         ]
     }
