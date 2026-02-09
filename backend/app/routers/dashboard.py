@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
-from app.db.database import get_session
+from app.db.database import get_db
 # モデルをインポート
 from app.models.models import Progress, EikenResult 
 
@@ -13,7 +13,7 @@ class ProgressUpdate(BaseModel):
     completed_units: int
 
 @router.get("/dashboard/summary/{student_id}")
-def get_dashboard_summary(student_id: int, session: Session = Depends(get_session)) -> Dict[str, Any]:
+def get_dashboard_summary(student_id: int, session: Session = Depends(get_db)) -> Dict[str, Any]:
     # 1. 全体進捗率の計算
     # SQLAlchemyの書き方: session.query(Model).filter(...).all()
     progress_items = session.query(Progress).filter(Progress.student_id == student_id).all()
@@ -50,7 +50,7 @@ def get_dashboard_summary(student_id: int, session: Session = Depends(get_sessio
 def update_progress(
     row_id: int, 
     update_data: ProgressUpdate, 
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_db)
 ):
     progress_item = session.query(Progress).filter(Progress.id == row_id).first()
     if not progress_item:
