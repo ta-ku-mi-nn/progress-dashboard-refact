@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -14,24 +14,33 @@ import BugReport from './pages/BugReport';
 import Changelog from './pages/Changelog';
 import { Toaster } from 'sonner';
 
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          
+          {/* 保護されたルート (ログイン必須) */}
           <Route path="/" element={
             <ProtectedRoute>
               <DashboardLayout />
             </ProtectedRoute>
           }>
+            {/* ダッシュボードホーム */}
             <Route index element={<Dashboard />} />
+            
+            {/* 生徒詳細ページ */}
             <Route path="students/:id" element={<StudentDetail />} />
+            
+            {/* 各機能ページ */}
             <Route path="past-exam" element={<PastExam />} />
             <Route path="root-table" element={<RootTable />} />
             <Route path="statistics" element={<Statistics />} />
             <Route path="bug-report" element={<BugReport />} />
             <Route path="changelog" element={<Changelog />} />
+            
+            {/* 管理者専用ページ */}
             <Route path="admin" element={
               <ProtectedRoute roles={['admin']}>
                 <Admin />
@@ -43,6 +52,6 @@ function App() {
       </AuthProvider>
     </Router>
   );
-}
+};
 
 export default App;
