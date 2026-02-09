@@ -29,7 +29,7 @@ app.include_router(common.router, prefix=f"{settings.API_V1_STR}/common", tags=[
 app.include_router(charts.router, prefix=f"{settings.API_V1_STR}/charts", tags=["charts"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 from app.routers import fix_db
-app.include_router(fix_db.router, prefix="/api", tags=["fix"])
+app.include_router(fix_db.router, prefix=settings.API_V1_STR, tags=["fix"])
 
 @app.get("/")
 def root():
