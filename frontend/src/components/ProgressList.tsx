@@ -8,57 +8,107 @@ import api from '../lib/api';
 interface ProgressItem {
   id: number;
   subject: string;
-  book_name: string; // ★修正: reference_book -> book_name
+  book_name: string;
   completed_units: number;
   total_units: number;
 }
 
 export default function ProgressList({ studentId }: { studentId: number }) {
-  const [list, setList] = useState<ProgressItem[]>([]);
+  const [fullList, setFullList] = useState<ProgressItem[]>([]); // 全データ保持用
+  const [filteredList, setFilteredList] = useState<ProgressItem[]>([]); // 表示用
+  
+  const [subjects, setSubjects] = useState<string[]>(["全体"]);
+  const [selectedSubject, setSelectedSubject] = useState("全体");
+  
   const [editingItem, setEditingItem] = useState<ProgressItem | null>(null);
   const [newCompleted, setNewCompleted] = useState<number>(0);
 
-  const fetchList = async () => {
+  // データ取得
+  const fetchData = async () => {
     try {
-      // ★修正: リスト専用のAPIエンドポイントを使用
-      const res = await api.get(`/dashboard/list/${studentId}`);
-      setList(res.data);
+      // 科目リスト取得 (チャートと同じAPIを利用)
+      const subjRes = await api.get(`/charts/subjects/${studentId}`);
+      if (subjRes.data) setSubjects(subjRes.data);
+
+      // 参考書リスト取得
+      const listRes = await api.get(`/dashboard/list/${studentId}`);
+      setFullList(listRes.data);
+      setFilteredList(listRes.data); // 初期表示は全件
     } catch (e) {
-      console.error("Failed to fetch progress list", e);
+      console.error("Failed to fetch data", e);
     }
   };
 
   useEffect(() => {
-    if (studentId) fetchList();
+    if (studentId) fetchData();
   }, [studentId]);
 
+  // フィルタリング処理
+  useEffect(() => {
+    if (selectedSubject === "全体") {
+      setFilteredList(fullList);
+    } else {
+      setFilteredList(fullList.filter(item => item.subject === selectedSubject));
+    }
+  }, [selectedSubject, fullList]);
+
+  const handleUpdate = async () => {
+    if(!editingItem) return;
+    try {
+      await api.patch(`/dashboard/progress/${editingItem.id}`, { completed_units: newCompleted });
+      setEditingItem(null);
+      fetchData(); // リストを再取得
+    } catch (e) {
+      alert("更新に失敗しました");
+    }
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col space-y-4">
+      {/* ★追加: リスト用の科目絞り込みボタン */}
+      <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide px-1">
+        {subjects.map((subj) => (
+          <button
+            key={subj}
+            onClick={() => setSelectedSubject(subj)}
+            className={`px-3 py-1 text-xs rounded-full transition-colors whitespace-nowrap border ${
+              selectedSubject === subj
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-white text-muted-foreground border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            {subj}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 overflow-auto border rounded-md">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>参考書</TableHead>
-              <TableHead className="text-center">進捗</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="text-center w-24">進捗</TableHead>
+              <TableHead className="text-right w-20">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.length === 0 ? (
+            {filteredList.length === 0 ? (
                 <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
                         データがありません
                     </TableCell>
                 </TableRow>
-            ) : list.map((item) => (
+            ) : filteredList.map((item) => (
               <TableRow key={item.id}>
-                {/* ★修正: item.book_name を表示 */}
-                <TableCell className="font-medium">{item.book_name}</TableCell>
+                <TableCell className="font-medium">
+                    <div className="text-xs text-muted-foreground mb-0.5">{item.subject}</div>
+                    {item.book_name}
+                </TableCell>
                 <TableCell className="text-center">
                   {item.completed_units} / {item.total_units}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => {
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => {
                       setEditingItem(item);
                       setNewCompleted(item.completed_units);
                   }}>
@@ -71,13 +121,13 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </Table>
       </div>
 
+      {/* 更新ダイアログ */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>進捗を更新</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-                {/* ★修正: editingItem.book_name */}
                 <p className="mb-2 text-sm text-muted-foreground">{editingItem?.book_name}</p>
                 <div className="flex items-center gap-2">
                     <Input 
@@ -90,13 +140,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setEditingItem(null)}>キャンセル</Button>
-                <Button onClick={async () => {
-                    if(!editingItem) return;
-                    // APIパスは dashboard.py の update_progress に合わせる
-                    await api.patch(`/dashboard/progress/${editingItem.id}`, { completed_units: newCompleted });
-                    setEditingItem(null);
-                    fetchList();
-                }}>保存</Button>
+                <Button onClick={handleUpdate}>保存</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
