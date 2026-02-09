@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session  # ★修正: sqlmodel ではなく sqlalchemy.orm から Session をインポート
 from typing import List, Optional, Dict, Any
-from app.db.database import get_session
+from app.db.database import get_db
 from app.models.models import Progress
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 def get_progress_chart(
     student_id: int,
     subject: Optional[str] = Query(None),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     進捗チャート用データを生成します。
