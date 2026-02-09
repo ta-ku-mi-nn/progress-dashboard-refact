@@ -1,65 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import Plot from 'react-plotly.js';
-import api from '../api/axios';
-
-interface ProgressChartProps {
-  studentId: string;
-}
+import axios from 'axios';
 
 interface ChartData {
-  data: any[];
-  layout: any;
+  labels: string[];
+  datasets: { label: string; data: number[]; color: string }[];
 }
 
-const ProgressChart: React.FC<ProgressChartProps> = ({ studentId }) => {
+const SUBJECTS = ["全体", "英語", "数学", "国語", "理科", "社会"];
+
+export const ProgressChart: React.FC<{ studentId: number }> = ({ studentId }) => {
+  const [selectedSubject, setSelectedSubject] = useState("全体");
   const [chartData, setChartData] = useState<ChartData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!studentId) {
-      setChartData(null);
-      return;
-    }
-
-    const fetchChartData = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchData = async () => {
       try {
-        const response = await api.get(`/charts/progress/${studentId}`);
-        setChartData(response.data);
-      } catch (err) {
-        console.error("グラフデータの取得に失敗:", err);
-        setError("データの取得に失敗しました");
-      } finally {
-        setLoading(false);
+        const res = await axios.get(`/api/charts/progress/${studentId}`, {
+          params: { subject: selectedSubject }
+        });
+        setChartData(res.data);
+      } catch (error) {
+        console.error("チャートデータの取得に失敗しました", error);
       }
     };
+    fetchData();
+  }, [studentId, selectedSubject]);
 
-    fetchChartData();
-  }, [studentId]);
-
-  if (!studentId) return <div style={{ color: '#666', padding: '20px' }}>生徒を選択してください</div>;
-  if (loading) return <div style={{ padding: '20px' }}>読み込み中...</div>;
-  if (error) return <div style={{ color: 'red', padding: '20px' }}>{error}</div>;
-  if (!chartData) return <div style={{ padding: '20px' }}>データがありません</div>;
+  if (!chartData) return <div>読み込み中...</div>;
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '400px' }}>
-      <Plot
-        data={chartData.data}
-        layout={{
-          ...chartData.layout,
-          autosize: true,
-          margin: { l: 50, r: 20, t: 30, b: 50 },
-          legend: { orientation: 'h', y: -0.2 }
-        }}
-        useResizeHandler={true}
-        style={{ width: '100%', height: '100%' }}
-        config={{ displayModeBar: false }}
-      />
+    <div className="bg-white p-4 rounded shadow">
+      {/* 科目切り替えタブ */}
+      <div className="flex space-x-2 mb-4 overflow-x-auto">
+        {SUBJECTS.map((subj) => (
+          <button
+            key={subj}
+            onClick={() => setSelectedSubject(subj)}
+            className={`px-3 py-1 rounded text-sm whitespace-nowrap ${
+              selectedSubject === subj 
+                ? "bg-blue-600 text-white" 
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            {subj}
+          </button>
+        ))}
+      </div>
+
+      {/* グラフ描画エリア */}
+      <div className="h-64 relative">
+        <p className="text-center text-gray-500 mb-2">
+          {selectedSubject}の進捗 (積み上げ棒グラフ)
+        </p>
+        
+        {/* 簡易的な可視化（ライブラリがある場合は置き換えてください） */}
+        <div className="flex flex-col space-y-2 h-full overflow-y-auto">
+            {chartData.labels.map((label, idx) => {
+                const done = chartData.datasets[0].data[idx];
+                const remain = chartData.datasets[1].data[idx];
+                const total = done + remain;
+                const donePct = total > 0 ? (done / total) * 100 : 0;
+                
+                return (
+                    <div key={idx} className="flex items-center text-xs">
+                        <span className="w-24 truncate mr-2 text-right">{label}</span>
+                        <div className="flex-1 h-4 bg-gray-200 rounded overflow-hidden flex">
+                            <div style={{ width: `${donePct}%` }} className="bg-green-500 h-full"></div>
+                        </div>
+                        <span className="ml-2 w-16 text-gray-600">{done}/{total}</span>
+                    </div>
+                )
+            })}
+        </div>
+      </div>
     </div>
   );
 };
-
-export default ProgressChart;

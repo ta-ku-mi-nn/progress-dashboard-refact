@@ -197,3 +197,19 @@ class MockExamResult(Base):
     subject_info_mark = Column(Integer)
 
     student = relationship("Student", back_populates="mock_exam_results")
+
+class EikenResult(SQLModel, table=True):
+    # add_eiken_table.py で作成したテーブル名を指定 (通常はクラス名のスネークケースですが、明示すると確実です)
+    __tablename__: str = "eiken_results" 
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    student_id: int = Field(foreign_key="student.id")
+    
+    # 以下のフィールド名は add_eiken_table.py の定義と合わせてください
+    exam_date: date
+    grade: str      # 例: "2級", "準1級"
+    score: int      # CSEスコア
+    result: str     # 例: "合格", "不合格"
+
+    # 必要であればリレーション
+    # student: Optional["Student"] = Relationship(back_populates="eiken_results")
