@@ -48,8 +48,8 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ studentId }) => {
     <div style={{ width: '100%', height: '100%', minHeight: '400px' }}>
       <Plot
         data={chartData.data}
-        layout={{ 
-          ...chartData.layout, 
+        layout={{
+          ...chartData.layout,
           autosize: true,
           margin: { l: 50, r: 20, t: 30, b: 50 },
           legend: { orientation: 'h', y: -0.2 }
