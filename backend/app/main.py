@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import auth, external, students, admin, common
+from app.routers import auth, external, students, admin, common, charts, dashboard
 
 app = FastAPI(
     title="Progress Dashboard API",
@@ -26,7 +26,8 @@ app.include_router(external.router, prefix="/api", tags=["external"]) # Keep /ap
 app.include_router(students.router, prefix=f"{settings.API_V1_STR}/students", tags=["students"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 app.include_router(common.router, prefix=f"{settings.API_V1_STR}/common", tags=["common"])
-
+app.include_router(charts.router, prefix=f"{settings.API_V1_STR}/charts", tags=["charts"])
+app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 from app.routers import fix_db
 app.include_router(fix_db.router, prefix="/api", tags=["fix"])
 
