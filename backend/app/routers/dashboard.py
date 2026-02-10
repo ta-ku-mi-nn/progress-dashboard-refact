@@ -4,7 +4,7 @@ from sqlalchemy import desc
 from typing import Dict, Any, List
 from pydantic import BaseModel
 from app.db.database import get_db
-from app.models.models import Progress, EikenResult 
+from app.models.models import Progress, EikenResult, MasterTextbook
 
 router = APIRouter()
 
