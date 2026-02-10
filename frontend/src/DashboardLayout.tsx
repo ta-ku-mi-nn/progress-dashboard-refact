@@ -3,23 +3,23 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
-import { LogOut, Home, BookOpen, BarChart2, Settings } from 'lucide-react';
+import { LogOut, Home, BookOpen, BarChart2, Settings, Map, Clipboard, ScrollText } from 'lucide-react';
 
 export default function DashboardLayout() {
     const { user, logout } = useAuth();
     const location = useLocation();
 
     const navItems = [
-        { name: 'Dashboard', path: '/', icon: Home },
-        { name: 'Past Exams', path: '/past-exam', icon: BookOpen },
-        { name: 'Root Table', path: '/root-table', icon: BookOpen }, // Using BookOpen for now as Map is not imported
-        { name: 'Statistics', path: '/statistics', icon: BarChart2 },
-        { name: 'Bug Report', path: '/bug-report', icon: BookOpen }, // Using generic icon
-        { name: 'Changelog', path: '/changelog', icon: BookOpen }, // Using generic icon
+        { name: 'ダッシュボード', path: '/', icon: Home },
+        { name: '過去問/模試/入試日程', path: '/past-exam', icon: BookOpen },
+        { name: 'ルート表', path: '/root-table', icon: Map }, 
+        { name: '統計', path: '/statistics', icon: BarChart2 },
+        { name: 'バグ報告/要望', path: '/bug-report', icon: Clipboard },
+        { name: '更新履歴', path: '/changelog', icon: ScrollText },
     ];
 
     if (user?.role === 'admin') {
-        navItems.push({ name: 'Admin', path: '/admin', icon: Settings });
+        navItems.push({ name: '管理者ページ', path: '/admin', icon: Settings });
     }
 
     return (
@@ -28,7 +28,7 @@ export default function DashboardLayout() {
             <aside className="w-64 bg-white shadow-md flex flex-col">
                 <div className="p-6">
                     <h1 className="text-2xl font-bold text-gray-800">Learning DB</h1>
-                    <p className="text-sm text-gray-500 mt-1">Welcome, {user?.username}</p>
+                    <p className="text-sm text-gray-500 mt-1">ようこそ、{user?.username}</p>
                 </div>
                 <nav className="flex-1 px-4 space-y-2">
                     {navItems.map((item) => (
@@ -48,7 +48,7 @@ export default function DashboardLayout() {
                 <div className="p-4 border-t">
                     <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-700 hover:bg-red-50" onClick={logout}>
                         <LogOut className="w-5 h-5 mr-3" />
-                        Logout
+                        ログアウト
                     </Button>
                 </div>
             </aside>
