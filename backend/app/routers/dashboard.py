@@ -228,3 +228,14 @@ def get_presets(session: Session = Depends(get_db)):
         })
         
     return result
+
+@router.delete("/progress/{row_id}")
+def delete_progress(row_id: int, session: Session = Depends(get_db)):
+    progress_item = session.query(Progress).filter(Progress.id == row_id).first()
+    if not progress_item:
+        raise HTTPException(status_code=404, detail="Progress item not found")
+    
+    session.delete(progress_item)
+    session.commit()
+    return {"message": "Deleted successfully"}
+    
