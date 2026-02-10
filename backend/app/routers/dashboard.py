@@ -52,7 +52,7 @@ def get_dashboard_summary(
     if latest_eiken:
         eiken_data = {
             "grade": latest_eiken.grade,
-            "cse_score": latest_eiken.score,
+            "score": latest_eiken.cse_score,
             "result": latest_eiken.result
         }
 
