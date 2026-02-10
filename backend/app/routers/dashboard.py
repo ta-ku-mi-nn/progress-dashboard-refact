@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from typing import Dict, Any, List
 from pydantic import BaseModel
 from app.db.database import get_db
-from app.models.models import Progress, EikenResult, MasterTextbook
+from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ class CustomBookSchema(BaseModel):
     level: str
     book_name: str
     duration: float = 0.0
-    
+
 class ProgressCreate(BaseModel):
     student_id: int
     book_ids: List[int] = [] 
@@ -179,3 +179,52 @@ def add_progress_batch(
     
     session.commit()
     return {"message": f"{len(added_items)} items added"}
+
+@router.get("/presets")
+def get_presets(session: Session = Depends(get_db)):
+    # プリセットと、それに紐づく本の名前を取得
+    presets = session.query(BulkPreset).options(joinedload(BulkPreset.books)).all()
+    
+    # 全マスタデータを取得して辞書化 (検索高速化)
+    # key: (subject, book_name), value: MasterTextbook object
+    all_masters = session.query(MasterTextbook).all()
+    master_map = { (m.subject, m.book_name): m for m in all_masters }
+
+    result = []
+    for p in presets:
+        books_data = []
+        for pb in p.books:
+            # マスタに存在するかチェック
+            # プリセットにはsubjectがあるため、それを使って検索
+            key = (p.subject, pb.book_name)
+            master_info = master_map.get(key)
+
+            if master_info:
+                # マスタにある場合 -> マスタIDや詳細情報をセット
+                books_data.append({
+                    "id": master_info.id,
+                    "subject": master_info.subject,
+                    "level": master_info.level,
+                    "book_name": master_info.book_name,
+                    "duration": master_info.duration,
+                    "is_master": True
+                })
+            else:
+                # マスタにない場合 -> 名前だけのカスタム扱い
+                books_data.append({
+                    "id": None, # マスタIDなし
+                    "subject": p.subject,
+                    "level": "プリセット", # 仮のレベル
+                    "book_name": pb.book_name,
+                    "duration": 0, # 不明
+                    "is_master": False
+                })
+        
+        result.append({
+            "id": p.id,
+            "name": p.preset_name, # モデル定義に合わせて preset_name
+            "subject": p.subject,
+            "books": books_data
+        })
+        
+    return result
