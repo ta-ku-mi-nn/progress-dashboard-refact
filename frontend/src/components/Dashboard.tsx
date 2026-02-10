@@ -33,17 +33,16 @@ export default function Dashboard({ studentId }: { studentId: number }) {
   return (
     <div className="space-y-6">
       {/* メインのGridレイアウト 
-        lg:grid-cols-12 を使用して細かい比率調整を行います。
-        左(グラフ側): 5/12
-        右(リスト側): 7/12 (リストを広く)
+        lg:grid-cols-2 で 1:1 の比率にします。
+        items-stretch は子要素の高さを揃えるために必須です。
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         
         {/* 左カラム: グラフ + KPI (2x2) */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           
           {/* 上段: 学習進捗チャート */}
-          <Card className="flex-1">
+          <Card>
             <CardHeader>
               <CardTitle>学習進捗チャート</CardTitle>
             </CardHeader>
@@ -53,7 +52,7 @@ export default function Dashboard({ studentId }: { studentId: number }) {
           </Card>
 
           {/* 下段: KPI 2x2 グリッド */}
-          <div className="grid grid-cols-2 gap-4 h-full">
+          <div className="grid grid-cols-2 gap-4">
             {/* 1. 達成済時間 */}
             <Card>
               <CardHeader className="pb-2">
@@ -124,17 +123,22 @@ export default function Dashboard({ studentId }: { studentId: number }) {
           </div>
         </div>
 
-        {/* 右カラム: 参考書リスト (高さを合わせる) */}
-        <div className="lg:col-span-7">
+        {/* 右カラム: 参考書リスト 
+          h-full を指定することで、左カラムと同じ高さになります。
+          flex flex-col で中身を構成し、リスト部分が余った領域（flex-1）を使ってスクロールするようにします。
+        */}
+        <div className="h-full">
           <Card className="h-full flex flex-col">
             <CardHeader>
               <CardTitle>参考書リスト</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0 pb-4 px-4 h-[500px] lg:h-auto">
-              {/* 高さを親に合わせるため h-full などを渡す工夫が必要ですが、
-                  ProgressList側で flex-1 overflow-auto しているので
-                  親の高さが決まっていれば自動でスクロールします */}
-              <ProgressList studentId={studentId} />
+            <CardContent className="flex-1 overflow-hidden p-0 pb-4 px-4 relative">
+              {/* h-full の親の中でリストを表示。
+                 ProgressList 側でも h-full flex flex-col が効くようにする。
+              */}
+              <div className="absolute inset-0 p-4">
+                 <ProgressList studentId={studentId} />
+              </div>
             </CardContent>
           </Card>
         </div>
