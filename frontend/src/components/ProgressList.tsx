@@ -60,7 +60,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
 
   const fetchMasterBooks = async () => {
     try {
-      const res = await api.get('/books/master');
+      const res = await api.get('dashboard/books/master');
       setMasterBooks(res.data);
     } catch (e) { console.error(e); }
   };
