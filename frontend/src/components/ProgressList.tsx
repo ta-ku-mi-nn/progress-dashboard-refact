@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'; 
-import { Plus, Trash2, BookOpen } from 'lucide-react'; 
+import { Plus, Trash2, BookOpen, Clock } from 'lucide-react'; 
 import api from '../lib/api';
 
 // --- 型定義 ---
@@ -41,20 +41,25 @@ export default function ProgressList({ studentId }: { studentId: number }) {
   const [subjects, setSubjects] = useState<string[]>(["全体"]);
   const [selectedSubject, setSelectedSubject] = useState("全体");
 
+  // 更新モーダル用
   const [editingItem, setEditingItem] = useState<ProgressItem | null>(null);
   const [editCompleted, setEditCompleted] = useState<number>(0);
   const [editTotal, setEditTotal] = useState<number>(0);
 
+  // 追加モーダル用
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [masterBooks, setMasterBooks] = useState<MasterBook[]>([]); 
   const [selectedBooks, setSelectedBooks] = useState<BookCandidate[]>([]);
 
+  // ドロップダウン用リスト
   const [masterSubjects, setMasterSubjects] = useState<string[]>([]);
   const [masterLevels, setMasterLevels] = useState<string[]>([]);
 
+  // フィルタ用State
   const [filterLeft, setFilterLeft] = useState({ subject: "", level: "", name: "" });
   const [filterRight, setFilterRight] = useState({ subject: "", level: "", name: "" });
 
+  // カスタム登録フォーム用State
   const [customForm, setCustomForm] = useState({
     subject: "",
     level: "",
@@ -197,10 +202,11 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     });
   };
 
+  // 左列: マスタ一覧 (個別に登録用)
   const LeftColumnMasterList = () => (
-    <div className="border rounded-md flex flex-col h-full overflow-hidden">
-        <div className="p-2 bg-muted/50 font-bold text-sm border-b">参考書一覧 (DB)</div>
-        <div className="p-2 grid grid-cols-3 gap-2 border-b">
+    <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
+        <div className="p-3 bg-muted/30 font-bold text-sm border-b">参考書一覧 (DB)</div>
+        <div className="p-2 grid grid-cols-3 gap-2 border-b bg-gray-50/50">
             <select
                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
                 value={filterLeft.subject}
@@ -222,12 +228,12 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {filterMasterBooks(masterBooks, filterLeft).map(book => (
-                <div key={book.id} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-gray-50">
+                <div key={book.id} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-gray-50 transition-colors">
                 <div>
                     <div className="text-xs text-muted-foreground">{book.subject} / {book.level}</div>
                     <div className="text-sm font-medium">{book.book_name}</div>
                 </div>
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveToRight(book)}>
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => moveToRight(book)}>
                     <Plus className="w-4 h-4" />
                 </Button>
                 </div>
@@ -236,10 +242,70 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     </div>
   );
 
+  // 左列: カスタムフォーム (カスタム登録用)
+  const LeftColumnCustomForm = () => (
+    <div className="border rounded-md flex flex-col h-full overflow-hidden bg-yellow-50/50">
+        <div className="p-3 font-bold text-sm text-yellow-800 flex items-center border-b border-yellow-200 bg-yellow-100/30">
+            <BookOpen className="w-4 h-4 mr-2" />
+            新しい参考書を入力
+        </div>
+        
+        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-yellow-900">科目 <span className="text-red-500">*</span></label>
+                    <Input placeholder="例: 英語" className="bg-white h-9 text-xs"
+                        value={customForm.subject} onChange={e => setCustomForm({...customForm, subject: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-yellow-900">レベル</label>
+                    <Input placeholder="例: 基礎" className="bg-white h-9 text-xs"
+                        value={customForm.level} onChange={e => setCustomForm({...customForm, level: e.target.value})} />
+                </div>
+            </div>
+
+            <div className="space-y-1.5">
+                <label className="text-xs font-medium text-yellow-900">参考書名 <span className="text-red-500">*</span></label>
+                <Input placeholder="参考書名を入力" className="bg-white h-9 text-xs"
+                    value={customForm.book_name} onChange={e => setCustomForm({...customForm, book_name: e.target.value})} />
+            </div>
+
+            <div className="space-y-1.5">
+                <label className="text-xs font-medium text-yellow-900">目安時間 (h)</label>
+                <div className="flex items-center gap-2">
+                    <div className="relative w-24">
+                        <Clock className="w-3 h-3 absolute left-2 top-3 text-gray-400" />
+                        <Input type="number" placeholder="0" className="bg-white h-9 text-xs pl-7"
+                            value={customForm.duration || ""} onChange={e => setCustomForm({...customForm, duration: Number(e.target.value)})} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">時間</span>
+                </div>
+            </div>
+
+            <div className="pt-4">
+                 <Button size="sm" onClick={addCustomBook} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white h-9">
+                    <Plus className="w-4 h-4 mr-2" />
+                    リストに追加
+                </Button>
+                <p className="text-[10px] text-yellow-800/60 text-center mt-2">
+                    ※ 追加した参考書は右側のリストに一時保存されます
+                </p>
+            </div>
+        </div>
+    </div>
+  );
+
+  // 右列: 選択済みリスト (共通)
   const RightColumnSelectedList = () => (
-      <>
-        <div className="p-2 bg-blue-50 font-bold text-sm border-b text-blue-700">追加する参考書</div>
-        <div className="p-2 grid grid-cols-3 gap-2 border-b">
+      <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
+        <div className="p-3 bg-blue-50/50 font-bold text-sm border-b text-blue-700 flex justify-between items-center">
+            <span>追加候補リスト</span>
+            <span className="text-xs font-normal text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                {selectedBooks.length}件
+            </span>
+        </div>
+        
+        <div className="p-2 grid grid-cols-3 gap-2 border-b bg-gray-50/50">
             <select
                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
                 value={filterRight.subject}
@@ -259,35 +325,40 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             <Input placeholder="名称" className="h-8 text-xs" 
                 value={filterRight.name} onChange={e => setFilterRight({...filterRight, name: e.target.value})} />
         </div>
+
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {filterCandidates(selectedBooks, filterRight).length === 0 && (
-                <div className="text-center text-xs text-muted-foreground mt-4">追加候補はありません</div>
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2 opacity-50">
+                    <BookOpen className="w-8 h-8" />
+                    <span className="text-xs">左列から追加してください</span>
+                </div>
             )}
             {filterCandidates(selectedBooks, filterRight).map(book => (
-                <div key={book.tempId} className="flex items-center justify-between p-2 border rounded bg-white">
+                <div key={book.tempId} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-gray-50 transition-colors">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{book.subject} / {book.level}</span>
-                        {book.isCustom && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded">カスタム</span>}
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[10px] font-medium text-gray-500 border px-1 rounded">{book.subject}</span>
+                        {book.isCustom && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200">カスタム</span>}
                     </div>
                     <div className="text-sm font-medium">{book.book_name}</div>
                 </div>
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromRight(book.tempId)}>
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFromRight(book.tempId)}>
                     <Trash2 className="w-4 h-4" />
                 </Button>
                 </div>
             ))}
         </div>
-        <div className="p-2 border-t bg-gray-50 text-right">
-            <Button size="sm" onClick={handleAddBatch} disabled={selectedBooks.length === 0}>
-                {selectedBooks.length}件を登録
+        <div className="p-3 border-t bg-gray-50 flex justify-end">
+            <Button size="sm" onClick={handleAddBatch} disabled={selectedBooks.length === 0} className="w-32">
+                登録する ({selectedBooks.length})
             </Button>
         </div>
-      </>
+      </div>
   );
 
   return (
     <div className="h-full flex flex-col space-y-4">
+      {/* メイン画面上部ヘッダー */}
       <div className="flex items-center justify-between px-1">
         <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
           {subjects.map((subj) => (
@@ -309,6 +380,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </Button>
       </div>
 
+      {/* メインリスト表示 */}
       <div className="flex-1 overflow-auto border rounded-md">
         <Table>
           <TableHeader>
@@ -319,6 +391,13 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filteredList.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground text-xs">
+                        データがありません。「追加」ボタンから登録してください。
+                    </TableCell>
+                </TableRow>
+            )}
             {filteredList.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">
@@ -343,6 +422,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </Table>
       </div>
 
+      {/* 更新用モーダル */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -368,88 +448,48 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </DialogContent>
       </Dialog>
 
+      {/* 追加用モーダル (3タブ構造) */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="max-w-5xl h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>参考書を追加</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <div className="p-6 pb-2">
+             <DialogHeader>
+                <DialogTitle>参考書を追加</DialogTitle>
+            </DialogHeader>
+          </div>
           
-          <Tabs defaultValue="individual" className="flex-1 flex flex-col h-full overflow-hidden">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="preset">プリセットから登録</TabsTrigger>
-              <TabsTrigger value="individual">個別に登録</TabsTrigger>
-              <TabsTrigger value="custom">カスタム登録</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="individual" className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-6">
+                <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="preset">プリセットから登録</TabsTrigger>
+                <TabsTrigger value="individual">個別に登録</TabsTrigger>
+                <TabsTrigger value="custom">カスタム登録</TabsTrigger>
+                </TabsList>
+            </div>
 
-            <TabsContent value="preset" className="flex-1 p-4 border rounded-md mt-2">
-              <div className="flex h-full items-center justify-center text-muted-foreground">Coming Soon...</div>
-            </TabsContent>
-            
-            {/* 個別に登録タブ: 左=DB一覧, 右=候補リスト */}
-            <TabsContent value="individual" className="flex-1 flex flex-col mt-2 h-full overflow-hidden">
-              <div className="grid grid-cols-2 gap-4 h-full">
-                <LeftColumnMasterList />
-                <div className="border rounded-md flex flex-col h-full overflow-hidden">
-                    <RightColumnSelectedList />
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* カスタム登録タブ: 左=フォーム, 右=候補リスト */}
-            <TabsContent value="custom" className="flex-1 flex flex-col mt-2 h-full overflow-hidden">
-                <div className="grid grid-cols-2 gap-4 h-full">
-                    
-                    {/* 左列: カスタム登録フォーム (ここに移動) */}
-                    <div className="border rounded-md flex flex-col h-full overflow-hidden bg-yellow-50">
-                        <div className="p-4 space-y-4">
-                            <div className="font-bold text-sm text-yellow-800 flex items-center border-b border-yellow-200 pb-2">
-                                <BookOpen className="w-4 h-4 mr-2" />
-                                新しい参考書を作成
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-yellow-900">科目</label>
-                                    <Input placeholder="例: 英語" className="bg-white h-9 text-xs"
-                                        value={customForm.subject} onChange={e => setCustomForm({...customForm, subject: e.target.value})} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-yellow-900">レベル</label>
-                                    <Input placeholder="例: 基礎" className="bg-white h-9 text-xs"
-                                        value={customForm.level} onChange={e => setCustomForm({...customForm, level: e.target.value})} />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-yellow-900">参考書名</label>
-                                <Input placeholder="参考書名を入力" className="bg-white h-9 text-xs"
-                                    value={customForm.book_name} onChange={e => setCustomForm({...customForm, book_name: e.target.value})} />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-medium text-yellow-900">目安時間 (h)</label>
-                                <div className="flex items-center gap-2">
-                                    <Input type="number" placeholder="0" className="bg-white h-9 text-xs w-24"
-                                        value={customForm.duration || ""} onChange={e => setCustomForm({...customForm, duration: Number(e.target.value)})} />
-                                    <span className="text-xs text-muted-foreground">時間</span>
-                                    <div className="flex-1 text-right">
-                                        <Button size="sm" onClick={addCustomBook} className="bg-yellow-600 hover:bg-yellow-700 text-white">
-                                            <Plus className="w-4 h-4 mr-1" />
-                                            リストに追加
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <div className="flex-1 overflow-hidden p-6 pt-4 bg-gray-50/50">
+                {/* プリセットタブ */}
+                <TabsContent value="preset" className="h-full m-0 data-[state=active]:flex flex-col">
+                    <div className="flex flex-1 items-center justify-center border rounded-md bg-white text-muted-foreground border-dashed">
+                        Coming Soon...
                     </div>
-
-                    {/* 右列: 追加候補リスト (共有) */}
-                    <div className="border rounded-md flex flex-col h-full overflow-hidden">
+                </TabsContent>
+                
+                {/* 個別に登録タブ: 左=DB一覧, 右=候補リスト */}
+                <TabsContent value="individual" className="h-full m-0 data-[state=active]:flex flex-col">
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                        <LeftColumnMasterList />
                         <RightColumnSelectedList />
                     </div>
-                </div>
-            </TabsContent>
+                </TabsContent>
 
+                {/* カスタム登録タブ: 左=フォーム, 右=候補リスト */}
+                <TabsContent value="custom" className="h-full m-0 data-[state=active]:flex flex-col">
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                        <LeftColumnCustomForm />
+                        <RightColumnSelectedList />
+                    </div>
+                </TabsContent>
+            </div>
           </Tabs>
         </DialogContent>
       </Dialog>
