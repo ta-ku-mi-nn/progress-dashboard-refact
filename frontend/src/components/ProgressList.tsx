@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'; 
-import { Plus, Trash2 } from 'lucide-react'; 
+import { Plus, Trash2, BookOpen } from 'lucide-react'; // アイコン追加
 import api from '../lib/api';
 
 // --- 型定義 ---
@@ -24,6 +24,17 @@ interface MasterBook {
   duration: number;
 }
 
+// ★追加: 選択候補用の拡張型 (マスタIDを持つか、カスタムデータを持つか)
+interface BookCandidate {
+  tempId: string; // フロントエンドでの管理用ID
+  masterId?: number; // マスタ由来ならセット
+  subject: string;
+  level: string;
+  book_name: string;
+  duration: number;
+  isCustom: boolean; // カスタムかどうか
+}
+
 export default function ProgressList({ studentId }: { studentId: number }) {
   // --- State ---
   const [fullList, setFullList] = useState<ProgressItem[]>([]);
@@ -39,15 +50,23 @@ export default function ProgressList({ studentId }: { studentId: number }) {
   // 追加モーダル用
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [masterBooks, setMasterBooks] = useState<MasterBook[]>([]); 
-  const [selectedBooks, setSelectedBooks] = useState<MasterBook[]>([]);
+  const [selectedBooks, setSelectedBooks] = useState<BookCandidate[]>([]); // ★型変更
 
-  // ★追加: ドロップダウン用リスト
+  // ドロップダウン用リスト
   const [masterSubjects, setMasterSubjects] = useState<string[]>([]);
   const [masterLevels, setMasterLevels] = useState<string[]>([]);
 
   // フィルタ用State
   const [filterLeft, setFilterLeft] = useState({ subject: "", level: "", name: "" });
   const [filterRight, setFilterRight] = useState({ subject: "", level: "", name: "" });
+
+  // ★追加: カスタム登録フォーム用State
+  const [customForm, setCustomForm] = useState({
+    subject: "",
+    level: "",
+    book_name: "",
+    duration: 0
+  });
 
   // --- データ取得 ---
   const fetchData = async () => {
@@ -63,7 +82,6 @@ export default function ProgressList({ studentId }: { studentId: number }) {
 
   const fetchMasterBooks = async () => {
     try {
-      // APIパスは環境に合わせて /dashboard/books/master 等へ修正済みと仮定
       const res = await api.get('/dashboard/books/master');
       setMasterBooks(res.data);
     } catch (e) { console.error(e); }
@@ -77,7 +95,6 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     if (isAddModalOpen) fetchMasterBooks();
   }, [isAddModalOpen]);
 
-  // ★追加: マスタデータから科目とレベルのユニークリストを生成
   useEffect(() => {
     if (masterBooks.length > 0) {
       const uniqueSubjects = Array.from(new Set(masterBooks.map(b => b.subject).filter(Boolean)));
@@ -111,10 +128,21 @@ export default function ProgressList({ studentId }: { studentId: number }) {
 
   const handleAddBatch = async () => {
     if (selectedBooks.length === 0) return;
+    
+    // データをマスタ由来とカスタム由来に分ける
+    const bookIds = selectedBooks.filter(b => !b.isCustom && b.masterId).map(b => b.masterId!);
+    const customBooks = selectedBooks.filter(b => b.isCustom).map(b => ({
+        subject: b.subject,
+        level: b.level,
+        book_name: b.book_name,
+        duration: b.duration
+    }));
+
     try {
       await api.post('/dashboard/progress/batch', {
         student_id: studentId,
-        book_ids: selectedBooks.map(b => b.id)
+        book_ids: bookIds,
+        custom_books: customBooks
       });
       setIsAddModalOpen(false);
       setSelectedBooks([]);
@@ -122,26 +150,155 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     } catch (e) { alert("登録失敗"); }
   };
 
+  // 左→右へ移動 (マスタ由来)
   const moveToRight = (book: MasterBook) => {
-    if (!selectedBooks.find(b => b.id === book.id)) {
-      setSelectedBooks([...selectedBooks, book]);
+    // 既に同じマスタIDのものが選択されていないか確認
+    if (!selectedBooks.find(b => b.masterId === book.id)) {
+      const candidate: BookCandidate = {
+          tempId: `m_${book.id}`,
+          masterId: book.id,
+          subject: book.subject,
+          level: book.level,
+          book_name: book.book_name,
+          duration: book.duration,
+          isCustom: false
+      };
+      setSelectedBooks([...selectedBooks, candidate]);
     }
   };
 
-  const removeFromRight = (id: number) => {
-    setSelectedBooks(selectedBooks.filter(b => b.id !== id));
+  // 右から削除
+  const removeFromRight = (tempId: string) => {
+    setSelectedBooks(selectedBooks.filter(b => b.tempId !== tempId));
   };
 
-  const filterBooks = (books: MasterBook[], filter: typeof filterLeft) => {
+  // カスタム参考書を追加
+  const addCustomBook = () => {
+      if (!customForm.subject || !customForm.book_name) {
+          alert("科目と参考書名は必須です");
+          return;
+      }
+      const candidate: BookCandidate = {
+          tempId: `c_${Date.now()}`,
+          subject: customForm.subject,
+          level: customForm.level || "カスタム",
+          book_name: customForm.book_name,
+          duration: customForm.duration,
+          isCustom: true
+      };
+      setSelectedBooks([...selectedBooks, candidate]);
+      // フォームをリセット
+      setCustomForm({ subject: "", level: "", book_name: "", duration: 0 });
+  };
+
+  const filterMasterBooks = (books: MasterBook[], filter: typeof filterLeft) => {
     return books.filter(b => {
-      // 完全一致ではなく部分一致または選択なし("")
-      // ドロップダウンで選択された場合は完全一致的に動作するが、includesでも問題ない
       const matchSubj = filter.subject === "" || b.subject === filter.subject;
       const matchLevel = filter.level === "" || b.level === filter.level;
       const matchName = filter.name === "" || b.book_name.includes(filter.name);
       return matchSubj && matchLevel && matchName;
     });
   };
+  
+  const filterCandidates = (books: BookCandidate[], filter: typeof filterRight) => {
+    return books.filter(b => {
+      const matchSubj = filter.subject === "" || b.subject === filter.subject;
+      const matchLevel = filter.level === "" || b.level === filter.level;
+      const matchName = filter.name === "" || b.book_name.includes(filter.name);
+      return matchSubj && matchLevel && matchName;
+    });
+  };
+
+  // 左列（マスタ一覧）のコンポーネント (共有用)
+  const LeftColumnMasterList = () => (
+    <div className="border rounded-md flex flex-col h-full overflow-hidden">
+        <div className="p-2 bg-muted/50 font-bold text-sm border-b">参考書一覧 (DB)</div>
+        <div className="p-2 grid grid-cols-3 gap-2 border-b">
+            <select
+                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
+                value={filterLeft.subject}
+                onChange={e => setFilterLeft({...filterLeft, subject: e.target.value})}
+            >
+                <option value="">科目: 全て</option>
+                {masterSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
+                value={filterLeft.level}
+                onChange={e => setFilterLeft({...filterLeft, level: e.target.value})}
+            >
+                <option value="">レベル: 全て</option>
+                {masterLevels.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+            <Input placeholder="名称" className="h-8 text-xs" 
+                value={filterLeft.name} onChange={e => setFilterLeft({...filterLeft, name: e.target.value})} />
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            {filterMasterBooks(masterBooks, filterLeft).map(book => (
+                <div key={book.id} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-gray-50">
+                <div>
+                    <div className="text-xs text-muted-foreground">{book.subject} / {book.level}</div>
+                    <div className="text-sm font-medium">{book.book_name}</div>
+                </div>
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveToRight(book)}>
+                    <Plus className="w-4 h-4" />
+                </Button>
+                </div>
+            ))}
+        </div>
+    </div>
+  );
+
+  // 右列の候補リストコンポーネント
+  const RightColumnSelectedList = () => (
+      <>
+        <div className="p-2 bg-blue-50 font-bold text-sm border-b text-blue-700">追加する参考書</div>
+        <div className="p-2 grid grid-cols-3 gap-2 border-b">
+            <select
+                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
+                value={filterRight.subject}
+                onChange={e => setFilterRight({...filterRight, subject: e.target.value})}
+            >
+                <option value="">科目: 全て</option>
+                {masterSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
+                value={filterRight.level}
+                onChange={e => setFilterRight({...filterRight, level: e.target.value})}
+            >
+                <option value="">レベル: 全て</option>
+                {masterLevels.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+            <Input placeholder="名称" className="h-8 text-xs" 
+                value={filterRight.name} onChange={e => setFilterRight({...filterRight, name: e.target.value})} />
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            {filterCandidates(selectedBooks, filterRight).length === 0 && (
+                <div className="text-center text-xs text-muted-foreground mt-4">追加候補はありません</div>
+            )}
+            {filterCandidates(selectedBooks, filterRight).map(book => (
+                <div key={book.tempId} className="flex items-center justify-between p-2 border rounded bg-white">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{book.subject} / {book.level}</span>
+                        {book.isCustom && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded">カスタム</span>}
+                    </div>
+                    <div className="text-sm font-medium">{book.book_name}</div>
+                </div>
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromRight(book.tempId)}>
+                    <Trash2 className="w-4 h-4" />
+                </Button>
+                </div>
+            ))}
+        </div>
+        <div className="p-2 border-t bg-gray-50 text-right">
+            <Button size="sm" onClick={handleAddBatch} disabled={selectedBooks.length === 0}>
+                {selectedBooks.length}件を登録
+            </Button>
+        </div>
+      </>
+  );
 
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -162,7 +319,6 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             </button>
           ))}
         </div>
-        
         <Button size="sm" className="h-7 text-xs ml-2" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="w-3 h-3 mr-1" /> 追加
         </Button>
@@ -229,7 +385,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </DialogContent>
       </Dialog>
 
-      {/* 追加用モーダル */}
+      {/* 追加用モーダル (3タブ構造) */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="max-w-5xl h-[80vh] flex flex-col">
           <DialogHeader>
@@ -247,111 +403,62 @@ export default function ProgressList({ studentId }: { studentId: number }) {
               <div className="flex h-full items-center justify-center text-muted-foreground">Coming Soon...</div>
             </TabsContent>
             
+            {/* 個別に登録タブ */}
             <TabsContent value="individual" className="flex-1 flex flex-col mt-2 h-full overflow-hidden">
               <div className="grid grid-cols-2 gap-4 h-full">
-                
                 {/* 左列: マスタ一覧 */}
-                <div className="border rounded-md flex flex-col h-full overflow-hidden">
-                  <div className="p-2 bg-muted/50 font-bold text-sm border-b">参考書一覧 (DB)</div>
-                  
-                  {/* ★修正: フィルタUIをドロップダウンに変更 */}
-                  <div className="p-2 grid grid-cols-3 gap-2 border-b">
-                    {/* 科目選択 */}
-                    <select
-                        className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        value={filterLeft.subject}
-                        onChange={e => setFilterLeft({...filterLeft, subject: e.target.value})}
-                    >
-                        <option value="">科目: 全て</option>
-                        {masterSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-
-                    {/* レベル選択 */}
-                    <select
-                        className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        value={filterLeft.level}
-                        onChange={e => setFilterLeft({...filterLeft, level: e.target.value})}
-                    >
-                        <option value="">レベル: 全て</option>
-                        {masterLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-
-                    {/* 名称検索 (ここはInputのまま) */}
-                    <Input placeholder="名称" className="h-8 text-xs" 
-                      value={filterLeft.name} onChange={e => setFilterLeft({...filterLeft, name: e.target.value})} />
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                    {filterBooks(masterBooks, filterLeft).map(book => (
-                      <div key={book.id} className="flex items-center justify-between p-2 border rounded bg-white hover:bg-gray-50">
-                        <div>
-                          <div className="text-xs text-muted-foreground">{book.subject} / {book.level}</div>
-                          <div className="text-sm font-medium">{book.book_name}</div>
-                        </div>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveToRight(book)}>
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
+                <LeftColumnMasterList />
                 {/* 右列: 追加候補 */}
                 <div className="border rounded-md flex flex-col h-full overflow-hidden">
-                  <div className="p-2 bg-blue-50 font-bold text-sm border-b text-blue-700">追加する参考書</div>
-                   
-                   {/* ★修正: 右列もドロップダウンに変更 */}
-                   <div className="p-2 grid grid-cols-3 gap-2 border-b">
-                    <select
-                        className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        value={filterRight.subject}
-                        onChange={e => setFilterRight({...filterRight, subject: e.target.value})}
-                    >
-                        <option value="">科目: 全て</option>
-                        {masterSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-
-                    <select
-                        className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        value={filterRight.level}
-                        onChange={e => setFilterRight({...filterRight, level: e.target.value})}
-                    >
-                        <option value="">レベル: 全て</option>
-                        {masterLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-
-                    <Input placeholder="名称" className="h-8 text-xs" 
-                      value={filterRight.name} onChange={e => setFilterRight({...filterRight, name: e.target.value})} />
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                    {filterBooks(selectedBooks, filterRight).length === 0 && (
-                      <div className="text-center text-xs text-muted-foreground mt-4">左から選択してください</div>
-                    )}
-                    {filterBooks(selectedBooks, filterRight).map(book => (
-                      <div key={book.id} className="flex items-center justify-between p-2 border rounded bg-white">
-                        <div>
-                          <div className="text-xs text-muted-foreground">{book.subject} / {book.level}</div>
-                          <div className="text-sm font-medium">{book.book_name}</div>
-                        </div>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromRight(book.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-2 border-t bg-gray-50 text-right">
-                    <Button size="sm" onClick={handleAddBatch} disabled={selectedBooks.length === 0}>
-                      {selectedBooks.length}件を登録
-                    </Button>
-                  </div>
+                    <RightColumnSelectedList />
                 </div>
-
               </div>
             </TabsContent>
-            <TabsContent value="custom" className="flex-1 p-4 border rounded-md mt-2">
-              <div className="flex h-full items-center justify-center text-muted-foreground">Coming Soon...</div>
+
+            {/* カスタム登録タブ */}
+            <TabsContent value="custom" className="flex-1 flex flex-col mt-2 h-full overflow-hidden">
+                <div className="grid grid-cols-2 gap-4 h-full">
+                    
+                    {/* 左列: マスタ一覧 (共有) */}
+                    <LeftColumnMasterList />
+
+                    {/* 右列: フォーム + 追加候補 */}
+                    <div className="border rounded-md flex flex-col h-full overflow-hidden">
+                        
+                        {/* カスタム登録フォーム */}
+                        <div className="p-4 bg-yellow-50 border-b space-y-3">
+                            <div className="font-bold text-sm text-yellow-800 flex items-center">
+                                <BookOpen className="w-4 h-4 mr-2" />
+                                新しい参考書を作成
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input placeholder="科目 (例: 英語)" className="bg-white h-8 text-xs"
+                                    value={customForm.subject} onChange={e => setCustomForm({...customForm, subject: e.target.value})} />
+                                <Input placeholder="レベル (例: 基礎)" className="bg-white h-8 text-xs"
+                                    value={customForm.level} onChange={e => setCustomForm({...customForm, level: e.target.value})} />
+                            </div>
+                            <Input placeholder="参考書名" className="bg-white h-8 text-xs"
+                                value={customForm.book_name} onChange={e => setCustomForm({...customForm, book_name: e.target.value})} />
+                            <div className="flex items-center gap-2">
+                                <Input type="number" placeholder="目安時間(h)" className="bg-white h-8 text-xs w-24"
+                                    value={customForm.duration || ""} onChange={e => setCustomForm({...customForm, duration: Number(e.target.value)})} />
+                                <span className="text-xs text-muted-foreground">時間</span>
+                                <div className="flex-1 text-right">
+                                    <Button size="sm" onClick={addCustomBook} className="h-8 text-xs bg-yellow-600 hover:bg-yellow-700">
+                                        リストに追加
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 追加候補リスト (共有) */}
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            <RightColumnSelectedList />
+                        </div>
+                    </div>
+                </div>
             </TabsContent>
+
           </Tabs>
         </DialogContent>
       </Dialog>
