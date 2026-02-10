@@ -4,10 +4,12 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'; 
-import { Plus, Trash2, BookOpen, Clock } from 'lucide-react'; 
+import { Plus, Trash2, BookOpen, Clock, Layers } from 'lucide-react'; 
 import api from '../lib/api';
 
 // --- 型定義 ---
+
+// メインリスト用
 interface ProgressItem {
   id: number;
   subject: string;
@@ -16,6 +18,7 @@ interface ProgressItem {
   total_units: number;
 }
 
+// マスタデータ用
 interface MasterBook {
   id: number;
   level: string;
@@ -24,42 +27,62 @@ interface MasterBook {
   duration: number;
 }
 
-interface BookCandidate {
-  tempId: string;
-  masterId?: number;
+// プリセット用 (バックエンドからのレスポンス構造に合わせる)
+interface PresetBook {
+  id: number | null; // マスタに存在すればID、なければnull
   subject: string;
   level: string;
   book_name: string;
   duration: number;
-  isCustom: boolean;
+  is_master: boolean;
+}
+
+interface Preset {
+  id: number;
+  name: string;   // プリセット名
+  subject: string;
+  books: PresetBook[];
+}
+
+// 追加候補リスト用 (共通型)
+interface BookCandidate {
+  tempId: string;    // フロント管理用ユニークID
+  masterId?: number; // マスタ由来の場合のID
+  subject: string;
+  level: string;
+  book_name: string;
+  duration: number;
+  isCustom: boolean; // マスタにない or カスタム登録ならtrue
 }
 
 export default function ProgressList({ studentId }: { studentId: number }) {
-  // --- State ---
+  // --- State: メインリスト ---
   const [fullList, setFullList] = useState<ProgressItem[]>([]);
   const [filteredList, setFilteredList] = useState<ProgressItem[]>([]);
   const [subjects, setSubjects] = useState<string[]>(["全体"]);
   const [selectedSubject, setSelectedSubject] = useState("全体");
 
-  // 更新モーダル用
+  // --- State: 更新モーダル ---
   const [editingItem, setEditingItem] = useState<ProgressItem | null>(null);
   const [editCompleted, setEditCompleted] = useState<number>(0);
   const [editTotal, setEditTotal] = useState<number>(0);
 
-  // 追加モーダル用
+  // --- State: 追加モーダル ---
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [masterBooks, setMasterBooks] = useState<MasterBook[]>([]); 
-  const [selectedBooks, setSelectedBooks] = useState<BookCandidate[]>([]);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [selectedBooks, setSelectedBooks] = useState<BookCandidate[]>([]); // 右列(共有)
 
   // ドロップダウン用リスト
   const [masterSubjects, setMasterSubjects] = useState<string[]>([]);
   const [masterLevels, setMasterLevels] = useState<string[]>([]);
 
-  // フィルタ用State
-  const [filterLeft, setFilterLeft] = useState({ subject: "", level: "", name: "" });
-  const [filterRight, setFilterRight] = useState({ subject: "", level: "", name: "" });
+  // フィルタ用
+  const [filterLeft, setFilterLeft] = useState({ subject: "", level: "", name: "" }); // 個別登録用
+  const [filterRight, setFilterRight] = useState({ subject: "", level: "", name: "" }); // 候補リスト用
+  const [filterPresetSubject, setFilterPresetSubject] = useState(""); // プリセット用
 
-  // カスタム登録フォーム用State
+  // カスタム登録フォーム用
   const [customForm, setCustomForm] = useState({
     subject: "",
     level: "",
@@ -79,21 +102,30 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     } catch (e) { console.error(e); }
   };
 
-  const fetchMasterBooks = async () => {
+  const fetchMasterData = async () => {
     try {
-      const res = await api.get('/dashboard/books/master');
-      setMasterBooks(res.data);
+      // マスタ参考書取得
+      const booksRes = await api.get('/dashboard/books/master');
+      setMasterBooks(booksRes.data);
+      
+      // プリセット取得
+      const presetsRes = await api.get('/dashboard/presets');
+      setPresets(presetsRes.data);
+
     } catch (e) { console.error(e); }
   };
 
+  // 初期ロード
   useEffect(() => {
     if (studentId) fetchData();
   }, [studentId]);
 
+  // モーダルオープン時にマスタデータ取得
   useEffect(() => {
-    if (isAddModalOpen) fetchMasterBooks();
+    if (isAddModalOpen) fetchMasterData();
   }, [isAddModalOpen]);
 
+  // マスタデータから科目・レベルのリスト生成
   useEffect(() => {
     if (masterBooks.length > 0) {
       const uniqueSubjects = Array.from(new Set(masterBooks.map(b => b.subject).filter(Boolean)));
@@ -103,7 +135,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     }
   }, [masterBooks]);
 
-  // --- フィルタリング ---
+  // メインリストフィルタリング
   useEffect(() => {
     if (selectedSubject === "全体") {
       setFilteredList(fullList);
@@ -112,7 +144,9 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     }
   }, [selectedSubject, fullList]);
 
-  // --- ハンドラ ---
+  // --- アクションハンドラ ---
+
+  // 進捗更新
   const handleUpdate = async () => {
     if (!editingItem) return;
     try {
@@ -125,9 +159,11 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     } catch (e) { alert("更新失敗"); }
   };
 
+  // 一括登録実行
   const handleAddBatch = async () => {
     if (selectedBooks.length === 0) return;
     
+    // マスタ由来とカスタム由来に分別
     const bookIds = selectedBooks.filter(b => !b.isCustom && b.masterId).map(b => b.masterId!);
     const customBooks = selectedBooks.filter(b => b.isCustom).map(b => ({
         subject: b.subject,
@@ -148,6 +184,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     } catch (e) { alert("登録失敗"); }
   };
 
+  // 左→右へ移動 (マスタから単体追加)
   const moveToRight = (book: MasterBook) => {
     if (!selectedBooks.find(b => b.masterId === book.id)) {
       const candidate: BookCandidate = {
@@ -163,10 +200,42 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     }
   };
 
-  const removeFromRight = (tempId: string) => {
-    setSelectedBooks(selectedBooks.filter(b => b.tempId !== tempId));
+  // プリセットから一括追加
+  const addPresetToRight = (preset: Preset) => {
+      let addedCount = 0;
+      const newCandidates = [...selectedBooks];
+      
+      preset.books.forEach(book => {
+          // ID生成 (マスタIDがあればそれ、なければ名前ベース)
+          const uniqueKey = book.id ? `m_${book.id}` : `p_${preset.id}_${book.book_name}`;
+          
+          // 重複チェック
+          const exists = newCandidates.find(b => 
+              b.tempId === uniqueKey || (book.id && b.masterId === book.id)
+          );
+
+          if (!exists) {
+              newCandidates.push({
+                  tempId: uniqueKey,
+                  masterId: book.id || undefined,
+                  subject: book.subject,
+                  level: book.level,
+                  book_name: book.book_name,
+                  duration: book.duration,
+                  isCustom: !book.is_master // マスタに紐付かないものはカスタム扱い
+              });
+              addedCount++;
+          }
+      });
+      
+      if (addedCount > 0) {
+          setSelectedBooks(newCandidates);
+      } else {
+          alert("このプリセットの参考書は既に追加候補に含まれています");
+      }
   };
 
+  // カスタムフォームから追加
   const addCustomBook = () => {
       if (!customForm.subject || !customForm.book_name) {
           alert("科目と参考書名は必須です");
@@ -184,6 +253,12 @@ export default function ProgressList({ studentId }: { studentId: number }) {
       setCustomForm({ subject: "", level: "", book_name: "", duration: 0 });
   };
 
+  // 右から削除
+  const removeFromRight = (tempId: string) => {
+    setSelectedBooks(selectedBooks.filter(b => b.tempId !== tempId));
+  };
+
+  // フィルタ関数
   const filterMasterBooks = (books: MasterBook[], filter: typeof filterLeft) => {
     return books.filter(b => {
       const matchSubj = filter.subject === "" || b.subject === filter.subject;
@@ -202,7 +277,62 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     });
   };
 
-  // 左列: マスタ一覧 (個別に登録用)
+  // --- サブコンポーネント (左列) ---
+
+  // 1. プリセット一覧
+  const LeftColumnPresetList = () => {
+      const filteredPresets = presets.filter(p => 
+          filterPresetSubject === "" || p.subject === filterPresetSubject
+      );
+
+      return (
+        <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
+            <div className="p-3 bg-purple-50/50 font-bold text-sm border-b text-purple-900 flex items-center">
+                <Layers className="w-4 h-4 mr-2" />
+                プリセット一覧
+            </div>
+            <div className="p-2 border-b bg-gray-50/50">
+                <select
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
+                    value={filterPresetSubject}
+                    onChange={e => setFilterPresetSubject(e.target.value)}
+                >
+                    <option value="">科目: 全て</option>
+                    {masterSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                {filteredPresets.map(preset => (
+                    <div key={preset.id} className="border rounded bg-white hover:bg-gray-50 transition-colors">
+                        <div className="p-2 flex items-center justify-between border-b border-dashed">
+                            <div>
+                                <div className="text-[10px] bg-purple-100 text-purple-800 px-1.5 rounded w-fit mb-1">
+                                    {preset.subject}
+                                </div>
+                                <div className="text-sm font-bold text-gray-800">{preset.name}</div>
+                            </div>
+                            <Button size="sm" className="h-7 bg-purple-600 hover:bg-purple-700 text-white text-xs" onClick={() => addPresetToRight(preset)}>
+                                <Plus className="w-3 h-3 mr-1" />
+                                一括追加
+                            </Button>
+                        </div>
+                        <div className="p-2 bg-gray-50/50 text-xs text-muted-foreground space-y-1">
+                            {preset.books.map((b, i) => (
+                                <div key={i} className="flex items-center gap-1">
+                                    <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                                    <span className="truncate">{b.book_name}</span>
+                                </div>
+                            ))}
+                            {preset.books.length === 0 && <span>(参考書なし)</span>}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+      );
+  };
+
+  // 2. マスタ一覧 (個別登録)
   const LeftColumnMasterList = () => (
     <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
         <div className="p-3 bg-muted/30 font-bold text-sm border-b">参考書一覧 (DB)</div>
@@ -242,7 +372,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     </div>
   );
 
-  // 左列: カスタムフォーム (カスタム登録用)
+  // 3. カスタムフォーム
   const LeftColumnCustomForm = () => (
     <div className="border rounded-md flex flex-col h-full overflow-hidden bg-yellow-50/50">
         <div className="p-3 font-bold text-sm text-yellow-800 flex items-center border-b border-yellow-200 bg-yellow-100/30">
@@ -295,7 +425,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     </div>
   );
 
-  // 右列: 選択済みリスト (共通)
+  // --- サブコンポーネント (右列・共通) ---
   const RightColumnSelectedList = () => (
       <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
         <div className="p-3 bg-blue-50/50 font-bold text-sm border-b text-blue-700 flex justify-between items-center">
@@ -356,9 +486,10 @@ export default function ProgressList({ studentId }: { studentId: number }) {
       </div>
   );
 
+  // --- メインレンダリング ---
   return (
     <div className="h-full flex flex-col space-y-4">
-      {/* メイン画面上部ヘッダー */}
+      {/* 画面上部ヘッダー */}
       <div className="flex items-center justify-between px-1">
         <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
           {subjects.map((subj) => (
@@ -380,7 +511,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </Button>
       </div>
 
-      {/* メインリスト表示 */}
+      {/* メインリスト */}
       <div className="flex-1 overflow-auto border rounded-md">
         <Table>
           <TableHeader>
@@ -422,7 +553,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </Table>
       </div>
 
-      {/* 更新用モーダル */}
+      {/* 進捗更新モーダル */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -448,7 +579,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
         </DialogContent>
       </Dialog>
 
-      {/* 追加用モーダル (3タブ構造) */}
+      {/* 追加用モーダル (3タブ) */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
           <div className="p-6 pb-2">
@@ -467,14 +598,15 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             </div>
 
             <div className="flex-1 overflow-hidden p-6 pt-4 bg-gray-50/50">
-                {/* プリセットタブ */}
+                {/* 1. プリセットタブ */}
                 <TabsContent value="preset" className="h-full m-0 data-[state=active]:flex flex-col">
-                    <div className="flex flex-1 items-center justify-center border rounded-md bg-white text-muted-foreground border-dashed">
-                        Coming Soon...
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                        <LeftColumnPresetList />
+                        <RightColumnSelectedList />
                     </div>
                 </TabsContent>
                 
-                {/* 個別に登録タブ: 左=DB一覧, 右=候補リスト */}
+                {/* 2. 個別登録タブ */}
                 <TabsContent value="individual" className="h-full m-0 data-[state=active]:flex flex-col">
                     <div className="grid grid-cols-2 gap-4 h-full">
                         <LeftColumnMasterList />
@@ -482,7 +614,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
                     </div>
                 </TabsContent>
 
-                {/* カスタム登録タブ: 左=フォーム, 右=候補リスト */}
+                {/* 3. カスタム登録タブ */}
                 <TabsContent value="custom" className="h-full m-0 data-[state=active]:flex flex-col">
                     <div className="grid grid-cols-2 gap-4 h-full">
                         <LeftColumnCustomForm />
