@@ -12,16 +12,16 @@ class ProgressUpdate(BaseModel):
     completed_units: int
     total_units: int
 
-class ProgressCreate(BaseModel):
-    student_id: int
-    book_ids: List[int] = [] 
-    custom_books: List[CustomBookSchema] = []
-
 class CustomBookSchema(BaseModel):
     subject: str
     level: str
     book_name: str
     duration: float = 0.0
+    
+class ProgressCreate(BaseModel):
+    student_id: int
+    book_ids: List[int] = [] 
+    custom_books: List[CustomBookSchema] = []
 
 @router.get("/summary/{student_id}")
 def get_dashboard_summary(
