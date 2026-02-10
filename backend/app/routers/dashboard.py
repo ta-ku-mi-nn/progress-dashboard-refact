@@ -14,7 +14,14 @@ class ProgressUpdate(BaseModel):
 
 class ProgressCreate(BaseModel):
     student_id: int
-    book_ids: List[int] # マスタのIDリスト
+    book_ids: List[int] = [] 
+    custom_books: List[CustomBookSchema] = []
+
+class CustomBookSchema(BaseModel):
+    subject: str
+    level: str
+    book_name: str
+    duration: float = 0.0
 
 @router.get("/summary/{student_id}")
 def get_dashboard_summary(
@@ -113,14 +120,14 @@ def add_progress_batch(
     session: Session = Depends(get_db)
 ):
     added_items = []
+
+    # 1. マスタID指定の登録
     for book_id in data.book_ids:
-        # マスタから情報を取得
         master_book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
         if not master_book:
             continue
             
-        # Progressに追加
-        # 重複チェック: 同じ生徒が同じ参考書を既に持っていないか確認
+        # 重複チェック
         exists = session.query(Progress).filter(
             Progress.student_id == data.student_id,
             Progress.book_name == master_book.book_name,
@@ -139,7 +146,33 @@ def add_progress_batch(
             is_planned=True,
             is_done=False,
             completed_units=0,
-            total_units=1 # マスタにデフォルト値がないため仮で1を設定
+            total_units=1 
+        )
+        session.add(new_progress)
+        added_items.append(new_progress)
+
+    # 2. カスタム登録
+    for custom in data.custom_books:
+        # 重複チェック (同名・同科目が既にないか)
+        exists = session.query(Progress).filter(
+            Progress.student_id == data.student_id,
+            Progress.book_name == custom.book_name,
+            Progress.subject == custom.subject
+        ).first()
+
+        if exists:
+            continue
+
+        new_progress = Progress(
+            student_id=data.student_id,
+            subject=custom.subject,
+            level=custom.level,
+            book_name=custom.book_name,
+            duration=custom.duration,
+            is_planned=True,
+            is_done=False,
+            completed_units=0,
+            total_units=1 # デフォルト
         )
         session.add(new_progress)
         added_items.append(new_progress)
