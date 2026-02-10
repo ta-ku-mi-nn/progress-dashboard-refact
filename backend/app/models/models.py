@@ -210,3 +210,5 @@ class EikenResult(Base):
     result = Column(String)
 
     student = relationship("Student", back_populates="eiken_results")
+
+
