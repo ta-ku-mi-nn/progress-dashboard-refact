@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { GitCommit, Tag, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Tag, CheckCircle2, ChevronDown, ChevronUp, ScrollText } from 'lucide-react';
 import api from '../lib/api';
 
 interface ChangelogItem {
@@ -47,7 +47,7 @@ const Changelog: React.FC = () => {
     <div className="h-full w-full p-4 md:p-8 pt-6 flex flex-col gap-4">
       <div className="flex-none">
         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <GitCommit className="w-6 h-6" /> 更新履歴
+          <ScrollText className="w-6 h-6" /> 更新履歴
         </h2>
         <p className="text-muted-foreground">システムのアップデート情報です。</p>
       </div>
