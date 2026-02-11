@@ -215,17 +215,19 @@ const BugReport: React.FC = () => {
 
       <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
         
-        {/* 左カラム: 報告フォーム */}
+{/* 左カラム: 報告フォーム */}
         <div className="w-full md:w-1/3 flex flex-col gap-4">
-            <Card className="h-full flex flex-col overflow-auto">
+            {/* Cardに h-full flex flex-col を適用 */}
+            <Card className="h-full flex flex-col overflow-hidden">
                 <CardHeader className="shrink-0">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                    <Send className="w-4 h-4" /> 新規報告
-                </CardTitle>
-                <CardDescription>不具合やご要望を入力してください。</CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <Send className="w-4 h-4" /> 新規報告
+                    </CardTitle>
+                    <CardDescription>不具合やご要望を入力してください。</CardDescription>
                 </CardHeader>
                 
                 {isSubmitted ? (
+                    // 送信完了画面
                     <CardContent className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
                         <CheckCircle2 className="w-16 h-16 text-green-500" />
                         <h3 className="text-xl font-bold">送信しました</h3>
@@ -234,30 +236,34 @@ const BugReport: React.FC = () => {
                         </Button>
                     </CardContent>
                 ) : (
-                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-                        <CardContent className="space-y-4 flex-1 overflow-auto">
+                    // フォーム本体: form自体を flex-1 flex flex-col にして高さを確保
+                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+                        {/* CardContent を flex-1 overflow-y-auto にしてスクロールさせる */}
+                        <CardContent className="flex-1 overflow-y-auto space-y-4">
                             <div className="space-y-2">
-                            <Label>種類</Label>
-                            <Select value={reportType} onValueChange={setReportType}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                <SelectItem value="bug">不具合 (バグ)</SelectItem>
-                                <SelectItem value="feature">機能リクエスト</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                <Label>種類</Label>
+                                <Select value={reportType} onValueChange={setReportType}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="bug">不具合 (バグ)</SelectItem>
+                                        <SelectItem value="feature">機能リクエスト</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
-                            <Label>タイトル</Label>
-                            <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                                <Label>タイトル</Label>
+                                <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
                             </div>
                             <div className="space-y-2">
-                            <Label>詳細</Label>
-                            <Textarea className="min-h-[150px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required />
+                                <Label>詳細</Label>
+                                <Textarea className="min-h-[150px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required />
                             </div>
                         </CardContent>
-                        <CardFooter className="border-t pt-4 shrink-0">
+                        
+                        {/* Footer (送信ボタン) は shrink-0 で固定表示 */}
+                        <CardFooter className="border-t pt-4 pb-4 shrink-0 bg-white">
                             <Button type="submit" disabled={loading} className="w-full">
-                            {loading ? "送信中..." : "送信"}
+                                {loading ? "送信中..." : "送信"}
                             </Button>
                         </CardFooter>
                     </form>

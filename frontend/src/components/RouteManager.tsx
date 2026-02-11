@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Input } from './ui/input';
-import { Download, FileText, Search, Filter } from 'lucide-react';
+import { Download, FileText, Search, Filter, ExternalLink } from 'lucide-react';
 import api from '../lib/api';
 
 // --- 型定義 ---
@@ -46,6 +46,28 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleViewPdf = async (file: RouteFile) => {
+    try {
+      // responseType: 'blob' でバイナリを取得
+      const response = await api.get(`/routes/download/${file.id}`, {
+        responseType: 'blob',
+      });
+      
+      // Blob URLを作成
+      const fileURL = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      
+      // 新しいタブで開く
+      window.open(fileURL, '_blank');
+      
+      // 注意: createObjectURLで作成したURLはGCされないため、厳密にはrevokeが必要ですが
+      // 別タブで開く場合、即座にrevokeすると読み込み前に消える可能性があるため、ここでは明示的なrevokeを省略するか
+      // 一定時間後にrevokeするなどの工夫がいりますが、簡易実装としてはこれで動作します。
+    } catch (e) {
+      alert("ファイルの表示に失敗しました");
+      console.error(e);
+    }
+  };
 
   // ダウンロード処理
   const handleDownload = async (file: RouteFile) => {
@@ -157,9 +179,9 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
                                 {new Date(file.uploaded_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-center">
-                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleDownload(file)}>
-                                    <Download className="w-3 h-3 mr-1" />
-                                    DL
+                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleViewPdf(file)}>
+                                    <ExternalLink className="w-3 h-3 mr-1" />
+                                    PDF表示
                                 </Button>
                             </TableCell>
                         </TableRow>
