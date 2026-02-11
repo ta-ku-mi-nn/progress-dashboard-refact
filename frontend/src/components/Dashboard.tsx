@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Printer, Edit2, Clock, Award } from 'lucide-react';
 
-// ★重要: 分割されていたコンポーネントをインポート
+// コンポーネント読み込み
 import ProgressChart from './ProgressChart';
 import ProgressList from './ProgressList';
 
@@ -59,7 +59,7 @@ export default function Dashboard() {
     init();
   }, [user]);
 
-  // 2. ダッシュボード基本データ取得 (KPI用)
+  // 2. ダッシュボード基本データ取得
   const fetchDashboardData = async () => {
     if (!selectedStudentId) return;
     try {
@@ -95,7 +95,7 @@ export default function Dashboard() {
   if (!selectedStudentId) return <div className="p-8 text-center">生徒が選択されていません</div>;
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-6 h-full p-1">
       {/* ヘッダーエリア: 生徒選択と印刷ボタン */}
       <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
         <h2 className="text-2xl font-bold tracking-tight">学習ダッシュボード</h2>
@@ -116,48 +116,53 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* メインコンテンツエリア */}
-      <div className="flex-1 overflow-y-auto space-y-6 print:overflow-visible">
+      {/* メインコンテンツエリア: 左右2分割 (1:1) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start print:block">
         
-        {/* KPIカード (総学習時間 & 英検) */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">総学習時間</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data?.total_study_time || 0}時間</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">英検スコア</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold">{data?.eiken_score || "未登録"}</div>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 print:hidden" onClick={() => setIsEikenModalOpen(true)}>
-                  <Edit2 className="w-3 h-3" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* === 左列: KPIカード + グラフ === */}
+        <div className="flex flex-col gap-4 w-full">
+            {/* KPIカード群 */}
+            <div className="grid grid-cols-2 gap-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">総学習時間</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    <div className="text-2xl font-bold">{data?.total_study_time || 0}時間</div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">英検スコア</CardTitle>
+                    <Award className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    <div className="flex items-center justify-between">
+                        <div className="text-xl font-bold truncate mr-2" title={data?.eiken_score}>{data?.eiken_score || "未登録"}</div>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0 print:hidden" onClick={() => setIsEikenModalOpen(true)}>
+                        <Edit2 className="w-3 h-3" />
+                        </Button>
+                    </div>
+                    </CardContent>
+                </Card>
+            </div>
 
-           {/* 必要に応じて他のKPIカード (進捗率など) */}
+            {/* グラフコンポーネント */}
+            <div className="w-full">
+                <ProgressChart studentId={selectedStudentId} />
+            </div>
         </div>
 
-        {/* ★ここに元のグラフコンポーネントを配置 */}
-        <div className="w-full">
-            <ProgressChart studentId={selectedStudentId} />
+        {/* === 右列: 参考書リスト === */}
+        {/* h-fullで親グリッドの高さを継承し、中身が溢れたらスクロールさせる */}
+        <div className="w-full h-full overflow-hidden rounded-lg border bg-white shadow-sm print:h-auto print:overflow-visible">
+            <div className="h-full overflow-y-auto p-1">
+                <ProgressList studentId={selectedStudentId} />
+            </div>
         </div>
 
-        {/* ★ここに元のリストコンポーネントを配置 */}
-        <div className="w-full">
-            <ProgressList studentId={selectedStudentId} />
-        </div>
       </div>
 
       {/* 英検編集モーダル */}
