@@ -41,14 +41,17 @@ interface PastExam {
   total_questions: number;
 }
 
+// 模試: 全科目対応 (models.pyの定義に準拠)
 interface MockExam {
   id: number;
   mock_exam_name: string;
   exam_date: string;
   grade: string;
   result_type: string;
-  grade_judgment: string;
-  // 記述
+  mock_exam_format: string; // result_typeと同じか、詳細な形式
+  round: string;
+  
+  // 記述式
   subject_kokugo_desc?: number;
   subject_math_desc?: number;
   subject_english_desc?: number;
@@ -56,7 +59,8 @@ interface MockExam {
   subject_rika2_desc?: number;
   subject_shakai1_desc?: number;
   subject_shakai2_desc?: number;
-  // マーク
+  
+  // マーク式
   subject_kokugo_mark?: number;
   subject_math1a_mark?: number;
   subject_math2bc_mark?: number;
@@ -82,8 +86,8 @@ const getCalendarDays = (year: number, month: number) => {
   for (let i = 0; i < startDayOfWeek; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
   
-  // 6週間分(42マス)確保してレイアウトを固定する
-  while (days.length < 42) {
+  // 週の残りを埋める (オプション)
+  while (days.length % 7 !== 0) {
       days.push(null);
   }
   return days;
@@ -164,7 +168,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
   const handleAddMockExam = async () => {
     try {
       await api.post('/exams/mock', { 
-          student_id: studentId, ...newMockExam, mock_exam_format: newMockExam.result_type, round: "1" 
+          student_id: studentId, 
+          ...newMockExam, 
+          mock_exam_format: newMockExam.result_type, // formatもセット
+          round: newMockExam.round || "1" 
       });
       setIsMockModalOpen(false); setNewMockExam({result_type: "マーク", mock_exam_name: "", grade: ""}); fetchData();
     } catch (e) { alert("登録失敗"); }
@@ -192,7 +199,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col border shadow-sm">
+    // カード全体の高さを確保 (min-h-[85vh])
+    <Card className="h-full flex flex-col border shadow-sm min-h-[85vh]">
       <CardHeader className="px-4 py-3 border-b shrink-0 bg-white rounded-t-lg">
         <CardTitle className="text-lg">入試・模試・過去問 管理</CardTitle>
       </CardHeader>
@@ -209,8 +217,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
             </TabsList>
           </div>
 
-          {/* タブコンテンツ: flex-1 で残りの高さを全て使う */}
-          {/* 各コンテンツには "flex-1 flex flex-col overflow-hidden" を適用して中身のスクロールを制御 */}
+          {/* タブコンテンツ */}
           
           {/* === カレンダータブ === */}
           <TabsContent value="calendar" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
@@ -225,14 +232,15 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 </div>
-                {/* カレンダー本体: flex-1 で伸縮、grid-rows-6 で均等配置 */}
+                {/* カレンダー本体: 行数は動的 (5~6行) */}
                 <div className="flex-1 bg-white border rounded-md overflow-hidden flex flex-col">
                     <div className="grid grid-cols-7 border-b bg-gray-50 text-center py-1 text-sm font-medium shrink-0">
                         <div className="text-red-500">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div className="text-blue-500">土</div>
                     </div>
-                    <div className="flex-1 grid grid-cols-7 grid-rows-6">
+                    {/* auto-rows-fr で行数を自動調整しつつ均等に広げる */}
+                    <div className="flex-1 grid grid-cols-7 auto-rows-fr">
                         {calendarDays.map((day, i) => (
-                            <div key={i} className={`border-b border-r p-1 flex flex-col overflow-hidden ${!day ? 'bg-gray-50' : ''} ${i >= 35 ? 'border-b-0' : ''}`}>
+                            <div key={i} className={`border-b border-r p-1 flex flex-col overflow-hidden ${!day ? 'bg-gray-50' : ''}`}>
                                 {day && (
                                     <>
                                         <div className="text-xs font-bold text-gray-500 mb-0.5">{day}</div>
@@ -522,6 +530,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                          <div><label className="text-[10px]">理科②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika2_mark: Number(e.target.value)})} /></div>
                          <div><label className="text-[10px]">地歴公①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_mark: Number(e.target.value)})} /></div>
                          <div><label className="text-[10px]">地歴公②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">理科基礎①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika_kiso1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika_kiso1_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">理科基礎②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika_kiso2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika_kiso2_mark: Number(e.target.value)})} /></div>
                      </div>
                  ) : (
                      <div className="grid grid-cols-3 gap-3">
@@ -562,6 +572,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                             <div className="flex justify-between"><span>理科②</span><span>{selectedMockExam.subject_rika2_mark}</span></div>
                             <div className="flex justify-between border-t pt-1"><span>地歴①</span><span>{selectedMockExam.subject_shakai1_mark}</span></div>
                             <div className="flex justify-between"><span>地歴②</span><span>{selectedMockExam.subject_shakai2_mark}</span></div>
+                            <div className="flex justify-between border-t pt-1"><span>理科基礎①</span><span>{selectedMockExam.subject_rika_kiso1_mark}</span></div>
+                            <div className="flex justify-between"><span>理科基礎②</span><span>{selectedMockExam.subject_rika_kiso2_mark}</span></div>
                         </>
                     ) : (
                         <>
