@@ -41,7 +41,6 @@ interface PastExam {
   total_questions: number;
 }
 
-// 模試: 全科目対応
 interface MockExam {
   id: number;
   mock_exam_name: string;
@@ -82,19 +81,26 @@ const getCalendarDays = (year: number, month: number) => {
   const days: (number | null)[] = [];
   for (let i = 0; i < startDayOfWeek; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
+  
+  // 6週間分(42マス)確保してレイアウトを固定する
+  while (days.length < 42) {
+      days.push(null);
+  }
   return days;
 };
 
 export default function ExamManager({ studentId }: ExamManagerProps) {
   const [activeTab, setActiveTab] = useState("calendar");
 
-  // --- 入試日程 State ---
+  // --- State ---
   const [acceptances, setAcceptances] = useState<Acceptance[]>([]);
+  const [pastExams, setPastExams] = useState<PastExam[]>([]);
+  const [mockExams, setMockExams] = useState<MockExam[]>([]);
+
+  // Modals
   const [isAcceptanceModalOpen, setIsAcceptanceModalOpen] = useState(false);
   const [newAcceptance, setNewAcceptance] = useState<Partial<Acceptance>>({});
 
-  // --- 過去問 State ---
-  const [pastExams, setPastExams] = useState<PastExam[]>([]);
   const [isPastModalOpen, setIsPastModalOpen] = useState(false);
   const [newPastExam, setNewPastExam] = useState<any>({
     date: new Date().toISOString().split('T')[0],
@@ -102,16 +108,13 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
     correct_answers: 0, total_questions: 0, time_required: 0, total_time_allowed: 0
   });
 
-  // --- 模試 State ---
-  const [mockExams, setMockExams] = useState<MockExam[]>([]);
   const [isMockModalOpen, setIsMockModalOpen] = useState(false);
-  const [selectedMockExam, setSelectedMockExam] = useState<MockExam | null>(null); // 詳細表示用
+  const [selectedMockExam, setSelectedMockExam] = useState<MockExam | null>(null);
   const [isMockDetailOpen, setIsMockDetailOpen] = useState(false);
   const [newMockExam, setNewMockExam] = useState<Partial<MockExam>>({
       result_type: "マーク", mock_exam_name: "", grade: ""
   });
 
-  // --- カレンダー State ---
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // --- データ取得 ---
@@ -175,26 +178,28 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
   const calendarDays = getCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
   const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
 
-  const getDayEvents = (day: number) => {
+  const getDayEvents = (day: number | null) => {
+      if (!day) return [];
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const events: {type: string, title: string, color: string}[] = [];
       
       acceptances.forEach(acc => {
-          if (acc.exam_date === dateStr) events.push({type: '試験', title: `${acc.university_name} (${acc.exam_system})`, color: 'bg-red-100 text-red-800'});
-          if (acc.announcement_date === dateStr) events.push({type: '発表', title: `${acc.university_name} 合格発表`, color: 'bg-green-100 text-green-800'});
-          if (acc.procedure_deadline === dateStr) events.push({type: '手続', title: `${acc.university_name} 手続締切`, color: 'bg-yellow-100 text-yellow-800'});
+          if (acc.exam_date === dateStr) events.push({type: '試験', title: `${acc.university_name}`, color: 'bg-red-100 text-red-800 border-red-200'});
+          if (acc.announcement_date === dateStr) events.push({type: '発表', title: `${acc.university_name}`, color: 'bg-green-100 text-green-800 border-green-200'});
+          if (acc.procedure_deadline === dateStr) events.push({type: '手続', title: `${acc.university_name}`, color: 'bg-yellow-100 text-yellow-800 border-yellow-200'});
       });
       return events;
   };
 
   return (
     <Card className="h-full flex flex-col border shadow-sm">
-      <CardHeader className="px-4 py-3 border-b shrink-0">
+      <CardHeader className="px-4 py-3 border-b shrink-0 bg-white rounded-t-lg">
         <CardTitle className="text-lg">入試・模試・過去問 管理</CardTitle>
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-hidden p-0 bg-gray-50/30 flex flex-col">
+      <CardContent className="flex-1 overflow-hidden p-0 bg-gray-50/30 flex flex-col min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          {/* タブヘッダー */}
           <div className="px-4 py-2 bg-white border-b shrink-0">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="calendar"><Calendar className="w-4 h-4 mr-2" />カレンダー</TabsTrigger>
@@ -204,35 +209,37 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-hidden p-4">
-            
-            {/* === カレンダータブ === */}
-            <TabsContent value="calendar" className="h-full m-0 flex flex-col data-[state=active]:flex">
-                <div className="flex items-center justify-between mb-4 bg-white p-2 rounded border">
-                    <Button variant="ghost" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}>
+          {/* タブコンテンツ: flex-1 で残りの高さを全て使う */}
+          {/* 各コンテンツには "flex-1 flex flex-col overflow-hidden" を適用して中身のスクロールを制御 */}
+          
+          {/* === カレンダータブ === */}
+          <TabsContent value="calendar" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
+                <div className="flex items-center justify-between mb-2 bg-white p-2 rounded border shrink-0">
+                    <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}>
                         <ChevronLeft className="w-4 h-4" />
                     </Button>
                     <span className="font-bold text-lg">
                         {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
                     </span>
-                    <Button variant="ghost" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}>
+                    <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}>
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 </div>
-                <div className="flex-1 bg-white border rounded-md overflow-auto">
-                    <div className="grid grid-cols-7 border-b bg-gray-50 text-center py-2 text-sm font-medium">
+                {/* カレンダー本体: flex-1 で伸縮、grid-rows-6 で均等配置 */}
+                <div className="flex-1 bg-white border rounded-md overflow-hidden flex flex-col">
+                    <div className="grid grid-cols-7 border-b bg-gray-50 text-center py-1 text-sm font-medium shrink-0">
                         <div className="text-red-500">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div className="text-blue-500">土</div>
                     </div>
-                    <div className="grid grid-cols-7 auto-rows-fr">
+                    <div className="flex-1 grid grid-cols-7 grid-rows-6">
                         {calendarDays.map((day, i) => (
-                            <div key={i} className={`min-h-[100px] border-b border-r p-1 ${!day ? 'bg-gray-50' : ''}`}>
+                            <div key={i} className={`border-b border-r p-1 flex flex-col overflow-hidden ${!day ? 'bg-gray-50' : ''} ${i >= 35 ? 'border-b-0' : ''}`}>
                                 {day && (
                                     <>
-                                        <div className="text-xs font-bold text-gray-500 mb-1">{day}</div>
-                                        <div className="flex flex-col gap-1">
+                                        <div className="text-xs font-bold text-gray-500 mb-0.5">{day}</div>
+                                        <div className="flex-1 flex flex-col gap-0.5 overflow-y-auto scrollbar-hide">
                                             {getDayEvents(day).map((ev, j) => (
-                                                <div key={j} className={`text-[10px] px-1 py-0.5 rounded border truncate ${ev.color}`}>
-                                                    <span className="font-bold mr-1">[{ev.type}]</span>{ev.title}
+                                                <div key={j} className={`text-[9px] px-1 py-0.5 rounded border truncate ${ev.color} leading-tight`}>
+                                                    <span className="font-bold mr-0.5">[{ev.type}]</span>{ev.title}
                                                 </div>
                                             ))}
                                         </div>
@@ -242,10 +249,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         ))}
                     </div>
                 </div>
-            </TabsContent>
+          </TabsContent>
 
-            {/* === 入試日程タブ === */}
-            <TabsContent value="acceptance" className="h-full m-0 flex flex-col data-[state=active]:flex">
+          {/* === 入試日程タブ === */}
+          <TabsContent value="acceptance" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
                     <Button size="sm" onClick={() => setIsAcceptanceModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 日程を追加
@@ -300,10 +307,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         </TableBody>
                     </Table>
                 </div>
-            </TabsContent>
+          </TabsContent>
 
-            {/* === 過去問タブ === */}
-            <TabsContent value="past_exam" className="h-full m-0 flex flex-col data-[state=active]:flex">
+          {/* === 過去問タブ === */}
+          <TabsContent value="past_exam" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
                     <Button size="sm" onClick={() => setIsPastModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 結果を記録
@@ -360,10 +367,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         </TableBody>
                     </Table>
                 </div>
-            </TabsContent>
+          </TabsContent>
 
-            {/* === 模試タブ === */}
-            <TabsContent value="mock_exam" className="h-full m-0 flex flex-col data-[state=active]:flex">
+          {/* === 模試タブ === */}
+          <TabsContent value="mock_exam" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
                     <Button size="sm" onClick={() => setIsMockModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 模試を追加
@@ -416,16 +423,15 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         </TableBody>
                     </Table>
                 </div>
-            </TabsContent>
+          </TabsContent>
 
-          </div>
         </Tabs>
       </CardContent>
 
       {/* --- モーダル: 入試日程 --- */}
       <Dialog open={isAcceptanceModalOpen} onOpenChange={setIsAcceptanceModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader><DialogTitle>入試日程を追加</DialogTitle></DialogHeader>
+          <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>入試日程を追加</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
                 <Input className="h-8 text-xs" placeholder="大学名" value={newAcceptance.university_name || ''} onChange={e => setNewAcceptance({...newAcceptance, university_name: e.target.value})} />
@@ -444,14 +450,14 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 <Input className="h-8 text-xs" type="date" value={newAcceptance.procedure_deadline || ''} onChange={e => setNewAcceptance({...newAcceptance, procedure_deadline: e.target.value})} /></div>
              </div>
           </div>
-          <DialogFooter><Button onClick={handleAddAcceptance}>登録</Button></DialogFooter>
+          <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddAcceptance}>登録</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* --- モーダル: 過去問 --- */}
       <Dialog open={isPastModalOpen} onOpenChange={setIsPastModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader><DialogTitle>過去問結果</DialogTitle></DialogHeader>
+          <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>過去問結果</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
                 <Input className="h-8 text-xs" type="date" value={newPastExam.date} onChange={e => setNewPastExam({...newPastExam, date: e.target.value})} />
@@ -476,25 +482,29 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 </div>
              </div>
           </div>
-          <DialogFooter><Button onClick={handleAddPastExam}>記録</Button></DialogFooter>
+          <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddPastExam}>記録</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* --- モーダル: 模試登録 (全科目対応) --- */}
       <Dialog open={isMockModalOpen} onOpenChange={setIsMockModalOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>模試結果を追加</DialogTitle></DialogHeader>
+          <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>模試結果を追加</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
-                <Input className="h-8 text-xs" type="date" value={newMockExam.exam_date || ''} onChange={e => setNewMockExam({...newMockExam, exam_date: e.target.value})} />
-                <Input className="h-8 text-xs" placeholder="模試名" value={newMockExam.mock_exam_name || ''} onChange={e => setNewMockExam({...newMockExam, mock_exam_name: e.target.value})} />
+                <div className="space-y-1.5"><label className="text-xs font-medium">実施日</label>
+                <Input className="h-8 text-xs" type="date" value={newMockExam.exam_date || ''} onChange={e => setNewMockExam({...newMockExam, exam_date: e.target.value})} /></div>
+                <div className="space-y-1.5"><label className="text-xs font-medium">模試名</label>
+                <Input className="h-8 text-xs" placeholder="模試名" value={newMockExam.mock_exam_name || ''} onChange={e => setNewMockExam({...newMockExam, mock_exam_name: e.target.value})} /></div>
              </div>
              <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1.5"><label className="text-xs font-medium">形式</label>
                  <Select value={newMockExam.result_type} onValueChange={v => setNewMockExam({...newMockExam, result_type: v})}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="マーク">マーク</SelectItem><SelectItem value="記述">記述</SelectItem></SelectContent>
-                 </Select>
-                 <Input className="h-8 text-xs" placeholder="判定 (A,B..)" value={newMockExam.grade || ''} onChange={e => setNewMockExam({...newMockExam, grade: e.target.value})} />
+                 </Select></div>
+                 <div className="space-y-1.5"><label className="text-xs font-medium">総合判定</label>
+                 <Input className="h-8 text-xs" placeholder="判定 (A,B..)" value={newMockExam.grade || ''} onChange={e => setNewMockExam({...newMockExam, grade: e.target.value})} /></div>
              </div>
 
              <div className="border-t pt-2 mt-2">
@@ -526,18 +536,18 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                  )}
              </div>
           </div>
-          <DialogFooter><Button onClick={handleAddMockExam}>追加</Button></DialogFooter>
+          <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddMockExam}>追加</Button></DialogFooter>
         </DialogContent>
       </Dialog>
       
       {/* --- モーダル: 模試詳細表示 --- */}
       <Dialog open={isMockDetailOpen} onOpenChange={setIsMockDetailOpen}>
         <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader><DialogTitle>{selectedMockExam?.mock_exam_name} 結果</DialogTitle></DialogHeader>
-            <div className="py-4">
+            <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>{selectedMockExam?.mock_exam_name} 結果</DialogTitle></DialogHeader>
+            <div className="py-2">
                 <div className="flex justify-between mb-4 border-b pb-2">
                     <span className="font-bold">{selectedMockExam?.result_type}</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 rounded">{selectedMockExam?.grade}判定</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 rounded text-sm font-bold flex items-center">{selectedMockExam?.grade}判定</span>
                 </div>
                 <div className="space-y-2 text-sm">
                     {selectedMockExam?.result_type === "マーク" ? (
