@@ -5,7 +5,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import DashboardLayout from './DashboardLayout';
 import Dashboard from './pages/DashboardHome';
-import StudentDetail from './pages/StudentDetail';
 import Admin from './pages/Admin';
 import PastExam from './pages/PastExam';
 import RootTable from './pages/RootTable';
@@ -29,9 +28,6 @@ const App: React.FC = () => {
           }>
             {/* ダッシュボードホーム */}
             <Route index element={<Dashboard />} />
-            
-            {/* 生徒詳細ページ */}
-            <Route path="students/:id" element={<StudentDetail />} />
             
             {/* 各機能ページ */}
             <Route path="past-exam" element={<PastExam />} />
