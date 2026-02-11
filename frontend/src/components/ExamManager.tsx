@@ -41,38 +41,37 @@ interface PastExam {
   total_questions: number;
 }
 
-// 模試: 全科目対応 (models.pyの定義に準拠)
 interface MockExam {
   id: number;
   mock_exam_name: string;
   exam_date: string;
   grade: string;
   result_type: string;
-  mock_exam_format: string; // result_typeと同じか、詳細な形式
+  mock_exam_format: string;
   round: string;
   
   // 記述式
-  subject_kokugo_desc?: number;
-  subject_math_desc?: number;
-  subject_english_desc?: number;
-  subject_rika1_desc?: number;
-  subject_rika2_desc?: number;
-  subject_shakai1_desc?: number;
-  subject_shakai2_desc?: number;
+  subject_kokugo_desc?: string | number;
+  subject_math_desc?: string | number;
+  subject_english_desc?: string | number;
+  subject_rika1_desc?: string | number;
+  subject_rika2_desc?: string | number;
+  subject_shakai1_desc?: string | number;
+  subject_shakai2_desc?: string | number;
   
   // マーク式
-  subject_kokugo_mark?: number;
-  subject_math1a_mark?: number;
-  subject_math2bc_mark?: number;
-  subject_english_r_mark?: number;
-  subject_english_l_mark?: number;
-  subject_rika1_mark?: number;
-  subject_rika2_mark?: number;
-  subject_shakai1_mark?: number;
-  subject_shakai2_mark?: number;
-  subject_rika_kiso1_mark?: number;
-  subject_rika_kiso2_mark?: number;
-  subject_info_mark?: number;
+  subject_kokugo_mark?: string | number;
+  subject_math1a_mark?: string | number;
+  subject_math2bc_mark?: string | number;
+  subject_english_r_mark?: string | number;
+  subject_english_l_mark?: string | number;
+  subject_rika1_mark?: string | number;
+  subject_rika2_mark?: string | number;
+  subject_shakai1_mark?: string | number;
+  subject_shakai2_mark?: string | number;
+  subject_rika_kiso1_mark?: string | number;
+  subject_rika_kiso2_mark?: string | number;
+  subject_info_mark?: string | number;
 }
 
 // --- カレンダー用ユーティリティ ---
@@ -86,8 +85,7 @@ const getCalendarDays = (year: number, month: number) => {
   for (let i = 0; i < startDayOfWeek; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
   
-  // 週の残りを埋める (オプション)
-  while (days.length % 7 !== 0) {
+  while (days.length < 42) {
       days.push(null);
   }
   return days;
@@ -167,13 +165,44 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
 
   const handleAddMockExam = async () => {
     try {
-      await api.post('/exams/mock', { 
-          student_id: studentId, 
-          ...newMockExam, 
-          mock_exam_format: newMockExam.result_type, // formatもセット
-          round: newMockExam.round || "1" 
-      });
-      setIsMockModalOpen(false); setNewMockExam({result_type: "マーク", mock_exam_name: "", grade: ""}); fetchData();
+      const toNum = (val: string | number | undefined) => {
+          if (val === "" || val === undefined || val === null) return null;
+          return Number(val);
+      };
+
+      const payload = {
+          student_id: studentId,
+          ...newMockExam,
+          mock_exam_format: newMockExam.result_type,
+          round: newMockExam.round || "1",
+          grade: "-", // ★修正: 判定入力欄削除に伴い、ダミー値を送信
+          
+          subject_kokugo_desc: toNum(newMockExam.subject_kokugo_desc),
+          subject_math_desc: toNum(newMockExam.subject_math_desc),
+          subject_english_desc: toNum(newMockExam.subject_english_desc),
+          subject_rika1_desc: toNum(newMockExam.subject_rika1_desc),
+          subject_rika2_desc: toNum(newMockExam.subject_rika2_desc),
+          subject_shakai1_desc: toNum(newMockExam.subject_shakai1_desc),
+          subject_shakai2_desc: toNum(newMockExam.subject_shakai2_desc),
+          
+          subject_kokugo_mark: toNum(newMockExam.subject_kokugo_mark),
+          subject_math1a_mark: toNum(newMockExam.subject_math1a_mark),
+          subject_math2bc_mark: toNum(newMockExam.subject_math2bc_mark),
+          subject_english_r_mark: toNum(newMockExam.subject_english_r_mark),
+          subject_english_l_mark: toNum(newMockExam.subject_english_l_mark),
+          subject_rika1_mark: toNum(newMockExam.subject_rika1_mark),
+          subject_rika2_mark: toNum(newMockExam.subject_rika2_mark),
+          subject_shakai1_mark: toNum(newMockExam.subject_shakai1_mark),
+          subject_shakai2_mark: toNum(newMockExam.subject_shakai2_mark),
+          subject_rika_kiso1_mark: toNum(newMockExam.subject_rika_kiso1_mark),
+          subject_rika_kiso2_mark: toNum(newMockExam.subject_rika_kiso2_mark),
+          subject_info_mark: toNum(newMockExam.subject_info_mark),
+      };
+
+      await api.post('/exams/mock', payload);
+      setIsMockModalOpen(false); 
+      setNewMockExam({result_type: "マーク", mock_exam_name: "", grade: ""}); 
+      fetchData();
     } catch (e) { alert("登録失敗"); }
   };
   const handleDeleteMockExam = async (id: number) => {
@@ -191,6 +220,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
       const events: {type: string, title: string, color: string}[] = [];
       
       acceptances.forEach(acc => {
+          if (acc.application_deadline === dateStr) events.push({type: '願書', title: `${acc.university_name}`, color: 'bg-purple-100 text-purple-800 border-purple-200'});
           if (acc.exam_date === dateStr) events.push({type: '試験', title: `${acc.university_name}`, color: 'bg-red-100 text-red-800 border-red-200'});
           if (acc.announcement_date === dateStr) events.push({type: '発表', title: `${acc.university_name}`, color: 'bg-green-100 text-green-800 border-green-200'});
           if (acc.procedure_deadline === dateStr) events.push({type: '手続', title: `${acc.university_name}`, color: 'bg-yellow-100 text-yellow-800 border-yellow-200'});
@@ -198,16 +228,16 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
       return events;
   };
 
+  const DetailRow = ({ label, value }: { label: string, value?: string | number }) => {
+      if (value === undefined || value === null || value === "") return null;
+      return <div className="flex justify-between border-b border-gray-100 py-1"><span>{label}</span><span className="font-medium">{value}</span></div>;
+  };
+
   return (
-    // カード全体の高さを確保 (min-h-[85vh])
-    <Card className="h-full flex flex-col border shadow-sm min-h-[85vh]">
-      <CardHeader className="px-4 py-3 border-b shrink-0 bg-white rounded-t-lg">
-        <CardTitle className="text-lg">入試・模試・過去問 管理</CardTitle>
-      </CardHeader>
+    <Card className="h-full flex flex-col border shadow-sm min-h-[90vh]">
       
       <CardContent className="flex-1 overflow-hidden p-0 bg-gray-50/30 flex flex-col min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          {/* タブヘッダー */}
           <div className="px-4 py-2 bg-white border-b shrink-0">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="calendar"><Calendar className="w-4 h-4 mr-2" />カレンダー</TabsTrigger>
@@ -217,8 +247,6 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
             </TabsList>
           </div>
 
-          {/* タブコンテンツ */}
-          
           {/* === カレンダータブ === */}
           <TabsContent value="calendar" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex items-center justify-between mb-2 bg-white p-2 rounded border shrink-0">
@@ -232,15 +260,13 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 </div>
-                {/* カレンダー本体: 行数は動的 (5~6行) */}
                 <div className="flex-1 bg-white border rounded-md overflow-hidden flex flex-col">
                     <div className="grid grid-cols-7 border-b bg-gray-50 text-center py-1 text-sm font-medium shrink-0">
                         <div className="text-red-500">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div className="text-blue-500">土</div>
                     </div>
-                    {/* auto-rows-fr で行数を自動調整しつつ均等に広げる */}
-                    <div className="flex-1 grid grid-cols-7 auto-rows-fr">
+                    <div className="flex-1 grid grid-cols-7 grid-rows-6">
                         {calendarDays.map((day, i) => (
-                            <div key={i} className={`border-b border-r p-1 flex flex-col overflow-hidden ${!day ? 'bg-gray-50' : ''}`}>
+                            <div key={i} className={`border-b border-r p-1 flex flex-col overflow-hidden ${!day ? 'bg-gray-50' : ''} ${(i+1)%7===0 ? 'border-r-0' : ''}`}>
                                 {day && (
                                     <>
                                         <div className="text-xs font-bold text-gray-500 mb-0.5">{day}</div>
@@ -270,6 +296,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>願書〆切</TableHead>
                                 <TableHead>試験日</TableHead>
                                 <TableHead>大学・学部</TableHead>
                                 <TableHead>発表日</TableHead>
@@ -281,6 +308,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                         <TableBody>
                             {acceptances.map((item) => (
                                 <TableRow key={item.id}>
+                                    <TableCell className="text-xs whitespace-nowrap text-purple-600 font-medium">{item.application_deadline}</TableCell>
                                     <TableCell className="text-xs whitespace-nowrap">{item.exam_date}</TableCell>
                                     <TableCell>
                                         <div className="text-sm font-bold">{item.university_name}</div>
@@ -311,7 +339,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {acceptances.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">登録がありません</TableCell></TableRow>}
+                            {acceptances.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">登録がありません</TableCell></TableRow>}
                         </TableBody>
                     </Table>
                 </div>
@@ -391,9 +419,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                 <TableHead>実施日</TableHead>
                                 <TableHead>模試名</TableHead>
                                 <TableHead>形式</TableHead>
-                                <TableHead>判定</TableHead>
-                                <TableHead>主要3教科(英数国)</TableHead>
-                                <TableHead className="w-20">操作</TableHead>
+                                <TableHead className="w-20">詳細</TableHead>
+                                <TableHead className="w-10">削除</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -403,31 +430,18 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                     <TableCell className="font-medium text-sm">{item.mock_exam_name}</TableCell>
                                     <TableCell className="text-xs">{item.result_type}</TableCell>
                                     <TableCell>
-                                        <span className={`font-bold px-2 py-0.5 rounded ${
-                                            item.grade === "A" ? "bg-green-100 text-green-700" :
-                                            item.grade === "E" ? "bg-red-100 text-red-700" : "bg-gray-100"
-                                        }`}>
-                                            {item.grade}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-xs">
-                                        <div>英: {item.result_type === "マーク" ? item.subject_english_r_mark : item.subject_english_desc}</div>
-                                        <div>数: {item.result_type === "マーク" ? item.subject_math1a_mark : item.subject_math_desc}</div>
-                                        <div>国: {item.result_type === "マーク" ? item.subject_kokugo_mark : item.subject_kokugo_desc}</div>
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-blue-500" onClick={() => { setSelectedMockExam(item); setIsMockDetailOpen(true); }}>
+                                            <Eye className="w-4 h-4" />
+                                        </Button>
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex items-center gap-1">
-                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-blue-500" onClick={() => { setSelectedMockExam(item); setIsMockDetailOpen(true); }}>
-                                                <Eye className="w-4 h-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-red-500" onClick={() => handleDeleteMockExam(item.id)}>
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-red-500" onClick={() => handleDeleteMockExam(item.id)}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {mockExams.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">記録がありません</TableCell></TableRow>}
+                            {mockExams.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">記録がありません</TableCell></TableRow>}
                         </TableBody>
                     </Table>
                 </div>
@@ -449,7 +463,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 <Input className="h-8 text-xs" placeholder="学科" value={newAcceptance.department_name || ''} onChange={e => setNewAcceptance({...newAcceptance, department_name: e.target.value})} />
                 <Input className="h-8 text-xs" placeholder="入試方式" value={newAcceptance.exam_system || ''} onChange={e => setNewAcceptance({...newAcceptance, exam_system: e.target.value})} />
              </div>
-             <div className="grid grid-cols-3 gap-2">
+             {/* 日付入力群: 願書〆切を追加 */}
+             <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1"><label className="text-[10px]">願書〆切</label>
+                <Input className="h-8 text-xs" type="date" value={newAcceptance.application_deadline || ''} onChange={e => setNewAcceptance({...newAcceptance, application_deadline: e.target.value})} /></div>
                 <div className="space-y-1"><label className="text-[10px]">試験日</label>
                 <Input className="h-8 text-xs" type="date" value={newAcceptance.exam_date || ''} onChange={e => setNewAcceptance({...newAcceptance, exam_date: e.target.value})} /></div>
                 <div className="space-y-1"><label className="text-[10px]">発表日</label>
@@ -462,7 +479,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
         </DialogContent>
       </Dialog>
 
-      {/* --- モーダル: 過去問 --- */}
+      {/* --- モーダル: 過去問 (変更なし) --- */}
       <Dialog open={isPastModalOpen} onOpenChange={setIsPastModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>過去問結果</DialogTitle></DialogHeader>
@@ -494,9 +511,9 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
         </DialogContent>
       </Dialog>
 
-      {/* --- モーダル: 模試登録 (全科目対応) --- */}
+      {/* --- モーダル: 模試登録 (判定削除・String対応) --- */}
       <Dialog open={isMockModalOpen} onOpenChange={setIsMockModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>模試結果を追加</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
@@ -506,86 +523,97 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 <Input className="h-8 text-xs" placeholder="模試名" value={newMockExam.mock_exam_name || ''} onChange={e => setNewMockExam({...newMockExam, mock_exam_name: e.target.value})} /></div>
              </div>
              <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5"><label className="text-xs font-medium">形式</label>
+                 <div className="space-y-1.5"><label className="text-xs font-medium">形式 (主)</label>
                  <Select value={newMockExam.result_type} onValueChange={v => setNewMockExam({...newMockExam, result_type: v})}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="マーク">マーク</SelectItem><SelectItem value="記述">記述</SelectItem></SelectContent>
                  </Select></div>
-                 <div className="space-y-1.5"><label className="text-xs font-medium">総合判定</label>
-                 <Input className="h-8 text-xs" placeholder="判定 (A,B..)" value={newMockExam.grade || ''} onChange={e => setNewMockExam({...newMockExam, grade: e.target.value})} /></div>
+                 {/* 判定入力欄は削除 */}
              </div>
 
-             <div className="border-t pt-2 mt-2">
-                 <label className="text-sm font-bold block mb-2">{newMockExam.result_type}科目 得点入力</label>
-                 
-                 {newMockExam.result_type === "マーク" ? (
-                     <div className="grid grid-cols-3 gap-3">
-                         <div><label className="text-[10px]">英語R</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_r_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_english_r_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">英語L</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_l_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_english_l_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">数IA</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math1a_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_math1a_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">数IIBC</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math2bc_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_math2bc_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">国語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_kokugo_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">情報</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_info_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_info_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">理科①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika1_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">理科②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika2_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">地歴公①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">地歴公②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">理科基礎①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika_kiso1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika_kiso1_mark: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">理科基礎②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika_kiso2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika_kiso2_mark: Number(e.target.value)})} /></div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2 border-t pt-2">
+                 {/* マーク式 (点数はstringで入力可能) */}
+                 <div className="space-y-2">
+                     <label className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded block">マーク式 得点</label>
+                     <div className="grid grid-cols-2 gap-2">
+                         <div><label className="text-[10px]">英語R</label><Input className="h-7 text-xs" value={newMockExam.subject_english_r_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_english_r_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">英語L</label><Input className="h-7 text-xs" value={newMockExam.subject_english_l_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_english_l_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">数IA</label><Input className="h-7 text-xs" value={newMockExam.subject_math1a_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_math1a_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">数IIBC</label><Input className="h-7 text-xs" value={newMockExam.subject_math2bc_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_math2bc_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">国語</label><Input className="h-7 text-xs" value={newMockExam.subject_kokugo_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">情報</label><Input className="h-7 text-xs" value={newMockExam.subject_info_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_info_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">理科①</label><Input className="h-7 text-xs" value={newMockExam.subject_rika1_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_rika1_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">理科②</label><Input className="h-7 text-xs" value={newMockExam.subject_rika2_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_rika2_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">理科基礎①</label><Input className="h-7 text-xs" value={newMockExam.subject_rika_kiso1_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_rika_kiso1_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">理科基礎②</label><Input className="h-7 text-xs" value={newMockExam.subject_rika_kiso2_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_rika_kiso2_mark: e.target.value})} /></div>
+                         {/* ラベル変更: 地歴公 -> 社会 */}
+                         <div><label className="text-[10px]">社会①</label><Input className="h-7 text-xs" value={newMockExam.subject_shakai1_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_mark: e.target.value})} /></div>
+                         <div><label className="text-[10px]">社会②</label><Input className="h-7 text-xs" value={newMockExam.subject_shakai2_mark || ''} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_mark: e.target.value})} /></div>
                      </div>
-                 ) : (
-                     <div className="grid grid-cols-3 gap-3">
-                         <div><label className="text-[10px]">英語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_english_desc: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">数学</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_math_desc: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">国語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_kokugo_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_desc: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">理科①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika1_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika1_desc: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">理科②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika2_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika2_desc: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">地歴公①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai1_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_desc: Number(e.target.value)})} /></div>
-                         <div><label className="text-[10px]">地歴公②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai2_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_desc: Number(e.target.value)})} /></div>
+                 </div>
+
+                 {/* 記述式 */}
+                 <div className="space-y-2">
+                     <label className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded block">記述式 得点</label>
+                     <div className="grid grid-cols-2 gap-2">
+                         <div><label className="text-[10px]">英語</label><Input className="h-7 text-xs" value={newMockExam.subject_english_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_english_desc: e.target.value})} /></div>
+                         <div><label className="text-[10px]">数学</label><Input className="h-7 text-xs" value={newMockExam.subject_math_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_math_desc: e.target.value})} /></div>
+                         <div><label className="text-[10px]">国語</label><Input className="h-7 text-xs" value={newMockExam.subject_kokugo_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_desc: e.target.value})} /></div>
+                         <div><label className="text-[10px]">理科①</label><Input className="h-7 text-xs" value={newMockExam.subject_rika1_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_rika1_desc: e.target.value})} /></div>
+                         <div><label className="text-[10px]">理科②</label><Input className="h-7 text-xs" value={newMockExam.subject_rika2_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_rika2_desc: e.target.value})} /></div>
+                         <div><label className="text-[10px]">社会①</label><Input className="h-7 text-xs" value={newMockExam.subject_shakai1_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_desc: e.target.value})} /></div>
+                         <div><label className="text-[10px]">社会②</label><Input className="h-7 text-xs" value={newMockExam.subject_shakai2_desc || ''} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_desc: e.target.value})} /></div>
                      </div>
-                 )}
+                 </div>
              </div>
           </div>
           <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddMockExam}>追加</Button></DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* --- モーダル: 模試詳細表示 --- */}
+      {/* --- モーダル: 模試詳細表示 (判定表示削除) --- */}
       <Dialog open={isMockDetailOpen} onOpenChange={setIsMockDetailOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[500px]">
             <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>{selectedMockExam?.mock_exam_name} 結果</DialogTitle></DialogHeader>
-            <div className="py-2">
+            <div className="py-2 overflow-y-auto max-h-[60vh]">
                 <div className="flex justify-between mb-4 border-b pb-2">
-                    <span className="font-bold">{selectedMockExam?.result_type}</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 rounded text-sm font-bold flex items-center">{selectedMockExam?.grade}判定</span>
+                    <span className="font-bold">主: {selectedMockExam?.result_type}</span>
+                    {/* 判定表示を削除 */}
                 </div>
-                <div className="space-y-2 text-sm">
-                    {selectedMockExam?.result_type === "マーク" ? (
-                        <>
-                            <div className="flex justify-between"><span>英語R</span><span>{selectedMockExam.subject_english_r_mark}</span></div>
-                            <div className="flex justify-between"><span>英語L</span><span>{selectedMockExam.subject_english_l_mark}</span></div>
-                            <div className="flex justify-between"><span>数IA</span><span>{selectedMockExam.subject_math1a_mark}</span></div>
-                            <div className="flex justify-between"><span>数IIBC</span><span>{selectedMockExam.subject_math2bc_mark}</span></div>
-                            <div className="flex justify-between"><span>国語</span><span>{selectedMockExam.subject_kokugo_mark}</span></div>
-                            <div className="flex justify-between"><span>情報</span><span>{selectedMockExam.subject_info_mark}</span></div>
-                            <div className="flex justify-between border-t pt-1"><span>理科①</span><span>{selectedMockExam.subject_rika1_mark}</span></div>
-                            <div className="flex justify-between"><span>理科②</span><span>{selectedMockExam.subject_rika2_mark}</span></div>
-                            <div className="flex justify-between border-t pt-1"><span>地歴①</span><span>{selectedMockExam.subject_shakai1_mark}</span></div>
-                            <div className="flex justify-between"><span>地歴②</span><span>{selectedMockExam.subject_shakai2_mark}</span></div>
-                            <div className="flex justify-between border-t pt-1"><span>理科基礎①</span><span>{selectedMockExam.subject_rika_kiso1_mark}</span></div>
-                            <div className="flex justify-between"><span>理科基礎②</span><span>{selectedMockExam.subject_rika_kiso2_mark}</span></div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="flex justify-between"><span>英語</span><span>{selectedMockExam?.subject_english_desc}</span></div>
-                            <div className="flex justify-between"><span>数学</span><span>{selectedMockExam?.subject_math_desc}</span></div>
-                            <div className="flex justify-between"><span>国語</span><span>{selectedMockExam?.subject_kokugo_desc}</span></div>
-                            <div className="flex justify-between border-t pt-1"><span>理科①</span><span>{selectedMockExam?.subject_rika1_desc}</span></div>
-                            <div className="flex justify-between"><span>理科②</span><span>{selectedMockExam?.subject_rika2_desc}</span></div>
-                            <div className="flex justify-between border-t pt-1"><span>地歴①</span><span>{selectedMockExam?.subject_shakai1_desc}</span></div>
-                            <div className="flex justify-between"><span>地歴②</span><span>{selectedMockExam?.subject_shakai2_desc}</span></div>
-                        </>
-                    )}
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    {/* マーク式結果 */}
+                    <div>
+                        <div className="font-bold mb-2 text-blue-700">マーク式</div>
+                        <div className="space-y-1">
+                            <DetailRow label="英R" value={selectedMockExam?.subject_english_r_mark} />
+                            <DetailRow label="英L" value={selectedMockExam?.subject_english_l_mark} />
+                            <DetailRow label="数IA" value={selectedMockExam?.subject_math1a_mark} />
+                            <DetailRow label="数IIBC" value={selectedMockExam?.subject_math2bc_mark} />
+                            <DetailRow label="国語" value={selectedMockExam?.subject_kokugo_mark} />
+                            <DetailRow label="情報" value={selectedMockExam?.subject_info_mark} />
+                            <DetailRow label="理科①" value={selectedMockExam?.subject_rika1_mark} />
+                            <DetailRow label="理科②" value={selectedMockExam?.subject_rika2_mark} />
+                            <DetailRow label="理基①" value={selectedMockExam?.subject_rika_kiso1_mark} />
+                            <DetailRow label="理基②" value={selectedMockExam?.subject_rika_kiso2_mark} />
+                            <DetailRow label="社会①" value={selectedMockExam?.subject_shakai1_mark} />
+                            <DetailRow label="社会②" value={selectedMockExam?.subject_shakai2_mark} />
+                        </div>
+                    </div>
+
+                    {/* 記述式結果 */}
+                    <div>
+                        <div className="font-bold mb-2 text-purple-700">記述式</div>
+                        <div className="space-y-1">
+                            <DetailRow label="英語" value={selectedMockExam?.subject_english_desc} />
+                            <DetailRow label="数学" value={selectedMockExam?.subject_math_desc} />
+                            <DetailRow label="国語" value={selectedMockExam?.subject_kokugo_desc} />
+                            <DetailRow label="理科①" value={selectedMockExam?.subject_rika1_desc} />
+                            <DetailRow label="理科②" value={selectedMockExam?.subject_rika2_desc} />
+                            <DetailRow label="社会①" value={selectedMockExam?.subject_shakai1_desc} />
+                            <DetailRow label="社会②" value={selectedMockExam?.subject_shakai2_desc} />
+                        </div>
+                    </div>
                 </div>
             </div>
         </DialogContent>
