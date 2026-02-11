@@ -35,7 +35,7 @@ class DashboardData(BaseModel):
 
 # --- Endpoints ---
 
-# ★追加: フロントエンドのトップページ用エンドポイント
+# ★修正: エラーの原因となっていた student.eiken_score の参照を削除
 @router.get("/{student_id}", response_model=DashboardData)
 def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     # 1. 生徒存在確認
@@ -76,9 +76,8 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
         eiken_str = f"{latest_eiken.grade} {latest_eiken.result}"
         if latest_eiken.cse_score:
             eiken_str += f" / CSE {latest_eiken.cse_score}"
-    elif student.eiken_score:
-        # Userモデルに直接文字列が入っている場合のフォールバック
-        eiken_str = student.eiken_score
+    
+    # ★修正: ここにあった `elif student.eiken_score:` のブロックを削除しました
 
     return {
         "student_id": student.id,
@@ -282,3 +281,4 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     session.delete(progress_item)
     session.commit()
     return {"message": "Deleted successfully"}
+    
