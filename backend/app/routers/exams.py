@@ -8,9 +8,8 @@ from app.models.models import UniversityAcceptance, PastExamResult, MockExamResu
 
 router = APIRouter()
 
-# --- Pydantic Models (リクエストボディ用) ---
+# --- Pydantic Models ---
 
-# 1. 入試日程用
 class AcceptanceCreate(BaseModel):
     student_id: int
     university_name: str
@@ -26,7 +25,6 @@ class AcceptanceCreate(BaseModel):
 class AcceptanceUpdate(BaseModel):
     result: str
 
-# 2. 過去問結果用
 class PastExamCreate(BaseModel):
     student_id: int
     date: str
@@ -40,7 +38,7 @@ class PastExamCreate(BaseModel):
     correct_answers: Optional[int] = None
     total_questions: Optional[int] = None
 
-# 3. 模試結果用
+# ★修正: 全科目に対応したスキーマ
 class MockExamCreate(BaseModel):
     student_id: int
     result_type: str
@@ -50,7 +48,7 @@ class MockExamCreate(BaseModel):
     round: str
     exam_date: Optional[date] = None
     
-    # 記述式スコア
+    # 記述式
     subject_kokugo_desc: Optional[int] = None
     subject_math_desc: Optional[int] = None
     subject_english_desc: Optional[int] = None
@@ -59,7 +57,7 @@ class MockExamCreate(BaseModel):
     subject_shakai1_desc: Optional[int] = None
     subject_shakai2_desc: Optional[int] = None
     
-    # マーク式スコア
+    # マーク式
     subject_kokugo_mark: Optional[int] = None
     subject_math1a_mark: Optional[int] = None
     subject_math2bc_mark: Optional[int] = None
@@ -74,8 +72,8 @@ class MockExamCreate(BaseModel):
     subject_info_mark: Optional[int] = None
 
 # --- API Endpoints ---
+# (以下、変更なし。get_acceptances, create_acceptance, update, delete等の既存処理)
 
-# === 1. 入試日程 (UniversityAcceptance) ===
 @router.get("/acceptance/{student_id}")
 def get_acceptances(student_id: int, session: Session = Depends(get_db)):
     return session.query(UniversityAcceptance).filter(
@@ -107,8 +105,6 @@ def delete_acceptance(row_id: int, session: Session = Depends(get_db)):
         session.commit()
     return {"message": "deleted"}
 
-
-# === 2. 過去問結果 (PastExamResult) ===
 @router.get("/pastexam/{student_id}")
 def get_past_exams(student_id: int, session: Session = Depends(get_db)):
     return session.query(PastExamResult).filter(
@@ -131,8 +127,6 @@ def delete_past_exam(row_id: int, session: Session = Depends(get_db)):
         session.commit()
     return {"message": "deleted"}
 
-
-# === 3. 模試結果 (MockExamResult) ===
 @router.get("/mock/{student_id}")
 def get_mock_exams(student_id: int, session: Session = Depends(get_db)):
     return session.query(MockExamResult).filter(
