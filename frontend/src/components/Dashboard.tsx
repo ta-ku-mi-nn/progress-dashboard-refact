@@ -8,6 +8,10 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Printer, Edit2, Clock, Award } from 'lucide-react';
 
+// ★重要: 分割されていたコンポーネントをインポート
+import ProgressChart from './ProgressChart';
+import ProgressList from './ProgressList';
+
 // 型定義
 interface Student {
   id: number;
@@ -17,11 +21,13 @@ interface Student {
 interface DashboardData {
   total_study_time: number;
   eiken_score?: string;
-  // 必要に応じて他のプロパティを追加
+  progress_rate?: number;
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
+  
+  // State
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
@@ -53,7 +59,7 @@ export default function Dashboard() {
     init();
   }, [user]);
 
-  // 2. ダッシュボードデータ取得
+  // 2. ダッシュボード基本データ取得 (KPI用)
   const fetchDashboardData = async () => {
     if (!selectedStudentId) return;
     try {
@@ -86,6 +92,7 @@ export default function Dashboard() {
   };
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
+  if (!selectedStudentId) return <div className="p-8 text-center">生徒が選択されていません</div>;
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -110,8 +117,9 @@ export default function Dashboard() {
       </div>
 
       {/* メインコンテンツエリア */}
-      <div className="flex-1 overflow-y-auto space-y-4 print:overflow-visible">
-        {/* KPIカード */}
+      <div className="flex-1 overflow-y-auto space-y-6 print:overflow-visible">
+        
+        {/* KPIカード (総学習時間 & 英検) */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -137,22 +145,18 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+
+           {/* 必要に応じて他のKPIカード (進捗率など) */}
         </div>
 
-        {/* グラフエリア等 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
-                <CardHeader><CardTitle>学習推移</CardTitle></CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center bg-gray-50 text-muted-foreground">
-                    グラフコンポーネント
-                </CardContent>
-            </Card>
-            <Card className="col-span-3">
-                <CardHeader><CardTitle>最近の活動</CardTitle></CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center bg-gray-50 text-muted-foreground">
-                    アクティビティリスト
-                </CardContent>
-            </Card>
+        {/* ★ここに元のグラフコンポーネントを配置 */}
+        <div className="w-full">
+            <ProgressChart studentId={selectedStudentId} />
+        </div>
+
+        {/* ★ここに元のリストコンポーネントを配置 */}
+        <div className="w-full">
+            <ProgressList studentId={selectedStudentId} />
         </div>
       </div>
 
