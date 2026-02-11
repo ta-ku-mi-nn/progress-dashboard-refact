@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Plus, Trash2, Calendar, FileText, BarChart2, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Plus, Trash2, Calendar, FileText, BarChart2, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Printer } from 'lucide-react';
 import api from '../lib/api';
 
 interface ExamManagerProps {
@@ -211,6 +211,9 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
     if (!confirm("削除しますか？")) return;
     try { await api.delete(`/exams/mock/${id}`); fetchData(); } catch (e) { alert("削除失敗"); }
   };
+  const handlePrint = () => {
+    window.print();
+  };
 
   // --- カレンダー描画用 ---
   const calendarDays = getCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
@@ -235,6 +238,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
       return <div className="flex justify-between border-b border-gray-100 py-1"><span>{label}</span><span className="font-medium">{value}</span></div>;
   };
 
+  
+
   return (
     <Card className="h-full flex flex-col border shadow-sm min-h-[90vh]">
       
@@ -253,6 +258,9 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
           {/* === 過去問タブ (1番目) === */}
           <TabsContent value="past_exam" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                        <Printer className="w-4 h-4 mr-1" /> 印刷
+                    </Button>
                     <Button size="sm" onClick={() => setIsPastModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 結果を記録
                     </Button>
@@ -313,6 +321,9 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
           {/* === 模試タブ (2番目) === */}
           <TabsContent value="mock_exam" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                        <Printer className="w-4 h-4 mr-1" /> 印刷
+                    </Button>
                     <Button size="sm" onClick={() => setIsMockModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 模試を追加
                     </Button>
@@ -355,6 +366,9 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
           {/* === 入試日程タブ (3番目) === */}
           <TabsContent value="acceptance" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                        <Printer className="w-4 h-4 mr-1" /> 印刷
+                    </Button>
                     <Button size="sm" onClick={() => setIsAcceptanceModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 日程を追加
                     </Button>
@@ -421,6 +435,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                     <span className="font-bold text-lg">
                         {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
                     </span>
+                    {/* ★追加: 印刷ボタン */}
+                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                        <Printer className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}>
                         <ChevronRight className="w-4 h-4" />
                     </Button>
