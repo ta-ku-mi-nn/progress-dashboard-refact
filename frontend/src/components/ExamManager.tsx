@@ -237,9 +237,6 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
 
   return (
     <Card className="h-full flex flex-col border shadow-sm min-h-[90vh]">
-      <CardHeader className="px-4 py-3 border-b shrink-0 bg-white rounded-t-lg">
-        <CardTitle className="text-lg">入試・模試・過去問 管理</CardTitle>
-      </CardHeader>
       
       <CardContent className="flex-1 overflow-hidden p-0 bg-gray-50/30 flex flex-col min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">

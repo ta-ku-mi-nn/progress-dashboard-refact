@@ -11,7 +11,7 @@ router = APIRouter()
 # レスポンス用モデル (ファイルの中身は含めない)
 class RootTableMeta(BaseModel):
     id: int
-    filename: string
+    filename: str
     subject: Optional[str]
     level: Optional[str]
     academic_year: Optional[int]
