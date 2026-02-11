@@ -16,7 +16,7 @@ interface RouteFile {
   uploaded_at: string;
 }
 
-// Props: 生徒IDは今回は使いませんが、共通I/Fとして残しておきます
+// Props
 interface RouteManagerProps {
   studentId: number; 
 }
@@ -28,6 +28,7 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
   // フィルタ用State
   const [filterSubject, setFilterSubject] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
+  const [filterYear, setFilterYear] = useState(""); // ★追加: 年度フィルタ
 
   // データ取得
   const fetchData = async () => {
@@ -50,18 +51,16 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
   const handleDownload = async (file: RouteFile) => {
     try {
       const response = await api.get(`/routes/download/${file.id}`, {
-        responseType: 'blob', // バイナリデータとして受け取る
+        responseType: 'blob',
       });
       
-      // ブラウザでダウンロードリンクを作成してクリックさせる
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', file.filename); // ファイル名を指定
+      link.setAttribute('download', file.filename);
       document.body.appendChild(link);
       link.click();
       
-      // クリーンアップ
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
@@ -74,12 +73,16 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
   const filteredFiles = files.filter(f => {
       const matchSubj = filterSubject === "" || (f.subject && f.subject.includes(filterSubject));
       const matchLevel = filterLevel === "" || (f.level && f.level.includes(filterLevel));
-      return matchSubj && matchLevel;
+      // ★追加: 年度フィルタ (数値->文字列変換して比較)
+      const matchYear = filterYear === "" || (f.academic_year && String(f.academic_year) === filterYear);
+      return matchSubj && matchLevel && matchYear;
   });
 
-  // ユニークな科目・レベルのリストを作成（セレクトボックス用）
+  // ユニークなリストを作成（セレクトボックス用）
   const subjects = Array.from(new Set(files.map(f => f.subject).filter(Boolean)));
   const levels = Array.from(new Set(files.map(f => f.level).filter(Boolean)));
+  // ★追加: 年度リスト (降順ソート)
+  const years = Array.from(new Set(files.map(f => f.academic_year).filter(Boolean))).sort((a, b) => b - a);
 
   return (
     <Card className="h-full flex flex-col border shadow-sm min-h-[90vh]">
@@ -95,7 +98,7 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
       
       <CardContent className="flex-1 overflow-hidden p-4 bg-gray-50/30 flex flex-col min-h-0">
         {/* フィルタエリア */}
-        <div className="flex gap-2 mb-4 bg-white p-2 rounded border shrink-0">
+        <div className="flex gap-2 mb-4 bg-white p-2 rounded border shrink-0 flex-wrap">
             <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-gray-400" />
                 <select 
@@ -117,6 +120,17 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
                     {levels.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
             </div>
+            {/* ★追加: 年度フィルタ */}
+            <div className="flex items-center gap-2">
+                <select 
+                    className="h-8 text-xs border rounded px-2 min-w-[100px]"
+                    value={filterYear}
+                    onChange={e => setFilterYear(e.target.value)}
+                >
+                    <option value="">全年度</option>
+                    {years.map(y => <option key={y} value={String(y)}>{y}年度</option>)}
+                </select>
+            </div>
         </div>
 
         {/* ファイルリスト */}
@@ -125,9 +139,11 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
                 <TableHeader>
                     <TableRow>
                         <TableHead>ファイル名</TableHead>
-                        <TableHead className="w-24">科目</TableHead>
+                        {/* ★修正: 幅を拡大 w-24 -> w-32 */}
+                        <TableHead className="w-32">科目</TableHead>
                         <TableHead className="w-24">レベル</TableHead>
-                        <TableHead className="w-20">年度</TableHead>
+                        {/* ★修正: 幅を拡大 w-20 -> w-28 */}
+                        <TableHead className="w-28">年度</TableHead>
                         <TableHead className="w-32">アップロード日</TableHead>
                         <TableHead className="w-24 text-center">操作</TableHead>
                     </TableRow>
@@ -142,11 +158,11 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
                                 </div>
                             </TableCell>
                             <TableCell className="text-xs">
-                                {file.subject && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">{file.subject}</span>}
+                                {file.subject && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full whitespace-nowrap">{file.subject}</span>}
                             </TableCell>
-                            <TableCell className="text-xs">{file.level}</TableCell>
-                            <TableCell className="text-xs">{file.academic_year}年度</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
+                            <TableCell className="text-xs whitespace-nowrap">{file.level}</TableCell>
+                            <TableCell className="text-xs whitespace-nowrap">{file.academic_year}年度</TableCell>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                                 {new Date(file.uploaded_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-center">
