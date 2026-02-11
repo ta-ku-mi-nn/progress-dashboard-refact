@@ -4,7 +4,6 @@ import ExamManager from '../components/ExamManager';
 import api from '../lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
-// 生徒の型定義 (DashboardHomeなどと共通)
 interface Student {
   id: number;
   name: string;
@@ -35,13 +34,11 @@ const PastExam: React.FC = () => {
                 }
 
                 // 2. 講師/管理者の場合 -> 生徒一覧を取得
-                // ※ APIエンドポイントはプロジェクトの構成に合わせて /students や /users/students など適宜調整してください
-                // ここではダッシュボードでよく使われる /students を想定しています
                 const res = await api.get('/students'); 
                 const studentList = res.data;
                 setStudents(studentList);
 
-                // 初期選択: リストの先頭を選択
+                // 初期選択
                 if (studentList.length > 0) {
                     setSelectedStudentId(studentList[0].id);
                 }
@@ -60,7 +57,7 @@ const PastExam: React.FC = () => {
         return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
     }
 
-    // 生徒が選択されていない、または見つからない場合
+    // 生徒が選択されていない場合
     if (!selectedStudentId) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-8 text-muted-foreground">
@@ -74,12 +71,13 @@ const PastExam: React.FC = () => {
     }
 
     return (
-        <div className="h-full w-full space-y-4 p-4 md:p-8 pt-6">
-            {/* ヘッダーエリア: タイトルと生徒切り替えプルダウン */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        // ★修正: h-full flex flex-col で画面全体の高さを確保し、縦並びにする
+        <div className="h-full w-full flex flex-col p-4 md:p-8 pt-6 gap-4">
+            
+            {/* ヘッダーエリア: 高さ固定 (flex-none) */}
+            <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold tracking-tight">過去問・模試・入試日程管理</h2>
                 
-                {/* 講師の場合のみ生徒切り替えを表示 */}
                 {students.length > 0 && (
                     <div className="w-full md:w-64">
                         <Select
@@ -101,8 +99,8 @@ const PastExam: React.FC = () => {
                 )}
             </div>
 
-            {/* メイン機能コンポーネント (選択された生徒IDを渡す) */}
-            <div className="h-[calc(100vh-180px)]">
+            {/* メイン機能エリア: 残りの高さを全て使う (flex-1) かつ 最小高さ0 (min-h-0) でスクロール制御 */}
+            <div className="flex-1 min-h-0">
                 <ExamManager key={selectedStudentId} studentId={selectedStudentId} />
             </div>
         </div>
