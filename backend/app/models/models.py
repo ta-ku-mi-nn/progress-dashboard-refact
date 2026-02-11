@@ -213,7 +213,7 @@ class EikenResult(Base):
     student = relationship("Student", back_populates="eiken_results")
 
 class RootTable(Base):
-    __tablename__ = "root_table"
+    __tablename__ = "root_tables"
 
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String, nullable=False)
