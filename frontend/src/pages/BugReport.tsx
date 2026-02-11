@@ -7,23 +7,13 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { AlertCircle, Send, CheckCircle2, MessageSquare, Lightbulb } from 'lucide-react';
+import { AlertCircle, Send, CheckCircle2, MessageSquare, Lightbulb, ChevronDown, ChevronUp, User as UserIcon } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
+import { ScrollArea } from '../components/ui/scroll-area';
 import api from '../lib/api';
 
 // --- 型定義 ---
-interface BugReportItem {
-  id: number;
-  reporter_username: string;
-  report_date: string;
-  title: string;
-  description: string;
-  status: string;
-  resolution_message?: string;
-}
-
-interface FeatureRequestItem {
+interface ReportItem {
   id: number;
   reporter_username: string;
   report_date: string;
@@ -35,22 +25,28 @@ interface FeatureRequestItem {
 
 const BugReport: React.FC = () => {
   const { user } = useAuth();
+  // 管理者判定: userオブジェクトの構造に合わせて調整してください (例: user.role === 'admin')
+  const isAdmin = (user as any)?.role === 'admin';
+
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // フォーム用State
+  // フォーム用
   const [reportType, setReportType] = useState("bug"); // bug | feature
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-  });
+  const [formData, setFormData] = useState({ title: "", description: "" });
 
-  // 一覧用State
-  const [bugReports, setBugReports] = useState<BugReportItem[]>([]);
-  const [featureRequests, setFeatureRequests] = useState<FeatureRequestItem[]>([]);
+  // 一覧用
+  const [bugReports, setBugReports] = useState<ReportItem[]>([]);
+  const [featureRequests, setFeatureRequests] = useState<ReportItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
+  
+  // 詳細展開用
+  const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
-  // データ取得
+  // 管理者編集用ステート
+  const [editStatus, setEditStatus] = useState("");
+  const [editResolution, setEditResolution] = useState("");
+
   const fetchReports = async () => {
     setListLoading(true);
     try {
@@ -71,45 +67,142 @@ const BugReport: React.FC = () => {
     fetchReports();
   }, []);
 
-  // 送信処理
+  // 報告送信
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-        alert("ログインが必要です");
-        return;
-    }
+    if (!user) return alert("ログインが必要です");
     setLoading(true);
     
     try {
       const payload = {
-          reporter_username: (user as any).username || "Unknown", // モデルに合わせてusernameを使用
+          reporter_username: (user as any).username || "Unknown",
           title: formData.title,
           description: formData.description
       };
-
-      if (reportType === "bug") {
-          await api.post('/system/bug_reports', payload);
-      } else {
-          await api.post('/system/feature_requests', payload);
-      }
+      const endpoint = reportType === "bug" ? '/system/bug_reports' : '/system/feature_requests';
+      await api.post(endpoint, payload);
       
       setIsSubmitted(true);
-      fetchReports(); // 送信後に一覧を更新
+      fetchReports();
     } catch (error) {
-      console.error(error);
       alert("送信に失敗しました。");
     } finally {
       setLoading(false);
     }
   };
 
-  // ステータスバッジのコンポーネント
+  // ステータス更新 (管理者用)
+  const handleUpdateStatus = async (id: number, type: "bug" | "feature") => {
+      try {
+          const endpoint = type === "bug" ? `/system/bug_reports/${id}` : `/system/feature_requests/${id}`;
+          await api.patch(endpoint, {
+              status: editStatus,
+              resolution_message: editResolution
+          });
+          alert("更新しました");
+          fetchReports();
+      } catch (e) {
+          alert("更新失敗");
+      }
+  };
+
+  // 展開トグル
+  const toggleExpand = (item: ReportItem) => {
+    if (expandedIds.includes(item.id)) {
+        setExpandedIds(expandedIds.filter(i => i !== item.id));
+    } else {
+        setExpandedIds([...expandedIds, item.id]);
+        // 展開時に編集ステートに初期値をセット(管理者用)
+        setEditStatus(item.status);
+        setEditResolution(item.resolution_message || "");
+    }
+  };
+
+  // ステータスバッジ
   const StatusBadge = ({ status }: { status: string }) => {
     let color = "bg-gray-100 text-gray-800";
     if (status === "対応中") color = "bg-blue-100 text-blue-800";
     if (status === "完了" || status === "解決済み") color = "bg-green-100 text-green-800";
-    return <Badge variant="outline" className={`${color} border-none`}>{status}</Badge>;
+    return <Badge variant="outline" className={`${color} border-none font-bold`}>{status}</Badge>;
   };
+
+  // リストアイテム描画コンポーネント
+  const ReportList = ({ items, type }: { items: ReportItem[], type: "bug" | "feature" }) => (
+      <div className="space-y-4 pb-4">
+          {items.map(item => {
+              const isExpanded = expandedIds.includes(item.id);
+              return (
+                  <Card key={item.id} className={`transition-all border-l-4 ${isExpanded ? 'border-l-blue-500 shadow-md' : 'border-l-gray-300 hover:bg-gray-50'}`}>
+                      <CardHeader className="py-3 px-4 cursor-pointer" onClick={() => toggleExpand(item)}>
+                          <div className="flex items-start justify-between">
+                              <div className="flex flex-col gap-1 w-full">
+                                  <div className="flex items-center justify-between w-full">
+                                      <span className="text-xs text-muted-foreground">{item.report_date}</span>
+                                      <StatusBadge status={item.status} />
+                                  </div>
+                                  <div className="font-bold text-sm">{item.title}</div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <UserIcon className="w-3 h-3" /> {item.reporter_username}
+                                  </div>
+                              </div>
+                              <div className="ml-2 mt-2">
+                                  {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                              </div>
+                          </div>
+                      </CardHeader>
+                      
+                      {isExpanded && (
+                          <CardContent className="pt-0 pb-4 px-4 border-t bg-gray-50/50">
+                              <div className="mt-3 space-y-4">
+                                  {/* 詳細内容 */}
+                                  <div>
+                                      <Label className="text-xs text-muted-foreground">詳細</Label>
+                                      <div className="text-sm mt-1 whitespace-pre-wrap">{item.description}</div>
+                                  </div>
+
+                                  {/* 管理者エリア or 解決メッセージ表示 */}
+                                  {isAdmin ? (
+                                      <div className="bg-white p-3 rounded border space-y-3">
+                                          <div className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                                              <AlertCircle className="w-3 h-3" /> 管理者メニュー
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                              <div className="space-y-1">
+                                                  <Label className="text-xs">ステータス</Label>
+                                                  <Select value={editStatus} onValueChange={setEditStatus}>
+                                                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                                      <SelectContent>
+                                                          <SelectItem value="未対応">未対応</SelectItem>
+                                                          <SelectItem value="対応中">対応中</SelectItem>
+                                                          <SelectItem value="解決済み">解決済み</SelectItem>
+                                                          <SelectItem value="保留">保留</SelectItem>
+                                                      </SelectContent>
+                                                  </Select>
+                                              </div>
+                                              <div className="space-y-1 col-span-2">
+                                                  <Label className="text-xs">対応コメント</Label>
+                                                  <Textarea className="min-h-[60px] text-xs" value={editResolution} onChange={e => setEditResolution(e.target.value)} placeholder="解決方法やコメントを入力..." />
+                                              </div>
+                                          </div>
+                                          <Button size="sm" className="w-full h-8 text-xs" onClick={() => handleUpdateStatus(item.id, type)}>更新</Button>
+                                      </div>
+                                  ) : (
+                                      item.resolution_message && (
+                                          <div className="bg-green-50 p-3 rounded border border-green-100">
+                                              <Label className="text-xs text-green-700 font-bold">対応コメント</Label>
+                                              <div className="text-sm mt-1 text-green-800 whitespace-pre-wrap">{item.resolution_message}</div>
+                                          </div>
+                                      )
+                                  )}
+                              </div>
+                          </CardContent>
+                      )}
+                  </Card>
+              );
+          })}
+          {items.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">報告はありません</div>}
+      </div>
+  );
 
   return (
     <div className="h-full w-full p-4 md:p-8 pt-6 flex flex-col gap-4 overflow-hidden">
@@ -124,78 +217,47 @@ const BugReport: React.FC = () => {
         
         {/* 左カラム: 報告フォーム */}
         <div className="w-full md:w-1/3 flex flex-col gap-4">
-            <Card className="h-full flex flex-col">
-                <CardHeader>
+            <Card className="h-full flex flex-col overflow-auto">
+                <CardHeader className="shrink-0">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                    <AlertCircle className="w-5 h-5 text-orange-500" />
-                    新規報告
+                    <Send className="w-4 h-4" /> 新規報告
                 </CardTitle>
-                <CardDescription>
-                    不具合やご要望を入力してください。
-                </CardDescription>
+                <CardDescription>不具合やご要望を入力してください。</CardDescription>
                 </CardHeader>
                 
                 {isSubmitted ? (
                     <CardContent className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
                         <CheckCircle2 className="w-16 h-16 text-green-500" />
                         <h3 className="text-xl font-bold">送信しました</h3>
-                        <p className="text-muted-foreground text-sm">
-                        ご協力ありがとうございます。<br />
-                        右側の一覧に反映されました。
-                        </p>
                         <Button onClick={() => { setIsSubmitted(false); setFormData({title:"", description:""}); }} className="mt-4">
                         続けて報告する
                         </Button>
                     </CardContent>
                 ) : (
                     <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-                        <CardContent className="space-y-4 flex-1">
+                        <CardContent className="space-y-4 flex-1 overflow-auto">
                             <div className="space-y-2">
-                            <Label htmlFor="type">報告の種類</Label>
-                            <Select 
-                                value={reportType} 
-                                onValueChange={(val) => setReportType(val)}
-                            >
-                                <SelectTrigger id="type">
-                                <SelectValue placeholder="種類を選択" />
-                                </SelectTrigger>
+                            <Label>種類</Label>
+                            <Select value={reportType} onValueChange={setReportType}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                 <SelectItem value="bug">不具合 (バグ)</SelectItem>
                                 <SelectItem value="feature">機能リクエスト</SelectItem>
                                 </SelectContent>
                             </Select>
                             </div>
-                            
                             <div className="space-y-2">
-                            <Label htmlFor="title">タイトル</Label>
-                            <Input 
-                                id="title" 
-                                placeholder={reportType === "bug" ? "例: ログイン画面でエラーが出る" : "例: 参考書の並び替え機能が欲しい"}
-                                value={formData.title}
-                                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                required
-                            />
+                            <Label>タイトル</Label>
+                            <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
                             </div>
-                            
                             <div className="space-y-2">
-                            <Label htmlFor="description">詳細内容</Label>
-                            <Textarea 
-                                id="description" 
-                                placeholder="詳細をご記入ください。" 
-                                className="min-h-[150px] resize-none"
-                                value={formData.description}
-                                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                required
-                            />
+                            <Label>詳細</Label>
+                            <Textarea className="min-h-[150px]" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required />
                             </div>
                         </CardContent>
-                        <CardFooter className="border-t pt-4">
+                        <CardFooter className="border-t pt-4 shrink-0">
                             <Button type="submit" disabled={loading} className="w-full">
-                            {loading ? "送信中..." : (
-                                <>
-                                <Send className="w-4 h-4 mr-2" /> 送信
-                                </>
-                            )}
+                            {loading ? "送信中..." : "送信"}
                             </Button>
                         </CardFooter>
                     </form>
@@ -203,87 +265,30 @@ const BugReport: React.FC = () => {
             </Card>
         </div>
 
-        {/* 右カラム: 一覧テーブル (タブ切り替え) */}
+        {/* 右カラム: 一覧リスト */}
         <div className="w-full md:w-2/3 flex flex-col">
             <Card className="h-full flex flex-col border shadow-sm">
                 <Tabs defaultValue="bug" className="h-full flex flex-col">
-                    <CardHeader className="px-4 py-3 border-b shrink-0">
+                    <CardHeader className="px-4 py-3 border-b shrink-0 bg-white">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-lg">報告一覧</CardTitle>
                             <TabsList>
-                                <TabsTrigger value="bug" className="flex items-center gap-1">
-                                    <AlertCircle className="w-4 h-4" /> バグ報告
-                                </TabsTrigger>
-                                <TabsTrigger value="feature" className="flex items-center gap-1">
-                                    <Lightbulb className="w-4 h-4" /> 要望
-                                </TabsTrigger>
+                                <TabsTrigger value="bug"><AlertCircle className="w-4 h-4 mr-1" /> バグ報告</TabsTrigger>
+                                <TabsTrigger value="feature"><Lightbulb className="w-4 h-4 mr-1" /> 要望</TabsTrigger>
                             </TabsList>
                         </div>
                     </CardHeader>
                     
                     <CardContent className="flex-1 p-0 overflow-hidden bg-gray-50/30">
-                        <TabsContent value="bug" className="h-full m-0 overflow-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-24">日付</TableHead>
-                                        <TableHead>タイトル</TableHead>
-                                        <TableHead className="w-24">報告者</TableHead>
-                                        <TableHead className="w-20">状態</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {listLoading ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-8">読み込み中...</TableCell></TableRow>
-                                    ) : bugReports.length === 0 ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">報告はありません</TableCell></TableRow>
-                                    ) : (
-                                        bugReports.map((item) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell className="text-xs whitespace-nowrap">{item.report_date}</TableCell>
-                                                <TableCell className="font-medium">
-                                                    <div>{item.title}</div>
-                                                    <div className="text-xs text-muted-foreground truncate max-w-[300px]">{item.description}</div>
-                                                </TableCell>
-                                                <TableCell className="text-xs">{item.reporter_username}</TableCell>
-                                                <TableCell><StatusBadge status={item.status} /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                        <TabsContent value="bug" className="h-full m-0">
+                            <ScrollArea className="h-full p-4">
+                                <ReportList items={bugReports} type="bug" />
+                            </ScrollArea>
                         </TabsContent>
-
-                        <TabsContent value="feature" className="h-full m-0 overflow-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-24">日付</TableHead>
-                                        <TableHead>タイトル</TableHead>
-                                        <TableHead className="w-24">報告者</TableHead>
-                                        <TableHead className="w-20">状態</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {listLoading ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-8">読み込み中...</TableCell></TableRow>
-                                    ) : featureRequests.length === 0 ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">要望はありません</TableCell></TableRow>
-                                    ) : (
-                                        featureRequests.map((item) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell className="text-xs whitespace-nowrap">{item.report_date}</TableCell>
-                                                <TableCell className="font-medium">
-                                                    <div>{item.title}</div>
-                                                    <div className="text-xs text-muted-foreground truncate max-w-[300px]">{item.description}</div>
-                                                </TableCell>
-                                                <TableCell className="text-xs">{item.reporter_username}</TableCell>
-                                                <TableCell><StatusBadge status={item.status} /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                        <TabsContent value="feature" className="h-full m-0">
+                            <ScrollArea className="h-full p-4">
+                                <ReportList items={featureRequests} type="feature" />
+                            </ScrollArea>
                         </TabsContent>
                     </CardContent>
                 </Tabs>
