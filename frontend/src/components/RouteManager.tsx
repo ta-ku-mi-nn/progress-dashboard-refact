@@ -86,15 +86,6 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
 
   return (
     <Card className="h-full flex flex-col border shadow-sm min-h-[90vh]">
-      <CardHeader className="px-4 py-3 border-b shrink-0 bg-white rounded-t-lg flex flex-row items-center justify-between">
-        <CardTitle className="text-lg flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-blue-600" />
-            学習ルート表 (PDFダウンロード)
-        </CardTitle>
-        <Button variant="outline" size="sm" onClick={fetchData} className="h-8 text-xs">
-            更新
-        </Button>
-      </CardHeader>
       
       <CardContent className="flex-1 overflow-hidden p-4 bg-gray-50/30 flex flex-col min-h-0">
         {/* フィルタエリア */}
