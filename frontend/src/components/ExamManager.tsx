@@ -5,7 +5,8 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Plus, Trash2, Calendar, FileText, BarChart2, Clock, CheckCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Plus, Trash2, Calendar, FileText, BarChart2, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import api from '../lib/api';
 
 interface ExamManagerProps {
@@ -40,6 +41,7 @@ interface PastExam {
   total_questions: number;
 }
 
+// 模試: 全科目対応
 interface MockExam {
   id: number;
   mock_exam_name: string;
@@ -47,74 +49,94 @@ interface MockExam {
   grade: string;
   result_type: string;
   grade_judgment: string;
-  subject_english_desc?: number;
-  subject_math_desc?: number;
+  // 記述
   subject_kokugo_desc?: number;
-  subject_english_r_mark?: number;
-  subject_math1a_mark?: number;
+  subject_math_desc?: number;
+  subject_english_desc?: number;
+  subject_rika1_desc?: number;
+  subject_rika2_desc?: number;
+  subject_shakai1_desc?: number;
+  subject_shakai2_desc?: number;
+  // マーク
   subject_kokugo_mark?: number;
+  subject_math1a_mark?: number;
+  subject_math2bc_mark?: number;
+  subject_english_r_mark?: number;
+  subject_english_l_mark?: number;
+  subject_rika1_mark?: number;
+  subject_rika2_mark?: number;
+  subject_shakai1_mark?: number;
+  subject_shakai2_mark?: number;
+  subject_rika_kiso1_mark?: number;
+  subject_rika_kiso2_mark?: number;
+  subject_info_mark?: number;
 }
 
+// --- カレンダー用ユーティリティ ---
+const getCalendarDays = (year: number, month: number) => {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay(); // 0:Sun
+  
+  const days: (number | null)[] = [];
+  for (let i = 0; i < startDayOfWeek; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+  return days;
+};
+
 export default function ExamManager({ studentId }: ExamManagerProps) {
-  const [activeTab, setActiveTab] = useState("acceptance");
+  const [activeTab, setActiveTab] = useState("calendar");
 
   // --- 入試日程 State ---
   const [acceptances, setAcceptances] = useState<Acceptance[]>([]);
   const [isAcceptanceModalOpen, setIsAcceptanceModalOpen] = useState(false);
-  const [newAcceptance, setNewAcceptance] = useState({
-    university_name: "", faculty_name: "", department_name: "", exam_system: "",
-    exam_date: "", application_deadline: "", announcement_date: "", procedure_deadline: ""
-  });
+  const [newAcceptance, setNewAcceptance] = useState<Partial<Acceptance>>({});
 
   // --- 過去問 State ---
   const [pastExams, setPastExams] = useState<PastExam[]>([]);
   const [isPastModalOpen, setIsPastModalOpen] = useState(false);
-  const [newPastExam, setNewPastExam] = useState({
+  const [newPastExam, setNewPastExam] = useState<any>({
     date: new Date().toISOString().split('T')[0],
-    university_name: "", faculty_name: "", exam_system: "",
-    year: new Date().getFullYear(), subject: "",
-    time_required: 0, total_time_allowed: 0,
-    correct_answers: 0, total_questions: 0
+    year: new Date().getFullYear(),
+    correct_answers: 0, total_questions: 0, time_required: 0, total_time_allowed: 0
   });
 
   // --- 模試 State ---
   const [mockExams, setMockExams] = useState<MockExam[]>([]);
   const [isMockModalOpen, setIsMockModalOpen] = useState(false);
-  const [newMockExam, setNewMockExam] = useState({
-    mock_exam_name: "", exam_date: "", grade: "", result_type: "マーク", mock_exam_format: "", round: "",
-    subject_english_r_mark: 0, subject_math1a_mark: 0, subject_kokugo_mark: 0
+  const [selectedMockExam, setSelectedMockExam] = useState<MockExam | null>(null); // 詳細表示用
+  const [isMockDetailOpen, setIsMockDetailOpen] = useState(false);
+  const [newMockExam, setNewMockExam] = useState<Partial<MockExam>>({
+      result_type: "マーク", mock_exam_name: "", grade: ""
   });
+
+  // --- カレンダー State ---
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   // --- データ取得 ---
   const fetchData = async () => {
     try {
-      if (activeTab === "acceptance") {
-        const res = await api.get(`/exams/acceptance/${studentId}`);
-        setAcceptances(res.data);
-      } else if (activeTab === "past_exam") {
-        const res = await api.get(`/exams/pastexam/${studentId}`);
-        setPastExams(res.data);
-      } else if (activeTab === "mock_exam") {
-        const res = await api.get(`/exams/mock/${studentId}`);
-        setMockExams(res.data);
-      }
+        const [accRes, pastRes, mockRes] = await Promise.all([
+            api.get(`/exams/acceptance/${studentId}`),
+            api.get(`/exams/pastexam/${studentId}`),
+            api.get(`/exams/mock/${studentId}`)
+        ]);
+        setAcceptances(accRes.data);
+        setPastExams(pastRes.data);
+        setMockExams(mockRes.data);
     } catch (e) { console.error(e); }
   };
 
   useEffect(() => {
     if (studentId) fetchData();
-  }, [studentId, activeTab]);
+  }, [studentId]);
 
   // --- ハンドラ ---
   const handleAddAcceptance = async () => {
     try {
       await api.post('/exams/acceptance', { student_id: studentId, ...newAcceptance });
-      setIsAcceptanceModalOpen(false);
-      setNewAcceptance({
-        university_name: "", faculty_name: "", department_name: "", exam_system: "",
-        exam_date: "", application_deadline: "", announcement_date: "", procedure_deadline: ""
-      });
-      fetchData();
+      setIsAcceptanceModalOpen(false); setNewAcceptance({}); fetchData();
     } catch (e) { alert("登録失敗"); }
   };
   const handleDeleteAcceptance = async (id: number) => {
@@ -128,15 +150,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
   const handleAddPastExam = async () => {
     try {
       await api.post('/exams/pastexam', { student_id: studentId, ...newPastExam });
-      setIsPastModalOpen(false);
-      setNewPastExam({
-        date: new Date().toISOString().split('T')[0],
-        university_name: "", faculty_name: "", exam_system: "",
-        year: new Date().getFullYear(), subject: "",
-        time_required: 0, total_time_allowed: 0,
-        correct_answers: 0, total_questions: 0
-      });
-      fetchData();
+      setIsPastModalOpen(false); setNewPastExam({date: new Date().toISOString().split('T')[0], year: new Date().getFullYear(), correct_answers:0, total_questions:0, time_required:0, total_time_allowed:0}); fetchData();
     } catch (e) { alert("登録失敗"); }
   };
   const handleDeletePastExam = async (id: number) => {
@@ -147,22 +161,30 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
   const handleAddMockExam = async () => {
     try {
       await api.post('/exams/mock', { 
-          student_id: studentId, 
-          ...newMockExam,
-          mock_exam_format: newMockExam.result_type,
-          round: "1" 
+          student_id: studentId, ...newMockExam, mock_exam_format: newMockExam.result_type, round: "1" 
       });
-      setIsMockModalOpen(false);
-      setNewMockExam({
-        mock_exam_name: "", exam_date: "", grade: "", result_type: "マーク", mock_exam_format: "", round: "",
-        subject_english_r_mark: 0, subject_math1a_mark: 0, subject_kokugo_mark: 0
-      });
-      fetchData();
+      setIsMockModalOpen(false); setNewMockExam({result_type: "マーク", mock_exam_name: "", grade: ""}); fetchData();
     } catch (e) { alert("登録失敗"); }
   };
   const handleDeleteMockExam = async (id: number) => {
     if (!confirm("削除しますか？")) return;
     try { await api.delete(`/exams/mock/${id}`); fetchData(); } catch (e) { alert("削除失敗"); }
+  };
+
+  // --- カレンダー描画用 ---
+  const calendarDays = getCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
+  const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+
+  const getDayEvents = (day: number) => {
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const events: {type: string, title: string, color: string}[] = [];
+      
+      acceptances.forEach(acc => {
+          if (acc.exam_date === dateStr) events.push({type: '試験', title: `${acc.university_name} (${acc.exam_system})`, color: 'bg-red-100 text-red-800'});
+          if (acc.announcement_date === dateStr) events.push({type: '発表', title: `${acc.university_name} 合格発表`, color: 'bg-green-100 text-green-800'});
+          if (acc.procedure_deadline === dateStr) events.push({type: '手続', title: `${acc.university_name} 手続締切`, color: 'bg-yellow-100 text-yellow-800'});
+      });
+      return events;
   };
 
   return (
@@ -171,32 +193,59 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
         <CardTitle className="text-lg">入試・模試・過去問 管理</CardTitle>
       </CardHeader>
       
-      {/* 修正ポイント: コンテンツエリアの構造化 */}
       <CardContent className="flex-1 overflow-hidden p-0 bg-gray-50/30 flex flex-col">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          {/* タブヘッダー */}
           <div className="px-4 py-2 bg-white border-b shrink-0">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="acceptance">
-                <Calendar className="w-4 h-4 mr-2" />
-                入試日程
-              </TabsTrigger>
-              <TabsTrigger value="past_exam">
-                <FileText className="w-4 h-4 mr-2" />
-                過去問
-              </TabsTrigger>
-              <TabsTrigger value="mock_exam">
-                <BarChart2 className="w-4 h-4 mr-2" />
-                模試
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="calendar"><Calendar className="w-4 h-4 mr-2" />カレンダー</TabsTrigger>
+              <TabsTrigger value="acceptance"><FileText className="w-4 h-4 mr-2" />入試日程</TabsTrigger>
+              <TabsTrigger value="past_exam"><Clock className="w-4 h-4 mr-2" />過去問</TabsTrigger>
+              <TabsTrigger value="mock_exam"><BarChart2 className="w-4 h-4 mr-2" />模試</TabsTrigger>
             </TabsList>
           </div>
 
-          {/* タブコンテンツエリア: ここに flex-1 と overflow-hidden を適用 */}
           <div className="flex-1 overflow-hidden p-4">
             
-            {/* === 1. 入試日程タブ === */}
-            <TabsContent value="acceptance" className="h-full m-0 data-[state=active]:flex flex-col">
+            {/* === カレンダータブ === */}
+            <TabsContent value="calendar" className="h-full m-0 flex flex-col data-[state=active]:flex">
+                <div className="flex items-center justify-between mb-4 bg-white p-2 rounded border">
+                    <Button variant="ghost" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}>
+                        <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="font-bold text-lg">
+                        {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
+                    </span>
+                    <Button variant="ghost" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}>
+                        <ChevronRight className="w-4 h-4" />
+                    </Button>
+                </div>
+                <div className="flex-1 bg-white border rounded-md overflow-auto">
+                    <div className="grid grid-cols-7 border-b bg-gray-50 text-center py-2 text-sm font-medium">
+                        <div className="text-red-500">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div className="text-blue-500">土</div>
+                    </div>
+                    <div className="grid grid-cols-7 auto-rows-fr">
+                        {calendarDays.map((day, i) => (
+                            <div key={i} className={`min-h-[100px] border-b border-r p-1 ${!day ? 'bg-gray-50' : ''}`}>
+                                {day && (
+                                    <>
+                                        <div className="text-xs font-bold text-gray-500 mb-1">{day}</div>
+                                        <div className="flex flex-col gap-1">
+                                            {getDayEvents(day).map((ev, j) => (
+                                                <div key={j} className={`text-[10px] px-1 py-0.5 rounded border truncate ${ev.color}`}>
+                                                    <span className="font-bold mr-1">[{ev.type}]</span>{ev.title}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </TabsContent>
+
+            {/* === 入試日程タブ === */}
+            <TabsContent value="acceptance" className="h-full m-0 flex flex-col data-[state=active]:flex">
                 <div className="flex justify-end mb-2 shrink-0">
                     <Button size="sm" onClick={() => setIsAcceptanceModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 日程を追加
@@ -209,6 +258,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                 <TableHead>試験日</TableHead>
                                 <TableHead>大学・学部</TableHead>
                                 <TableHead>発表日</TableHead>
+                                <TableHead>手続締切</TableHead>
                                 <TableHead>結果</TableHead>
                                 <TableHead className="w-10"></TableHead>
                             </TableRow>
@@ -219,9 +269,10 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                     <TableCell className="text-xs whitespace-nowrap">{item.exam_date}</TableCell>
                                     <TableCell>
                                         <div className="text-sm font-bold">{item.university_name}</div>
-                                        <div className="text-xs text-muted-foreground">{item.faculty_name} {item.department_name}</div>
+                                        <div className="text-xs text-muted-foreground">{item.faculty_name} {item.department_name} ({item.exam_system})</div>
                                     </TableCell>
                                     <TableCell className="text-xs">{item.announcement_date}</TableCell>
+                                    <TableCell className="text-xs text-red-600">{item.procedure_deadline}</TableCell>
                                     <TableCell>
                                         <select 
                                             className={`text-xs p-1 rounded border ${
@@ -245,14 +296,14 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {acceptances.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">登録がありません</TableCell></TableRow>}
+                            {acceptances.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">登録がありません</TableCell></TableRow>}
                         </TableBody>
                     </Table>
                 </div>
             </TabsContent>
 
-            {/* === 2. 過去問タブ === */}
-            <TabsContent value="past_exam" className="h-full m-0 data-[state=active]:flex flex-col">
+            {/* === 過去問タブ === */}
+            <TabsContent value="past_exam" className="h-full m-0 flex flex-col data-[state=active]:flex">
                 <div className="flex justify-end mb-2 shrink-0">
                     <Button size="sm" onClick={() => setIsPastModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 結果を記録
@@ -311,8 +362,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 </div>
             </TabsContent>
 
-            {/* === 3. 模試タブ === */}
-            <TabsContent value="mock_exam" className="h-full m-0 data-[state=active]:flex flex-col">
+            {/* === 模試タブ === */}
+            <TabsContent value="mock_exam" className="h-full m-0 flex flex-col data-[state=active]:flex">
                 <div className="flex justify-end mb-2 shrink-0">
                     <Button size="sm" onClick={() => setIsMockModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 模試を追加
@@ -326,8 +377,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                 <TableHead>模試名</TableHead>
                                 <TableHead>形式</TableHead>
                                 <TableHead>判定</TableHead>
-                                <TableHead>主要3教科</TableHead>
-                                <TableHead className="w-10"></TableHead>
+                                <TableHead>主要3教科(英数国)</TableHead>
+                                <TableHead className="w-20">操作</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -345,14 +396,19 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                         </span>
                                     </TableCell>
                                     <TableCell className="text-xs">
-                                        <div>英: {item.subject_english_r_mark || '-'}</div>
-                                        <div>数: {item.subject_math1a_mark || '-'}</div>
-                                        <div>国: {item.subject_kokugo_mark || '-'}</div>
+                                        <div>英: {item.result_type === "マーク" ? item.subject_english_r_mark : item.subject_english_desc}</div>
+                                        <div>数: {item.result_type === "マーク" ? item.subject_math1a_mark : item.subject_math_desc}</div>
+                                        <div>国: {item.result_type === "マーク" ? item.subject_kokugo_mark : item.subject_kokugo_desc}</div>
                                     </TableCell>
                                     <TableCell>
-                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-red-500" onClick={() => handleDeleteMockExam(item.id)}>
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-blue-500" onClick={() => { setSelectedMockExam(item); setIsMockDetailOpen(true); }}>
+                                                <Eye className="w-4 h-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-red-500" onClick={() => handleDeleteMockExam(item.id)}>
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -369,96 +425,147 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
       {/* --- モーダル: 入試日程 --- */}
       <Dialog open={isAcceptanceModalOpen} onOpenChange={setIsAcceptanceModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>入試日程を追加</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>入試日程を追加</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">大学名</label>
-                <Input className="h-8 text-xs" placeholder="大学名" value={newAcceptance.university_name} onChange={e => setNewAcceptance({...newAcceptance, university_name: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">学部</label>
-                <Input className="h-8 text-xs" placeholder="学部" value={newAcceptance.faculty_name} onChange={e => setNewAcceptance({...newAcceptance, faculty_name: e.target.value})} /></div>
+                <Input className="h-8 text-xs" placeholder="大学名" value={newAcceptance.university_name || ''} onChange={e => setNewAcceptance({...newAcceptance, university_name: e.target.value})} />
+                <Input className="h-8 text-xs" placeholder="学部" value={newAcceptance.faculty_name || ''} onChange={e => setNewAcceptance({...newAcceptance, faculty_name: e.target.value})} />
              </div>
              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">学科・専攻</label>
-                <Input className="h-8 text-xs" placeholder="学科・専攻" value={newAcceptance.department_name} onChange={e => setNewAcceptance({...newAcceptance, department_name: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">入試方式</label>
-                <Input className="h-8 text-xs" placeholder="入試方式" value={newAcceptance.exam_system} onChange={e => setNewAcceptance({...newAcceptance, exam_system: e.target.value})} /></div>
+                <Input className="h-8 text-xs" placeholder="学科" value={newAcceptance.department_name || ''} onChange={e => setNewAcceptance({...newAcceptance, department_name: e.target.value})} />
+                <Input className="h-8 text-xs" placeholder="入試方式" value={newAcceptance.exam_system || ''} onChange={e => setNewAcceptance({...newAcceptance, exam_system: e.target.value})} />
              </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">試験日</label>
-                <Input className="h-8 text-xs" type="date" value={newAcceptance.exam_date} onChange={e => setNewAcceptance({...newAcceptance, exam_date: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">発表日</label>
-                <Input className="h-8 text-xs" type="date" value={newAcceptance.announcement_date} onChange={e => setNewAcceptance({...newAcceptance, announcement_date: e.target.value})} /></div>
+             <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1"><label className="text-[10px]">試験日</label>
+                <Input className="h-8 text-xs" type="date" value={newAcceptance.exam_date || ''} onChange={e => setNewAcceptance({...newAcceptance, exam_date: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px]">発表日</label>
+                <Input className="h-8 text-xs" type="date" value={newAcceptance.announcement_date || ''} onChange={e => setNewAcceptance({...newAcceptance, announcement_date: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px]">手続締切</label>
+                <Input className="h-8 text-xs" type="date" value={newAcceptance.procedure_deadline || ''} onChange={e => setNewAcceptance({...newAcceptance, procedure_deadline: e.target.value})} /></div>
              </div>
           </div>
-          <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddAcceptance}>登録</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleAddAcceptance}>登録</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* --- モーダル: 過去問 --- */}
       <Dialog open={isPastModalOpen} onOpenChange={setIsPastModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>過去問結果を記録</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>過去問結果</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">実施日</label>
-                <Input className="h-8 text-xs" type="date" value={newPastExam.date} onChange={e => setNewPastExam({...newPastExam, date: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">科目</label>
-                <Input className="h-8 text-xs" placeholder="科目" value={newPastExam.subject} onChange={e => setNewPastExam({...newPastExam, subject: e.target.value})} /></div>
+                <Input className="h-8 text-xs" type="date" value={newPastExam.date} onChange={e => setNewPastExam({...newPastExam, date: e.target.value})} />
+                <Input className="h-8 text-xs" placeholder="科目" value={newPastExam.subject} onChange={e => setNewPastExam({...newPastExam, subject: e.target.value})} />
              </div>
              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">大学名</label>
-                <Input className="h-8 text-xs" placeholder="大学名" value={newPastExam.university_name} onChange={e => setNewPastExam({...newPastExam, university_name: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">年度</label>
-                <Input className="h-8 text-xs" placeholder="2023" type="number" value={newPastExam.year} onChange={e => setNewPastExam({...newPastExam, year: Number(e.target.value)})} /></div>
+                <Input className="h-8 text-xs" placeholder="大学名" value={newPastExam.university_name} onChange={e => setNewPastExam({...newPastExam, university_name: e.target.value})} />
+                <Input className="h-8 text-xs" type="number" placeholder="年度" value={newPastExam.year} onChange={e => setNewPastExam({...newPastExam, year: Number(e.target.value)})} />
              </div>
              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">正解数</label>
-                <Input className="h-8 text-xs" type="number" value={newPastExam.correct_answers} onChange={e => setNewPastExam({...newPastExam, correct_answers: Number(e.target.value)})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">総問数</label>
-                <Input className="h-8 text-xs" type="number" value={newPastExam.total_questions} onChange={e => setNewPastExam({...newPastExam, total_questions: Number(e.target.value)})} /></div>
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">所要時間(分)</label>
-                <Input className="h-8 text-xs" type="number" value={newPastExam.time_required} onChange={e => setNewPastExam({...newPastExam, time_required: Number(e.target.value)})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">制限時間(分)</label>
-                <Input className="h-8 text-xs" type="number" value={newPastExam.total_time_allowed} onChange={e => setNewPastExam({...newPastExam, total_time_allowed: Number(e.target.value)})} /></div>
+                <div className="space-y-1"><label className="text-[10px]">正解/総問</label>
+                    <div className="flex gap-2">
+                        <Input className="h-8 text-xs" type="number" placeholder="正解" value={newPastExam.correct_answers} onChange={e => setNewPastExam({...newPastExam, correct_answers: Number(e.target.value)})} />
+                        <Input className="h-8 text-xs" type="number" placeholder="総問" value={newPastExam.total_questions} onChange={e => setNewPastExam({...newPastExam, total_questions: Number(e.target.value)})} />
+                    </div>
+                </div>
+                <div className="space-y-1"><label className="text-[10px]">時間(所要/制限)</label>
+                    <div className="flex gap-2">
+                        <Input className="h-8 text-xs" type="number" placeholder="所要" value={newPastExam.time_required} onChange={e => setNewPastExam({...newPastExam, time_required: Number(e.target.value)})} />
+                        <Input className="h-8 text-xs" type="number" placeholder="制限" value={newPastExam.total_time_allowed} onChange={e => setNewPastExam({...newPastExam, total_time_allowed: Number(e.target.value)})} />
+                    </div>
+                </div>
              </div>
           </div>
-          <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddPastExam}>記録</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleAddPastExam}>記録</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* --- モーダル: 模試 --- */}
+      {/* --- モーダル: 模試登録 (全科目対応) --- */}
       <Dialog open={isMockModalOpen} onOpenChange={setIsMockModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>模試結果を追加</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>模試結果を追加</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><label className="text-xs font-medium">実施日</label>
-                <Input className="h-8 text-xs" type="date" value={newMockExam.exam_date} onChange={e => setNewMockExam({...newMockExam, exam_date: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-medium">模試名</label>
-                <Input className="h-8 text-xs" placeholder="模試名" value={newMockExam.mock_exam_name} onChange={e => setNewMockExam({...newMockExam, mock_exam_name: e.target.value})} /></div>
+                <Input className="h-8 text-xs" type="date" value={newMockExam.exam_date || ''} onChange={e => setNewMockExam({...newMockExam, exam_date: e.target.value})} />
+                <Input className="h-8 text-xs" placeholder="模試名" value={newMockExam.mock_exam_name || ''} onChange={e => setNewMockExam({...newMockExam, mock_exam_name: e.target.value})} />
              </div>
              <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5"><label className="text-xs font-medium">形式</label>
-                 <select className="flex h-8 w-full rounded-md border bg-background px-3 py-1 text-xs" 
-                    value={newMockExam.result_type} onChange={e => setNewMockExam({...newMockExam, result_type: e.target.value})}>
-                     <option value="マーク">マーク</option>
-                     <option value="記述">記述</option>
-                 </select></div>
-                 <div className="space-y-1.5"><label className="text-xs font-medium">総合判定</label>
-                 <Input className="h-8 text-xs" placeholder="A, B..." value={newMockExam.grade} onChange={e => setNewMockExam({...newMockExam, grade: e.target.value})} /></div>
+                 <Select value={newMockExam.result_type} onValueChange={v => setNewMockExam({...newMockExam, result_type: v})}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="マーク">マーク</SelectItem><SelectItem value="記述">記述</SelectItem></SelectContent>
+                 </Select>
+                 <Input className="h-8 text-xs" placeholder="判定 (A,B..)" value={newMockExam.grade || ''} onChange={e => setNewMockExam({...newMockExam, grade: e.target.value})} />
              </div>
+
              <div className="border-t pt-2 mt-2">
-                 <label className="text-xs font-bold text-muted-foreground block mb-2">主要科目得点 (マーク)</label>
-                 <div className="grid grid-cols-3 gap-2">
-                     <div><label className="text-[10px] text-muted-foreground">英語R</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_r_mark} onChange={e => setNewMockExam({...newMockExam, subject_english_r_mark: Number(e.target.value)})} /></div>
-                     <div><label className="text-[10px] text-muted-foreground">数IA</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math1a_mark} onChange={e => setNewMockExam({...newMockExam, subject_math1a_mark: Number(e.target.value)})} /></div>
-                     <div><label className="text-[10px] text-muted-foreground">国語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_kokugo_mark} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_mark: Number(e.target.value)})} /></div>
-                 </div>
+                 <label className="text-sm font-bold block mb-2">{newMockExam.result_type}科目 得点入力</label>
+                 
+                 {newMockExam.result_type === "マーク" ? (
+                     <div className="grid grid-cols-3 gap-3">
+                         <div><label className="text-[10px]">英語R</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_r_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_english_r_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">英語L</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_l_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_english_l_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">数IA</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math1a_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_math1a_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">数IIBC</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math2bc_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_math2bc_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">国語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_kokugo_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">情報</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_info_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_info_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">理科①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika1_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">理科②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika2_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">地歴公①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai1_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_mark: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">地歴公②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai2_mark || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_mark: Number(e.target.value)})} /></div>
+                     </div>
+                 ) : (
+                     <div className="grid grid-cols-3 gap-3">
+                         <div><label className="text-[10px]">英語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_english_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_english_desc: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">数学</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_math_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_math_desc: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">国語</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_kokugo_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_kokugo_desc: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">理科①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika1_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika1_desc: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">理科②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_rika2_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_rika2_desc: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">地歴公①</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai1_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai1_desc: Number(e.target.value)})} /></div>
+                         <div><label className="text-[10px]">地歴公②</label><Input className="h-8 text-xs" type="number" value={newMockExam.subject_shakai2_desc || 0} onChange={e => setNewMockExam({...newMockExam, subject_shakai2_desc: Number(e.target.value)})} /></div>
+                     </div>
+                 )}
              </div>
           </div>
-          <DialogFooter className="mt-2"><Button size="sm" onClick={handleAddMockExam}>追加</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleAddMockExam}>追加</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* --- モーダル: 模試詳細表示 --- */}
+      <Dialog open={isMockDetailOpen} onOpenChange={setIsMockDetailOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader><DialogTitle>{selectedMockExam?.mock_exam_name} 結果</DialogTitle></DialogHeader>
+            <div className="py-4">
+                <div className="flex justify-between mb-4 border-b pb-2">
+                    <span className="font-bold">{selectedMockExam?.result_type}</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 rounded">{selectedMockExam?.grade}判定</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                    {selectedMockExam?.result_type === "マーク" ? (
+                        <>
+                            <div className="flex justify-between"><span>英語R</span><span>{selectedMockExam.subject_english_r_mark}</span></div>
+                            <div className="flex justify-between"><span>英語L</span><span>{selectedMockExam.subject_english_l_mark}</span></div>
+                            <div className="flex justify-between"><span>数IA</span><span>{selectedMockExam.subject_math1a_mark}</span></div>
+                            <div className="flex justify-between"><span>数IIBC</span><span>{selectedMockExam.subject_math2bc_mark}</span></div>
+                            <div className="flex justify-between"><span>国語</span><span>{selectedMockExam.subject_kokugo_mark}</span></div>
+                            <div className="flex justify-between"><span>情報</span><span>{selectedMockExam.subject_info_mark}</span></div>
+                            <div className="flex justify-between border-t pt-1"><span>理科①</span><span>{selectedMockExam.subject_rika1_mark}</span></div>
+                            <div className="flex justify-between"><span>理科②</span><span>{selectedMockExam.subject_rika2_mark}</span></div>
+                            <div className="flex justify-between border-t pt-1"><span>地歴①</span><span>{selectedMockExam.subject_shakai1_mark}</span></div>
+                            <div className="flex justify-between"><span>地歴②</span><span>{selectedMockExam.subject_shakai2_mark}</span></div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex justify-between"><span>英語</span><span>{selectedMockExam?.subject_english_desc}</span></div>
+                            <div className="flex justify-between"><span>数学</span><span>{selectedMockExam?.subject_math_desc}</span></div>
+                            <div className="flex justify-between"><span>国語</span><span>{selectedMockExam?.subject_kokugo_desc}</span></div>
+                            <div className="flex justify-between border-t pt-1"><span>理科①</span><span>{selectedMockExam?.subject_rika1_desc}</span></div>
+                            <div className="flex justify-between"><span>理科②</span><span>{selectedMockExam?.subject_rika2_desc}</span></div>
+                            <div className="flex justify-between border-t pt-1"><span>地歴①</span><span>{selectedMockExam?.subject_shakai1_desc}</span></div>
+                            <div className="flex justify-between"><span>地歴②</span><span>{selectedMockExam?.subject_shakai2_desc}</span></div>
+                        </>
+                    )}
+                </div>
+            </div>
         </DialogContent>
       </Dialog>
     </Card>
