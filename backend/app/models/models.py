@@ -207,7 +207,7 @@ class EikenResult(Base):
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     grade = Column(String, nullable=False)
     cse_score = Column(Integer)  # add_eiken_table.py の定義に合わせて 'score' ではなく 'cse_score' に
-    exam_date = Column(Date)
+    exam_date = Column(String, nullable=True)
     result = Column(String)
 
     student = relationship("Student", back_populates="eiken_results")
