@@ -123,12 +123,7 @@ def update_student_eiken(
 
     # 3. Date
     if len(parts) > 2:
-        try:
-            dt = datetime.strptime(parts[2], "%Y-%m-%d").date()
-            eiken_result.exam_date = dt
-        except ValueError:
-             # 日付変換失敗時は更新しない
-             pass
+        eiken_result.exam_date = parts[2]
 
     db.commit()
     return {"message": "Eiken info updated"}
