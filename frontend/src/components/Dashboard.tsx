@@ -136,7 +136,7 @@ export default function Dashboard() {
     // APIのベースURLを取得 (環境変数またはデフォルト)
     // api.defaults.baseURL は axios の設定から取得できますが、
     // 確実にURLを構築するために import.meta.env を優先します
-    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+    const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
     
     // 末尾のスラッシュを削除して整形
     const cleanBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
