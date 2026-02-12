@@ -7,14 +7,11 @@
         @page {
             size: A4;
             margin: 2cm;
-            @top-right {
-                content: "発行日: " string(date);
-                font-size: 10pt;
-            }
         }
         
         body {
-            font-family: "HeiseiKakuGo-W5", sans-serif; /* xhtml2pdfの標準日本語フォント */
+            /* HeiseiKakuGo-W5 は reportlab が標準で持っている日本語フォントエイリアスです */
+            font-family: "HeiseiKakuGo-W5", sans-serif;
             font-size: 10pt;
             line-height: 1.5;
         }
@@ -36,29 +33,28 @@
             font-size: 12pt;
         }
 
-        .summary-box {
-            display: flex; /* xhtml2pdfではflexboxのサポートが限定的ですがTableで代用 */
+        /* サマリーエリア */
+        .summary-table {
             width: 100%;
             margin-bottom: 30px;
             border: 1px solid #ccc;
-            padding: 10px;
             background-color: #f9f9f9;
-        }
-
-        /* レイアウト用テーブル */
-        .summary-table {
-            width: 100%;
             border-collapse: collapse;
         }
         .summary-table td {
             text-align: center;
-            padding: 10px;
+            padding: 15px;
             width: 33%;
+            border-right: 1px solid #eee;
+        }
+        .summary-table td:last-child {
+            border-right: none;
         }
         .label {
             font-size: 10pt;
             color: #666;
             display: block;
+            margin-bottom: 5px;
         }
         .value {
             font-size: 16pt;
@@ -72,33 +68,30 @@
             margin-bottom: 10px;
             background-color: #eee;
             padding: 5px 10px;
+            border-left: 5px solid #333;
         }
 
+        /* 詳細データテーブル */
         .data-table {
             width: 100%;
             border-collapse: collapse;
         }
         .data-table th {
             background-color: #f0f0f0;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #999;
             padding: 8px;
             text-align: left;
             font-size: 9pt;
+            font-weight: bold;
         }
         .data-table td {
             border-bottom: 1px solid #eee;
             padding: 8px;
             font-size: 10pt;
+            vertical-align: middle;
         }
-        .progress-bar {
-            background-color: #eee;
-            height: 10px;
-            width: 100px;
-            display: inline-block;
-        }
-        .progress-fill {
-            background-color: #4CAF50;
-            height: 100%;
+        .data-table tr:nth-child(even) {
+            background-color: #fcfcfc;
         }
     </style>
 </head>
@@ -108,8 +101,8 @@
     </div>
 
     <div class="user-info">
-        <strong>生徒名:</strong> {{ student_name }} 様
-        <span style="float: right;">発行日: {{ date_str }}</span>
+        <div><strong>生徒名:</strong> {{ student_name }} 様</div>
+        <div style="text-align: right; margin-top: -20px;">発行日: {{ date_str }}</div>
     </div>
 
     <table class="summary-table">
@@ -129,7 +122,7 @@
         </tr>
     </table>
 
-    <div class="details-header">【学習詳細】</div>
+    <div class="details-header">学習詳細</div>
 
     <table class="data-table">
         <thead>
