@@ -21,9 +21,11 @@ interface Student {
 
 interface DashboardData {
   total_study_time: number;
-  eiken_score?: string; // バックエンドからは連結文字列で来る想定
+  total_planned_time?: number;
   progress_rate?: number;
-  total_planned_time?: number; // なければ0として扱う
+  eiken_grade?: string;
+  eiken_score?: string;
+  eiken_date?: string;
 }
 
 export default function Dashboard() {
@@ -40,13 +42,6 @@ export default function Dashboard() {
   const [editEikenGrade, setEditEikenGrade] = useState("");
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
-
-  // 英検表示用State (連結文字列を分解して保持)
-  const [displayEiken, setDisplayEiken] = useState({
-    grade: "未登録",
-    score: "-",
-    date: "-"
-  });
 
   // 1. 生徒一覧取得 & 初期選択
   useEffect(() => {
@@ -70,33 +65,19 @@ export default function Dashboard() {
     init();
   }, [user]);
 
-  // 2. ダッシュボード基本データ取得 & 英検データ分解
+  // 2. ダッシュボード基本データ取得
   const fetchDashboardData = async () => {
     if (!selectedStudentId) return;
     try {
       const res = await api.get(`/dashboard/${selectedStudentId}`);
       setData(res.data);
       
-      // バックエンドからの eiken_score 文字列を解析して表示用と編集用にセット
-      // 想定フォーマット: "準2級 合格 / CSE 1950 / 2025-06-01" (区切り文字は / )
-      // または単に "準2級 合格" だけの場合もあり
-      const rawScore = res.data.eiken_score || "";
-      const parts = rawScore.split(' / ');
-      
-      const grade = parts[0] || "";
-      const score = parts[1] ? parts[1].replace('CSE ', '') : "";
-      const date = parts[2] || "";
-
-      setEditEikenGrade(grade);
-      setEditEikenScore(score);
-      setEditEikenDate(date);
-
-      setDisplayEiken({
-        grade: grade || "未登録",
-        score: score || "-",
-        date: date || "-"
-      });
-
+      // 編集用フォーム初期値セット
+      // 合否が含まれている場合(例: "準2級 合格")でも、そのまま入力欄に入れるか、あるいは整形するか
+      // ここではAPIから返ってきた値をそのままセットします
+      setEditEikenGrade(res.data.eiken_grade || "");
+      setEditEikenScore(res.data.eiken_score || "");
+      setEditEikenDate(res.data.eiken_date || "");
     } catch (e) {
       console.error(e);
     }
@@ -106,22 +87,22 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [selectedStudentId]);
 
-  // 3. 英検スコア更新 (連結して送信)
+  // 3. 英検スコア更新
   const handleUpdateEiken = async () => {
     try {
-      // 3つの入力値を連結して1つの文字列にする
-      // "準2級 合格 / CSE 1950 / 2025-06-01" の形式
-      let combinedScore = editEikenGrade;
-      if (editEikenScore) combinedScore += ` / CSE ${editEikenScore}`;
-      if (editEikenDate) combinedScore += ` / ${editEikenDate}`;
+      // バックエンドの仕様(連結文字列を受け取る)に合わせてデータを整形
+      // フォーマット: "{級} / CSE {スコア} / {日付}"
+      // 合否情報は入力させず、級のみを送ります
+      const combinedScore = `${editEikenGrade} / CSE ${editEikenScore} / ${editEikenDate}`;
 
-      // 既存のAPIは { score: string } を受け取る
-      await api.patch(`/students/${selectedStudentId}/eiken`, { score: combinedScore });
-      
+      await api.patch(`/students/${selectedStudentId}/eiken`, { 
+          score: combinedScore
+      });
       setIsEikenModalOpen(false);
       fetchDashboardData();
     } catch (e) {
       alert("更新失敗");
+      console.error(e);
     }
   };
 
@@ -180,7 +161,7 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                {/* 学習予定時間 (API未対応なら仮表示) */}
+                {/* 学習予定時間 */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
                         <CardTitle className="text-sm font-medium">学習予定</CardTitle>
@@ -221,14 +202,14 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {displayEiken.grade}
+                                {data?.eiken_grade || "未登録"}
                             </div>
                             <div className="text-sm font-medium text-gray-700">
-                                CSE: {displayEiken.score}
+                                CSE: {data?.eiken_score || "-"}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
-                                {displayEiken.date}
+                                {data?.eiken_date || "-"}
                             </div>
                         </div>
                     </CardContent>
@@ -252,12 +233,13 @@ export default function Dashboard() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="grade">級・合否</Label>
+                    {/* ラベルとプレースホルダーから合否を削除 */}
+                    <Label htmlFor="grade">級</Label>
                     <Input 
                         id="grade"
                         value={editEikenGrade} 
                         onChange={(e) => setEditEikenGrade(e.target.value)} 
-                        placeholder="例: 準2級 合格" 
+                        placeholder="例: 準2級" 
                     />
                 </div>
                 <div className="space-y-2">
