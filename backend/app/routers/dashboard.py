@@ -73,7 +73,7 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     eiken_str = "未登録"
     if latest_eiken:
         # 例: "準2級 合格 / CSE 1950"
-        eiken_str = f"{latest_eiken.grade} {latest_eiken.result}"
+        eiken_str = f"{latest_eiken.grade}"
         if latest_eiken.cse_score:
             eiken_str += f" / CSE {latest_eiken.cse_score}"
     

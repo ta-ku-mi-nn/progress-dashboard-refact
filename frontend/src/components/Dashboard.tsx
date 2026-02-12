@@ -23,7 +23,7 @@ interface DashboardData {
   total_study_time: number;
   total_planned_time?: number;
   progress_rate?: number;
-  eiken_grade?: string; // バックエンドの変更が反映されていない場合、これが連結文字列になる可能性がある
+  eiken_grade?: string;
   eiken_score?: string;
   eiken_date?: string;
 }
@@ -42,13 +42,6 @@ export default function Dashboard() {
   const [editEikenGrade, setEditEikenGrade] = useState("");
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
-
-  // ★追加: 英検表示用State (分解後のデータを保持)
-  const [displayEiken, setDisplayEiken] = useState({
-    grade: "未登録",
-    score: "-",
-    date: "-"
-  });
 
   // 1. 生徒一覧取得 & 初期選択
   useEffect(() => {
@@ -72,39 +65,17 @@ export default function Dashboard() {
     init();
   }, [user]);
 
-  // 2. ダッシュボード基本データ取得 & 英検データ分解
+  // 2. ダッシュボード基本データ取得
   const fetchDashboardData = async () => {
     if (!selectedStudentId) return;
     try {
       const res = await api.get(`/dashboard/${selectedStudentId}`);
       setData(res.data);
       
-      // ★修正: バックエンドからの eiken_score 文字列を解析して表示用と編集用にセット
-      // 想定フォーマット: "準2級 合格 / CSE 1950 / 2025-06-01" (区切り文字は / )
-      // ※バックエンドが個別のフィールドで返してくる場合は、それらを結合してから分解する、または個別にセットするなどの調整が必要ですが、
-      // ここでは連結文字列で返ってくることを前提に実装します。
-      // もしバックエンドが eiken_grade, eiken_score, eiken_date を個別に返しているなら、
-      // それらを直接使えば良いので、この分解ロジックは不要になります。
-      // 現状は、連結文字列で返ってきているという前提で進めます。
-      const rawScore = res.data.eiken_score || ""; // eiken_score が連結文字列であると仮定
-      const parts = rawScore.split(' / ');
-      
-      let grade = parts[0] || "";
-      // 合否を削除し、級のみを取得する
-      grade = grade.replace(" 合格", "").replace(" 不合格", "");
-
-      const score = parts[1] ? parts[1].replace('CSE ', '') : "";
-      const date = parts[2] || "";
-
-      setEditEikenGrade(grade);
-      setEditEikenScore(score);
-      setEditEikenDate(date);
-
-      setDisplayEiken({
-        grade: grade || "未登録",
-        score: score || "-",
-        date: date || "-"
-      });
+      // ★修正: バックエンドから正しいデータが来るので、そのままセット
+      setEditEikenGrade(res.data.eiken_grade || "");
+      setEditEikenScore(res.data.eiken_score || "");
+      setEditEikenDate(res.data.eiken_date || "");
 
     } catch (e) {
       console.error(e);
@@ -115,11 +86,10 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [selectedStudentId]);
 
-  // 3. 英検スコア更新 (連結して送信)
+  // 3. 英検スコア更新 (バックエンドのstudents.pyの仕様に合わせて結合して送信)
   const handleUpdateEiken = async () => {
     try {
-      // 3つの入力値を連結して1つの文字列にする
-      // "準2級 / CSE 1950 / 2025-06-01" の形式 (合否は含めない)
+      // 形式: "{級} / CSE {スコア} / {日付}"
       const combinedScore = `${editEikenGrade} / CSE ${editEikenScore} / ${editEikenDate}`;
 
       await api.patch(`/students/${selectedStudentId}/eiken`, { 
@@ -129,7 +99,6 @@ export default function Dashboard() {
       fetchDashboardData();
     } catch (e) {
       alert("更新失敗");
-      console.error(e);
     }
   };
 
@@ -229,17 +198,14 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {/* ★修正: 分解後のデータを表示 */}
-                                {displayEiken.grade}
+                                {data?.eiken_grade || "未登録"}
                             </div>
                             <div className="text-sm font-medium text-gray-700">
-                                {/* ★修正: 分解後のデータを表示 */}
-                                CSE: {displayEiken.score}
+                                CSE: {data?.eiken_score || "-"}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
-                                {/* ★修正: 分解後のデータを表示 */}
-                                {displayEiken.date}
+                                {data?.eiken_date || "-"}
                             </div>
                         </div>
                     </CardContent>
