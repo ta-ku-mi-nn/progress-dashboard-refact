@@ -1,6 +1,7 @@
 # backend/app/routers/dashboard.py
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from typing import Dict, Any, List, Optional
