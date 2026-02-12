@@ -123,7 +123,8 @@ def get_dashboard_summary(
         eiken_data = {
             "grade": latest_eiken.grade,
             "score": latest_eiken.cse_score,
-            "result": latest_eiken.result
+            "result": latest_eiken.result,
+            "exam_date": latest_eiken.exam_date
         }
 
     return {
