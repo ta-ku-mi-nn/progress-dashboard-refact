@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from app.db.database import get_db
 from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User
+from app.utils.pdf_generator import create_pdf_from_template
 
 router = APIRouter()
 
