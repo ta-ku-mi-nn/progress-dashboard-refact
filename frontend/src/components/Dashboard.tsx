@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar } from 'lucide-react';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, FileText } from 'lucide-react';
 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
@@ -24,7 +24,7 @@ interface DashboardData {
   total_planned_time?: number;
   progress_rate?: number;
   eiken_grade?: string; 
-  eiken_score?: string; // ここに "2級 / CSE 1950..." のような連結文字が入ってくる可能性がある
+  eiken_score?: string;
   eiken_date?: string;
 }
 
@@ -43,7 +43,7 @@ export default function Dashboard() {
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
 
-  // ★追加: 表示用に整形したデータを保持するState
+  // 表示用に整形したデータを保持するState
   const [displayEiken, setDisplayEiken] = useState({
     grade: "未登録",
     score: "-",
@@ -80,38 +80,28 @@ export default function Dashboard() {
       setData(res.data);
       
       // === データ解析ロジック ===
-      // バックエンドから返ってくる値は2パターンの可能性があります
-      // パターンA (分離済み): eiken_grade="2級", eiken_score="1950"
-      // パターンB (連結): eiken_score="2級 / CSE 1950 / 2025..." (eiken_gradeは空)
-      
       let g = res.data.eiken_grade || "";
       let s = res.data.eiken_score || "";
       let d = res.data.eiken_date || "";
 
-      // パターンB（連結文字列）の場合の分解処理
-      // " / " が含まれていれば連結文字列とみなす
+      // 連結文字列の場合の分解処理
       if (s.includes(" / ")) {
           const parts = s.split(" / ");
-          g = parts[0] || ""; // 級
-          s = parts[1] || ""; // スコア (CSE 1950)
-          d = parts[2] || ""; // 日付
+          g = parts[0] || ""; 
+          s = parts[1] || ""; 
+          d = parts[2] || ""; 
       }
 
-      // データのクレンジング (余計な文字を削除)
-      // 級: " None", " 合格", " 不合格" を削除
+      // クレンジング
       g = g.replace(" None", "").replace(" 合格", "").replace(" 不合格", "").trim();
-      
-      // スコア: "CSE " を削除 (数値のみにする)
       s = s.replace("CSE ", "").trim();
 
-      // 表示用データセット
       setDisplayEiken({
           grade: g || "未登録",
           score: s || "-",
           date: d || "-"
       });
 
-      // 編集フォーム初期値セット
       setEditEikenGrade(g);
       setEditEikenScore(s);
       setEditEikenDate(d);
@@ -128,10 +118,7 @@ export default function Dashboard() {
   // 3. 英検スコア更新
   const handleUpdateEiken = async () => {
     try {
-      // バックエンドが期待するフォーマットに結合して送信
-      // "{級} / CSE {スコア} / {日付}"
       const combinedScore = `${editEikenGrade} / CSE ${editEikenScore} / ${editEikenDate}`;
-
       await api.patch(`/students/${selectedStudentId}/eiken`, { 
           score: combinedScore
       });
@@ -142,9 +129,23 @@ export default function Dashboard() {
     }
   };
 
-  // 4. 印刷
+  // ★修正: 印刷ボタン (PDF発行)
   const handlePrint = () => {
-    window.print();
+    if (!selectedStudentId) return;
+
+    // APIのベースURLを取得 (環境変数またはデフォルト)
+    // api.defaults.baseURL は axios の設定から取得できますが、
+    // 確実にURLを構築するために import.meta.env を優先します
+    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+    
+    // 末尾のスラッシュを削除して整形
+    const cleanBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+
+    // PDF生成エンドポイント
+    const pdfUrl = `${cleanBaseURL}/dashboard/report/${selectedStudentId}`;
+    
+    // 新しいタブで開く
+    window.open(pdfUrl, '_blank');
   };
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
@@ -166,8 +167,9 @@ export default function Dashboard() {
               </Select>
             </div>
           )}
+          {/* ★修正: ボタンのアイコンとラベルを変更 */}
           <Button variant="outline" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-2" /> 印刷
+            <FileText className="w-4 h-4 mr-2" /> PDF出力
           </Button>
         </div>
       </div>
@@ -238,16 +240,13 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {/* ★修正: 解析済みのデータを表示 */}
                                 {displayEiken.grade}
                             </div>
                             <div className="text-sm font-medium text-gray-700">
-                                {/* ★修正: 解析済みのデータを表示 */}
                                 CSE: {displayEiken.score}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
-                                {/* ★修正: 解析済みのデータを表示 */}
                                 {displayEiken.date}
                             </div>
                         </div>
