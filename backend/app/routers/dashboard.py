@@ -319,3 +319,76 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     session.delete(progress_item)
     session.commit()
     return {"message": "Deleted successfully"}
+
+@router.get("/report/{student_id}")
+def generate_dashboard_report(student_id: int, session: Session = Depends(get_db)):
+    # 1. データ取得 (ロジックは既存と同じ)
+    student = session.query(User).filter(User.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    progress_items = session.query(Progress).filter(Progress.student_id == student_id).all()
+    latest_eiken = (
+        session.query(EikenResult)
+        .filter(EikenResult.student_id == student_id)
+        .order_by(desc(EikenResult.exam_date))
+        .first()
+    )
+
+    # 2. データ整形
+    total_study_time = 0.0
+    total_progress_pct = 0.0
+    
+    formatted_items = []
+    
+    if progress_items:
+        valid_items = [p for p in progress_items if p.total_units > 0]
+        if valid_items:
+            ratios = [min(1.0, p.completed_units / p.total_units) for p in valid_items]
+            total_progress_pct = (sum(ratios) / len(ratios)) * 100
+        
+        for item in progress_items:
+            pct = 0
+            if item.total_units > 0:
+                pct = round((item.completed_units / item.total_units) * 100)
+                if item.duration and item.duration > 0:
+                     ratio = min(1.0, item.completed_units / item.total_units)
+                     total_study_time += ratio * item.duration
+            
+            formatted_items.append({
+                "subject": item.subject or "-",
+                "book_name": item.book_name,
+                "completed_units": item.completed_units,
+                "total_units": item.total_units,
+                "pct": pct
+            })
+
+    eiken_str = "未登録"
+    if latest_eiken:
+        eiken_str = latest_eiken.grade
+        if latest_eiken.cse_score:
+            eiken_str += f" / CSE {latest_eiken.cse_score}"
+
+    # 3. テンプレート用コンテキスト作成
+    context = {
+        "student_name": student.username,
+        "date_str": datetime.now().strftime("%Y年%m月%d日"),
+        "total_study_time": round(total_study_time, 1),
+        "total_progress_pct": round(total_progress_pct, 1),
+        "eiken_str": eiken_str,
+        "items": formatted_items
+    }
+
+    # 4. PDF生成
+    try:
+        pdf_buffer = create_pdf_from_template("report_template.html", context)
+        
+        filename = f"report_{student_id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return StreamingResponse(
+            pdf_buffer, 
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF report")
