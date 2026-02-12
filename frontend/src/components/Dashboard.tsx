@@ -23,8 +23,8 @@ interface DashboardData {
   total_study_time: number;
   total_planned_time?: number;
   progress_rate?: number;
-  eiken_grade?: string;
-  eiken_score?: string;
+  eiken_grade?: string; 
+  eiken_score?: string; // ここに "2級 / CSE 1950..." のような連結文字が入ってくる可能性がある
   eiken_date?: string;
 }
 
@@ -42,6 +42,13 @@ export default function Dashboard() {
   const [editEikenGrade, setEditEikenGrade] = useState("");
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
+
+  // ★追加: 表示用に整形したデータを保持するState
+  const [displayEiken, setDisplayEiken] = useState({
+    grade: "未登録",
+    score: "-",
+    date: "-"
+  });
 
   // 1. 生徒一覧取得 & 初期選択
   useEffect(() => {
@@ -72,10 +79,42 @@ export default function Dashboard() {
       const res = await api.get(`/dashboard/${selectedStudentId}`);
       setData(res.data);
       
-      // ★修正: バックエンドから正しいデータが来るので、そのままセット
-      setEditEikenGrade(res.data.eiken_grade || "");
-      setEditEikenScore(res.data.eiken_score || "");
-      setEditEikenDate(res.data.eiken_date || "");
+      // === データ解析ロジック ===
+      // バックエンドから返ってくる値は2パターンの可能性があります
+      // パターンA (分離済み): eiken_grade="2級", eiken_score="1950"
+      // パターンB (連結): eiken_score="2級 / CSE 1950 / 2025..." (eiken_gradeは空)
+      
+      let g = res.data.eiken_grade || "";
+      let s = res.data.eiken_score || "";
+      let d = res.data.eiken_date || "";
+
+      // パターンB（連結文字列）の場合の分解処理
+      // " / " が含まれていれば連結文字列とみなす
+      if (s.includes(" / ")) {
+          const parts = s.split(" / ");
+          g = parts[0] || ""; // 級
+          s = parts[1] || ""; // スコア (CSE 1950)
+          d = parts[2] || ""; // 日付
+      }
+
+      // データのクレンジング (余計な文字を削除)
+      // 級: " None", " 合格", " 不合格" を削除
+      g = g.replace(" None", "").replace(" 合格", "").replace(" 不合格", "").trim();
+      
+      // スコア: "CSE " を削除 (数値のみにする)
+      s = s.replace("CSE ", "").trim();
+
+      // 表示用データセット
+      setDisplayEiken({
+          grade: g || "未登録",
+          score: s || "-",
+          date: d || "-"
+      });
+
+      // 編集フォーム初期値セット
+      setEditEikenGrade(g);
+      setEditEikenScore(s);
+      setEditEikenDate(d);
 
     } catch (e) {
       console.error(e);
@@ -86,10 +125,11 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [selectedStudentId]);
 
-  // 3. 英検スコア更新 (バックエンドのstudents.pyの仕様に合わせて結合して送信)
+  // 3. 英検スコア更新
   const handleUpdateEiken = async () => {
     try {
-      // 形式: "{級} / CSE {スコア} / {日付}"
+      // バックエンドが期待するフォーマットに結合して送信
+      // "{級} / CSE {スコア} / {日付}"
       const combinedScore = `${editEikenGrade} / CSE ${editEikenScore} / ${editEikenDate}`;
 
       await api.patch(`/students/${selectedStudentId}/eiken`, { 
@@ -198,14 +238,17 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {data?.eiken_grade || "未登録"}
+                                {/* ★修正: 解析済みのデータを表示 */}
+                                {displayEiken.grade}
                             </div>
                             <div className="text-sm font-medium text-gray-700">
-                                CSE: {data?.eiken_score || "-"}
+                                {/* ★修正: 解析済みのデータを表示 */}
+                                CSE: {displayEiken.score}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
-                                {data?.eiken_date || "-"}
+                                {/* ★修正: 解析済みのデータを表示 */}
+                                {displayEiken.date}
                             </div>
                         </div>
                     </CardContent>
