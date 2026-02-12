@@ -30,12 +30,14 @@ class ProgressCreate(BaseModel):
 class DashboardData(BaseModel):
     student_id: int
     total_study_time: float
-    eiken_score: Optional[str] = None
+    total_planned_time: float = 0.0 # 追加
     progress_rate: float = 0.0
+    eiken_grade: Optional[str] = None # 追加
+    eiken_score: Optional[str] = None # 追加 (連結ではなくスコア単体を入れる想定)
+    eiken_date: Optional[str] = None  # 追加
 
 # --- Endpoints ---
 
-# ★修正: エラーの原因となっていた student.eiken_score の参照を削除
 @router.get("/{student_id}", response_model=DashboardData)
 def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     # 1. 生徒存在確認
@@ -48,19 +50,22 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     
     total_progress_pct = 0.0
     total_completed_time = 0.0
+    total_planned_time = 0.0
     
     if progress_items:
         # 進捗率平均
         valid_items_for_pct = [p for p in progress_items if p.total_units > 0]
         if valid_items_for_pct:
-            ratios = [p.completed_units / p.total_units for p in valid_items_for_pct]
+            ratios = [min(1.0, p.completed_units / p.total_units) for p in valid_items_for_pct]
             total_progress_pct = (sum(ratios) / len(ratios)) * 100
         
-        # 学習時間計算 (進捗割合 * 目安時間)
+        # 学習時間計算
         for item in progress_items:
-            if item.duration and item.duration > 0 and item.total_units > 0:
-                ratio = min(1.0, item.completed_units / item.total_units)
-                total_completed_time += ratio * item.duration
+            if item.duration and item.duration > 0:
+                total_planned_time += item.duration
+                if item.total_units > 0:
+                    ratio = min(1.0, item.completed_units / item.total_units)
+                    total_completed_time += ratio * item.duration
 
     # 3. 英検結果取得とフォーマット整形
     latest_eiken = (
@@ -70,20 +75,28 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
         .first()
     )
     
-    eiken_str = "未登録"
+    eiken_grade = None
+    eiken_score = None
+    eiken_date = None
+
     if latest_eiken:
-        # 例: "準2級 合格 / CSE 1950"
-        eiken_str = f"{latest_eiken.grade}"
-        if latest_eiken.cse_score:
-            eiken_str += f" / CSE {latest_eiken.cse_score}"
-    
-    # ★修正: ここにあった `elif student.eiken_score:` のブロックを削除しました
+        # ★修正ポイント: 合否(result)を結合せず、単純に級(grade)だけを返す
+        eiken_grade = latest_eiken.grade 
+        
+        # スコア (CSE XXXX の数値部分だけを想定、もしくは文字列そのまま)
+        eiken_score = str(latest_eiken.cse_score) if latest_eiken.cse_score is not None else None
+        
+        # ★修正ポイント: 日付を文字列としてそのまま返す (DB定義変更前提)
+        eiken_date = latest_eiken.exam_date
 
     return {
         "student_id": student.id,
         "total_study_time": round(total_completed_time, 1),
-        "eiken_score": eiken_str,
-        "progress_rate": round(total_progress_pct, 1)
+        "total_planned_time": round(total_planned_time, 1),
+        "progress_rate": round(total_progress_pct, 1),
+        "eiken_grade": eiken_grade,
+        "eiken_score": eiken_score,
+        "eiken_date": eiken_date
     }
 
 
@@ -133,6 +146,30 @@ def get_dashboard_summary(
         "total_completed_time": round(total_completed_time, 1),
         "latest_eiken": eiken_data
     }
+
+# ★追加: グラフ用エンドポイント (以前のやり取りで追加したもの)
+@router.get("/chart/{student_id}")
+def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
+    items = session.query(Progress).filter(Progress.student_id == student_id).all()
+    subject_map = {}
+    
+    for item in items:
+        if item.total_units > 0:
+            ratio = min(1.0, item.completed_units / item.total_units)
+            if item.subject not in subject_map:
+                subject_map[item.subject] = []
+            subject_map[item.subject].append(ratio * 100)
+            
+    result = []
+    for subj, ratios in subject_map.items():
+        avg_progress = sum(ratios) / len(ratios)
+        result.append({
+            "subject": subj,
+            "progress": round(avg_progress, 1)
+        })
+    if not result:
+        return []
+    return result
 
 @router.get("/list/{student_id}")
 def get_progress_list(student_id: int, session: Session = Depends(get_db)) -> List[Dict[str, Any]]:
@@ -282,4 +319,3 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     session.delete(progress_item)
     session.commit()
     return {"message": "Deleted successfully"}
-    
