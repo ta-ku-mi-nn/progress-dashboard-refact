@@ -6,6 +6,10 @@ from app.routers import deps
 from app.crud import crud_student, crud_progress
 from app.schemas import schemas
 from app.models.models import User
+from app.models.models import EikenResult
+from sqlalchemy import desc
+from datetime import datetime
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -128,4 +132,3 @@ def update_student_eiken(
 
     db.commit()
     return {"message": "Eiken info updated"}
-    
