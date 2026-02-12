@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
-import { Label } from './ui/label'; // Label追加
+import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar } from 'lucide-react';
 
@@ -20,12 +20,10 @@ interface Student {
 }
 
 interface DashboardData {
-  total_study_time: number;     // 総学習時間 (実績)
-  total_planned_time?: number;  // 学習予定時間 (APIから返却される想定)
-  progress_rate?: number;       // 達成率
-  eiken_grade?: string;         // 英検 級
-  eiken_score?: string;         // 英検 スコア
-  eiken_date?: string;          // 英検 試験日
+  total_study_time: number;
+  eiken_score?: string; // バックエンドからは連結文字列で来る想定
+  progress_rate?: number;
+  total_planned_time?: number; // なければ0として扱う
 }
 
 export default function Dashboard() {
@@ -42,6 +40,13 @@ export default function Dashboard() {
   const [editEikenGrade, setEditEikenGrade] = useState("");
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
+
+  // 英検表示用State (連結文字列を分解して保持)
+  const [displayEiken, setDisplayEiken] = useState({
+    grade: "未登録",
+    score: "-",
+    date: "-"
+  });
 
   // 1. 生徒一覧取得 & 初期選択
   useEffect(() => {
@@ -65,16 +70,33 @@ export default function Dashboard() {
     init();
   }, [user]);
 
-  // 2. ダッシュボード基本データ取得
+  // 2. ダッシュボード基本データ取得 & 英検データ分解
   const fetchDashboardData = async () => {
     if (!selectedStudentId) return;
     try {
       const res = await api.get(`/dashboard/${selectedStudentId}`);
       setData(res.data);
-      // 編集用フォーム初期値セット
-      setEditEikenGrade(res.data.eiken_grade || "");
-      setEditEikenScore(res.data.eiken_score || "");
-      setEditEikenDate(res.data.eiken_date || "");
+      
+      // バックエンドからの eiken_score 文字列を解析して表示用と編集用にセット
+      // 想定フォーマット: "準2級 合格 / CSE 1950 / 2025-06-01" (区切り文字は / )
+      // または単に "準2級 合格" だけの場合もあり
+      const rawScore = res.data.eiken_score || "";
+      const parts = rawScore.split(' / ');
+      
+      const grade = parts[0] || "";
+      const score = parts[1] ? parts[1].replace('CSE ', '') : "";
+      const date = parts[2] || "";
+
+      setEditEikenGrade(grade);
+      setEditEikenScore(score);
+      setEditEikenDate(date);
+
+      setDisplayEiken({
+        grade: grade || "未登録",
+        score: score || "-",
+        date: date || "-"
+      });
+
     } catch (e) {
       console.error(e);
     }
@@ -84,19 +106,18 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [selectedStudentId]);
 
-  // 3. 英検スコア更新
+  // 3. 英検スコア更新 (連結して送信)
   const handleUpdateEiken = async () => {
     try {
-      // 3項目をまとめて送信 (バックエンド側で受け取るAPIが必要)
-      // 文字列結合して送るか、個別のカラムに送るかはバックエンドの実装次第ですが
-      // ここでは既存の `/students/{id}/eiken` を拡張して利用する想定で書きます。
-      // もしバックエンドが単一の `score` 文字列しか受け取らない場合は、連結して送るなどの調整が必要です。
-      // 今回はJSONで構造化して送る形にします。
-      await api.patch(`/students/${selectedStudentId}/eiken`, { 
-          grade: editEikenGrade,
-          score: editEikenScore,
-          date: editEikenDate
-      });
+      // 3つの入力値を連結して1つの文字列にする
+      // "準2級 合格 / CSE 1950 / 2025-06-01" の形式
+      let combinedScore = editEikenGrade;
+      if (editEikenScore) combinedScore += ` / CSE ${editEikenScore}`;
+      if (editEikenDate) combinedScore += ` / ${editEikenDate}`;
+
+      // 既存のAPIは { score: string } を受け取る
+      await api.patch(`/students/${selectedStudentId}/eiken`, { score: combinedScore });
+      
       setIsEikenModalOpen(false);
       fetchDashboardData();
     } catch (e) {
@@ -159,14 +180,13 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                {/* 学習予定時間 */}
+                {/* 学習予定時間 (API未対応なら仮表示) */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
                         <CardTitle className="text-sm font-medium">学習予定</CardTitle>
                         <Target className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                        {/* total_planned_time が API にない場合は 0 や - を表示 */}
                         <div className="text-2xl font-bold">{data?.total_planned_time || 0}<span className="text-sm font-normal ml-1">時間</span></div>
                         <p className="text-xs text-muted-foreground mt-1">登録された総目安時間</p>
                     </CardContent>
@@ -201,14 +221,14 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {data?.eiken_grade || "未登録"}
+                                {displayEiken.grade}
                             </div>
                             <div className="text-sm font-medium text-gray-700">
-                                CSE: {data?.eiken_score || "-"}
+                                CSE: {displayEiken.score}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
-                                {data?.eiken_date || "-"}
+                                {displayEiken.date}
                             </div>
                         </div>
                     </CardContent>
@@ -256,7 +276,7 @@ export default function Dashboard() {
                     id="date"
                     value={editEikenDate} 
                     onChange={(e) => setEditEikenDate(e.target.value)} 
-                    placeholder="例: 2025年度 第2回 (または日付)" 
+                    placeholder="例: 2025-06-01" 
                 />
             </div>
           </div>
