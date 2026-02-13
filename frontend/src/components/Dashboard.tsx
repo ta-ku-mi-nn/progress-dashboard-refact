@@ -12,6 +12,7 @@ import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, FileText } 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
 import ProgressList from './ProgressList';
+import html2canvas from 'html2canvas';
 
 // 型定義
 interface Student {
@@ -129,23 +130,43 @@ export default function Dashboard() {
     }
   };
 
-  // ★修正: 印刷ボタン (PDF発行)
-  const handlePrint = () => {
-    if (!selectedStudentId) return;
+  const handlePrint = async () => {
+    if (!selectedStudentId) {
+        alert("生徒が選択されていません");
+        return;
+    }
 
-    // APIのベースURLを取得 (環境変数またはデフォルト)
-    // api.defaults.baseURL は axios の設定から取得できますが、
-    // 確実にURLを構築するために import.meta.env を優先します
-    const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
-    
-    // 末尾のスラッシュを削除して整形
-    const cleanBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+    try {
+        // 1. グラフの要素を取得
+        const chartElement = document.getElementById('chart-container');
+        let chartImage = "";
 
-    // PDF生成エンドポイント
-    const pdfUrl = `${cleanBaseURL}/dashboard/report/${selectedStudentId}`;
-    
-    // 新しいタブで開く
-    window.open(pdfUrl, '_blank');
+        if (chartElement) {
+            // 2. html2canvasで画像化 (Base64文字列を取得)
+            const canvas = await html2canvas(chartElement, {
+                scale: 2, // 高画質化
+                backgroundColor: null // 背景透明維持
+            });
+            chartImage = canvas.toDataURL('image/png');
+        }
+
+        // 3. バックエンドに画像付きでリクエスト (POSTに変更)
+        // responseType: 'blob' が重要 (バイナリデータとして受け取るため)
+        const res = await api.post(`/dashboard/report/${selectedStudentId}`, {
+            chart_image: chartImage
+        }, {
+            responseType: 'blob'
+        });
+
+        // 4. 受け取ったPDF BlobをURLに変換して開く
+        const pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+        const pdfUrl = window.URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+
+    } catch (e) {
+        console.error("PDF generation failed:", e);
+        alert("PDF作成に失敗しました");
+    }
   };
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
@@ -181,7 +202,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 w-full h-full">
             
             {/* 1. グラフコンポーネント (上) */}
-            <div className="w-full flex-1 min-h-[300px]">
+            <div id="chart-container" className="w-full flex-1 min-h-[300px] bg-white p-2 rounded">
                 <ProgressChart studentId={selectedStudentId} />
             </div>
 

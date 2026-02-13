@@ -39,6 +39,9 @@ class DashboardData(BaseModel):
     eiken_score: Optional[str] = None # 追加 (連結ではなくスコア単体を入れる想定)
     eiken_date: Optional[str] = None  # 追加
 
+class ReportRequest(BaseModel):
+    chart_image: Optional[str] = None
+
 # --- Endpoints ---
 
 @router.get("/{student_id}", response_model=DashboardData)
@@ -324,7 +327,7 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     return {"message": "Deleted successfully"}
 
 @router.get("/report/{student_id}")
-def generate_dashboard_report(student_id: int, session: Session = Depends(get_db)):
+def generate_dashboard_report(student_id: int, request: ReportRequest, session: Session = Depends(get_db)):
     # 1. データ取得 (ロジックは既存と同じ)
     student = session.query(User).filter(User.id == student_id).first()
     if not student:
@@ -379,7 +382,8 @@ def generate_dashboard_report(student_id: int, session: Session = Depends(get_db
         "total_study_time": round(total_study_time, 1),
         "total_progress_pct": round(total_progress_pct, 1),
         "eiken_str": eiken_str,
-        "items": formatted_items
+        "items": formatted_items,
+        "chart_image": request.chart_image
     }
 
     # 4. PDF生成
