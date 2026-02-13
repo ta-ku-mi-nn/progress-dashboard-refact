@@ -10,7 +10,6 @@
         }
         
         body {
-            /* HeiseiKakuGo-W5 は reportlab が標準で持っている日本語フォントエイリアスです */
             font-family: "HeiseiKakuGo-W5", sans-serif;
             font-size: 10pt;
             line-height: 1.5;
@@ -121,6 +120,15 @@
             </td>
         </tr>
     </table>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h3>【学習進捗グラフ】</h3>
+        {% if chart_image %}
+            <img src="{{ chart_image }}" style="width: 100%; max-width: 600px; height: auto;">
+        {% else %}
+            <p style="color: #999;">グラフデータがありません</p>
+        {% endif %}
+    </div>
 
     <div class="details-header">学習詳細</div>
 
