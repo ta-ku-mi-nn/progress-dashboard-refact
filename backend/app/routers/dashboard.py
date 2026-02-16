@@ -326,7 +326,7 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     session.commit()
     return {"message": "Deleted successfully"}
 
-@router.get("/report/{student_id}")
+@router.post("/report/{student_id}")
 def generate_dashboard_report(student_id: int, request: ReportRequest, session: Session = Depends(get_db)):
     # 1. データ取得 (ロジックは既存と同じ)
     student = session.query(User).filter(User.id == student_id).first()
