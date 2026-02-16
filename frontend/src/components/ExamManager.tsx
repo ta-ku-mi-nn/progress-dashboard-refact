@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
@@ -8,12 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Plus, Trash2, Calendar, FileText, BarChart2, Clock, CheckCircle, ChevronLeft, ChevronRight, Eye, Printer } from 'lucide-react';
 import api from '../lib/api';
+import html2canvas from 'html2canvas'; // ★追加
 
 interface ExamManagerProps {
   studentId: number;
 }
 
-// --- 型定義 ---
+// --- 型定義 (省略なし) ---
 interface Acceptance {
   id: number;
   university_name: string;
@@ -85,7 +86,6 @@ const getCalendarDays = (year: number, month: number) => {
   for (let i = 0; i < startDayOfWeek; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
   
-  // 5行(35マス)確保する
   while (days.length < 35) {
       days.push(null);
   }
@@ -93,7 +93,6 @@ const getCalendarDays = (year: number, month: number) => {
 };
 
 export default function ExamManager({ studentId }: ExamManagerProps) {
-  // ★修正: タブ初期値を「過去問」に変更
   const [activeTab, setActiveTab] = useState("past_exam");
 
   // --- State ---
@@ -139,7 +138,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
     if (studentId) fetchData();
   }, [studentId]);
 
-  // --- ハンドラ ---
+  // --- ハンドラ (追加/削除/更新) ---
   const handleAddAcceptance = async () => {
     try {
       await api.post('/exams/acceptance', { student_id: studentId, ...newAcceptance });
@@ -178,7 +177,6 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
           mock_exam_format: newMockExam.result_type,
           round: newMockExam.round || "1",
           grade: "-", 
-          
           subject_kokugo_desc: toNum(newMockExam.subject_kokugo_desc),
           subject_math_desc: toNum(newMockExam.subject_math_desc),
           subject_english_desc: toNum(newMockExam.subject_english_desc),
@@ -211,8 +209,59 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
     if (!confirm("削除しますか？")) return;
     try { await api.delete(`/exams/mock/${id}`); fetchData(); } catch (e) { alert("削除失敗"); }
   };
-  const handlePrint = () => {
-    window.print();
+
+  // ★修正: タブごとの印刷ハンドラ
+  const handlePrint = async (type: 'past' | 'mock' | 'acceptance' | 'calendar') => {
+    if (!studentId) return;
+
+    let endpoint = "";
+    let targetId = ""; // 画像化する要素のID
+    
+    switch (type) {
+        case 'past':
+            endpoint = `/reports/past-exams/${studentId}`;
+            targetId = "past-exam-table"; // IDを指定
+            break;
+        case 'mock':
+            endpoint = `/reports/mock-exams/${studentId}`;
+            targetId = "mock-exam-table"; // IDを指定
+            break;
+        case 'acceptance':
+            // 入試日程はカレンダーAPIを流用するか、別途作るかですが、今回はcalendarエンドポイントで代用します
+            endpoint = `/reports/calendar/${studentId}`; 
+            targetId = "acceptance-table";
+            break;
+        case 'calendar':
+            endpoint = `/reports/calendar/${studentId}`;
+            targetId = "calendar-view"; // IDを指定
+            break;
+    }
+
+    try {
+        let chartImage = "";
+        const targetElement = document.getElementById(targetId);
+
+        if (targetElement) {
+            // 背景色を白に強制しないと透過して黒くなることがある
+            const canvas = await html2canvas(targetElement, {
+                scale: 2, 
+                backgroundColor: "#ffffff", 
+                useCORS: true 
+            });
+            chartImage = canvas.toDataURL('image/png');
+        }
+
+        const res = await api.post(endpoint, {
+            chart_image: chartImage
+        }, { responseType: 'blob' });
+
+        const pdfUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+        window.open(pdfUrl, '_blank');
+
+    } catch (e) {
+        console.error("PDF generation failed:", e);
+        alert("PDF作成に失敗しました");
+    }
   };
 
   // --- カレンダー描画用 ---
@@ -238,16 +287,12 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
       return <div className="flex justify-between border-b border-gray-100 py-1"><span>{label}</span><span className="font-medium">{value}</span></div>;
   };
 
-  
-
   return (
     <Card className="h-full flex flex-col border shadow-sm min-h-[90vh]">
-      
       <CardContent className="flex-1 overflow-hidden p-0 bg-gray-50/30 flex flex-col min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="px-4 py-2 bg-white border-b shrink-0">
             <TabsList className="grid w-full grid-cols-4">
-              {/* ★修正: タブ順序を 過去問 -> 模試 -> 入試日程 -> カレンダー に変更 */}
               <TabsTrigger value="past_exam"><Clock className="w-4 h-4 mr-2" />過去問</TabsTrigger>
               <TabsTrigger value="mock_exam"><BarChart2 className="w-4 h-4 mr-2" />模試</TabsTrigger>
               <TabsTrigger value="acceptance"><FileText className="w-4 h-4 mr-2" />入試日程</TabsTrigger>
@@ -255,17 +300,18 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
             </TabsList>
           </div>
 
-          {/* === 過去問タブ (1番目) === */}
+          {/* === 過去問タブ === */}
           <TabsContent value="past_exam" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
-                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                    <Button size="sm" variant="outline" onClick={() => handlePrint('past')} className="print:hidden">
                         <Printer className="w-4 h-4 mr-1" /> 印刷
                     </Button>
                     <Button size="sm" onClick={() => setIsPastModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 結果を記録
                     </Button>
                 </div>
-                <div className="flex-1 overflow-auto border rounded-md bg-white">
+                {/* ★ID付与: 画像化対象 */}
+                <div id="past-exam-table" className="flex-1 overflow-auto border rounded-md bg-white">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -318,17 +364,18 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 </div>
           </TabsContent>
 
-          {/* === 模試タブ (2番目) === */}
+          {/* === 模試タブ === */}
           <TabsContent value="mock_exam" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
-                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                    <Button size="sm" variant="outline" onClick={() => handlePrint('mock')} className="print:hidden">
                         <Printer className="w-4 h-4 mr-1" /> 印刷
                     </Button>
                     <Button size="sm" onClick={() => setIsMockModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 模試を追加
                     </Button>
                 </div>
-                <div className="flex-1 overflow-auto border rounded-md bg-white">
+                {/* ★ID付与: 画像化対象 */}
+                <div id="mock-exam-table" className="flex-1 overflow-auto border rounded-md bg-white">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -363,21 +410,21 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 </div>
           </TabsContent>
 
-          {/* === 入試日程タブ (3番目) === */}
+          {/* === 入試日程タブ === */}
           <TabsContent value="acceptance" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex justify-end mb-2 shrink-0">
-                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                    <Button size="sm" variant="outline" onClick={() => handlePrint('acceptance')} className="print:hidden">
                         <Printer className="w-4 h-4 mr-1" /> 印刷
                     </Button>
                     <Button size="sm" onClick={() => setIsAcceptanceModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-1" /> 日程を追加
                     </Button>
                 </div>
-                <div className="flex-1 overflow-auto border rounded-md bg-white">
+                {/* ★ID付与: 画像化対象 */}
+                <div id="acceptance-table" className="flex-1 overflow-auto border rounded-md bg-white">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                {/* ★修正: カラム順序を 大学名->願書->試験日->発表日->手続->結果 に変更 */}
                                 <TableHead>大学・学部</TableHead>
                                 <TableHead>願書〆切</TableHead>
                                 <TableHead>試験日</TableHead>
@@ -407,7 +454,6 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                                             value={item.result || "未受験"}
                                             onChange={(e) => handleUpdateResult(item.id, e.target.value)}
                                         >
-                                            {/* ★修正: 選択肢を3つに限定 */}
                                             <option value="未受験">未受験</option>
                                             <option value="合格">合格</option>
                                             <option value="不合格">不合格</option>
@@ -426,7 +472,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 </div>
           </TabsContent>
 
-          {/* === カレンダータブ (4番目) === */}
+          {/* === カレンダータブ === */}
           <TabsContent value="calendar" className="flex-1 flex flex-col p-4 overflow-hidden m-0 data-[state=inactive]:hidden">
                 <div className="flex items-center justify-between mb-2 bg-white p-2 rounded border shrink-0">
                     <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}>
@@ -435,19 +481,18 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                     <span className="font-bold text-lg">
                         {currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}
                     </span>
-                    {/* ★追加: 印刷ボタン */}
-                    <Button size="sm" variant="outline" onClick={handlePrint} className="print:hidden">
+                    <Button size="sm" variant="outline" onClick={() => handlePrint('calendar')} className="print:hidden">
                         <Printer className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}>
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 </div>
-                <div className="flex-1 bg-white border rounded-md overflow-hidden flex flex-col">
+                {/* ★ID付与: 画像化対象 (カレンダー全体) */}
+                <div id="calendar-view" className="flex-1 bg-white border rounded-md overflow-hidden flex flex-col">
                     <div className="grid grid-cols-7 border-b bg-gray-50 text-center py-1 text-sm font-medium shrink-0">
                         <div className="text-red-500">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div className="text-blue-500">土</div>
                     </div>
-                    {/* ★修正: 5行固定 (grid-rows-5) */}
                     <div className="flex-1 grid grid-cols-7 grid-rows-5">
                         {calendarDays.map((day, i) => (
                             <div key={i} className={`border-b border-r p-1 flex flex-col overflow-hidden ${!day ? 'bg-gray-50' : ''} ${(i+1)%7===0 ? 'border-r-0' : ''}`}>
@@ -472,7 +517,8 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
         </Tabs>
       </CardContent>
 
-      {/* --- モーダル群 (変更なし) --- */}
+      {/* --- モーダル群 (変更なしのため省略します。既存のコードをそのまま使用してください) --- */}
+      {/* ... (既存のDialogコンポーネント群) ... */}
       <Dialog open={isAcceptanceModalOpen} onOpenChange={setIsAcceptanceModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="bg-gray-50/50 p-4 border-b -m-6 mb-2 rounded-t-lg"><DialogTitle>入試日程を追加</DialogTitle></DialogHeader>

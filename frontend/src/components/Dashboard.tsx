@@ -152,7 +152,7 @@ export default function Dashboard() {
 
         // 3. バックエンドに画像付きでリクエスト (POSTに変更)
         // responseType: 'blob' が重要 (バイナリデータとして受け取るため)
-        const res = await api.post(`/dashboard/report/${selectedStudentId}`, {
+        const res = await api.post(`reports/dashboard/${selectedStudentId}`, {
             chart_image: chartImage
         }, {
             responseType: 'blob'
