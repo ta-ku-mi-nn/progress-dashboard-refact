@@ -216,7 +216,6 @@ export default function Dashboard() {
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
                         <div className="text-2xl font-bold">{data?.total_study_time || 0}<span className="text-sm font-normal ml-1">時間</span></div>
-                        <p className="text-xs text-muted-foreground mt-1">累計学習時間</p>
                     </CardContent>
                 </Card>
 
@@ -228,7 +227,6 @@ export default function Dashboard() {
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
                         <div className="text-2xl font-bold">{data?.total_planned_time || 0}<span className="text-sm font-normal ml-1">時間</span></div>
-                        <p className="text-xs text-muted-foreground mt-1">登録された総目安時間</p>
                     </CardContent>
                 </Card>
 
@@ -240,7 +238,6 @@ export default function Dashboard() {
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
                         <div className="text-2xl font-bold">{data?.progress_rate || 0}<span className="text-sm font-normal ml-1">%</span></div>
-                        <p className="text-xs text-muted-foreground mt-1">完了数 / 全登録数</p>
                     </CardContent>
                 </Card>
                 
@@ -261,10 +258,7 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {displayEiken.grade}
-                            </div>
-                            <div className="text-sm font-medium text-gray-700">
-                                CSE: {displayEiken.score}
+                                {displayEiken.grade} CSE: {displayEiken.score }
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
