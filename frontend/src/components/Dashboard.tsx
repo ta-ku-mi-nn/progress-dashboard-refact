@@ -146,13 +146,13 @@ export default function Dashboard() {
             const canvas = await html2canvas(chartElement, {
                 scale: 2, // 高画質化
                 backgroundColor: null // 背景透明維持
-            });
+            } as any);
             chartImage = canvas.toDataURL('image/png');
         }
 
         // 3. バックエンドに画像付きでリクエスト (POSTに変更)
         // responseType: 'blob' が重要 (バイナリデータとして受け取るため)
-        const res = await api.post(`/dashboard/report/${selectedStudentId}`, {
+        const res = await api.post(`reports/dashboard/${selectedStudentId}`, {
             chart_image: chartImage
         }, {
             responseType: 'blob'
