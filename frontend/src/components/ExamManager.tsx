@@ -247,7 +247,7 @@ export default function ExamManager({ studentId }: ExamManagerProps) {
                 scale: 2, 
                 backgroundColor: "#ffffff", 
                 useCORS: true 
-            });
+            }as any);
             chartImage = canvas.toDataURL('image/png');
         }
 

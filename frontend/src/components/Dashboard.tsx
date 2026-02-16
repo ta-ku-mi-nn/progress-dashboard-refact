@@ -146,7 +146,7 @@ export default function Dashboard() {
             const canvas = await html2canvas(chartElement, {
                 scale: 2, // 高画質化
                 backgroundColor: null // 背景透明維持
-            });
+            } as any);
             chartImage = canvas.toDataURL('image/png');
         }
 
