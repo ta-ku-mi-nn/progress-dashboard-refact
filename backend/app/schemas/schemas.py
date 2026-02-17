@@ -197,3 +197,10 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+# --- Changelog Schemas ---
+class ChangelogCreate(BaseModel):
+    version: str
+    title: str
+    description: Optional[str] = None
+    release_date: Optional[str] = None # 未指定ならサーバー側で現在日付
