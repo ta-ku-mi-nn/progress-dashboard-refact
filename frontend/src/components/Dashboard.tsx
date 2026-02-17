@@ -1,112 +1,324 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, FileText } from 'lucide-react';
+
+// コンポーネント読み込み
 import ProgressChart from './ProgressChart';
 import ProgressList from './ProgressList';
-import api from '../lib/api';
+import html2canvas from 'html2canvas';
 
-// データ型の定義 (types.ts に移動してもOKです)
-interface DashboardSummary {
-  total_progress: number;
-  latest_eiken: {
-    grade: string;
-    score: number;
-    result: string;
-  } | null;
+// 型定義
+interface Student {
+  id: number;
+  name: string;
 }
 
-export default function Dashboard({ studentId }: { studentId: number }) {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+interface DashboardData {
+  total_study_time: number;
+  total_planned_time?: number;
+  progress_rate?: number;
+  eiken_grade?: string; 
+  eiken_score?: string;
+  eiken_date?: string;
+}
 
+export default function Dashboard() {
+  const { user } = useAuth();
+  
+  // State
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // 英検編集用State
+  const [isEikenModalOpen, setIsEikenModalOpen] = useState(false);
+  const [editEikenGrade, setEditEikenGrade] = useState("");
+  const [editEikenScore, setEditEikenScore] = useState("");
+  const [editEikenDate, setEditEikenDate] = useState("");
+
+  // 表示用に整形したデータを保持するState
+  const [displayEiken, setDisplayEiken] = useState({
+    grade: "未登録",
+    score: "-",
+    date: "-"
+  });
+
+  // 1. 生徒一覧取得 & 初期選択
   useEffect(() => {
-    const fetchSummary = async () => {
+    const init = async () => {
+      if (!user) return;
       try {
-        const res = await api.get(`/dashboard/summary/${studentId}`);
-        setSummary(res.data);
+        if ((user as any).student_id) {
+          setSelectedStudentId((user as any).student_id);
+          setLoading(false);
+          return;
+        }
+        const res = await api.get('/students');
+        setStudents(res.data);
+        if (res.data.length > 0) setSelectedStudentId(res.data[0].id);
       } catch (e) {
-        console.error("Failed to fetch summary", e);
+        console.error(e);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchSummary();
-  }, [studentId]);
+    init();
+  }, [user]);
+
+  // 2. ダッシュボード基本データ取得
+  const fetchDashboardData = async () => {
+    if (!selectedStudentId) return;
+    try {
+      const res = await api.get(`/dashboard/${selectedStudentId}`);
+      setData(res.data);
+      
+      // === データ解析ロジック ===
+      let g = res.data.eiken_grade || "";
+      let s = res.data.eiken_score || "";
+      let d = res.data.eiken_date || "";
+
+      // 連結文字列の場合の分解処理
+      if (s.includes(" / ")) {
+          const parts = s.split(" / ");
+          g = parts[0] || ""; 
+          s = parts[1] || ""; 
+          d = parts[2] || ""; 
+      }
+
+      // クレンジング
+      g = g.replace(" None", "").replace(" 合格", "").replace(" 不合格", "").trim();
+      s = s.replace("CSE ", "").trim();
+
+      setDisplayEiken({
+          grade: g || "未登録",
+          score: s || "-",
+          date: d || "-"
+      });
+
+      setEditEikenGrade(g);
+      setEditEikenScore(s);
+      setEditEikenDate(d);
+
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [selectedStudentId]);
+
+  // 3. 英検スコア更新
+  const handleUpdateEiken = async () => {
+    try {
+      const combinedScore = `${editEikenGrade} / CSE ${editEikenScore} / ${editEikenDate}`;
+      await api.patch(`/students/${selectedStudentId}/eiken`, { 
+          score: combinedScore
+      });
+      setIsEikenModalOpen(false);
+      fetchDashboardData();
+    } catch (e) {
+      alert("更新失敗");
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!selectedStudentId) {
+        alert("生徒が選択されていません");
+        return;
+    }
+
+    try {
+        // 1. グラフの要素を取得
+        const chartElement = document.getElementById('chart-container');
+        let chartImage = "";
+
+        if (chartElement) {
+            // 2. html2canvasで画像化 (Base64文字列を取得)
+            const canvas = await html2canvas(chartElement, {
+                scale: 2, // 高画質化
+                backgroundColor: null // 背景透明維持
+            } as any);
+            chartImage = canvas.toDataURL('image/png');
+        }
+
+        // 3. バックエンドに画像付きでリクエスト (POSTに変更)
+        // responseType: 'blob' が重要 (バイナリデータとして受け取るため)
+        const res = await api.post(`reports/dashboard/${selectedStudentId}`, {
+            chart_image: chartImage
+        }, {
+            responseType: 'blob'
+        });
+
+        // 4. 受け取ったPDF BlobをURLに変換して開く
+        const pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+        const pdfUrl = window.URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+
+    } catch (e) {
+        console.error("PDF generation failed:", e);
+        alert("PDF作成に失敗しました");
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
+  if (!selectedStudentId) return <div className="p-8 text-center">生徒が選択されていません</div>;
 
   return (
-    <div className="space-y-6">
-      {/* 上段: チャートとリスト */}
-      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
-        {/* 左側: 進捗チャート (幅広) */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>学習進捗チャート</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ProgressChart studentId={studentId} />
-          </CardContent>
-        </Card>
-
-        {/* 右側: 参考書リスト */}
-        <Card className="md:col-span-1 h-[400px] flex flex-col">
-          <CardHeader>
-            <CardTitle>参考書リスト</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0 pb-4 px-4">
-            <ProgressList studentId={studentId} />
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-6 h-full p-1">
+      {/* ヘッダーエリア */}
+      <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+        <h2 className="text-2xl font-bold tracking-tight">学習ダッシュボード</h2>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {students.length > 0 && (
+            <div className="w-full md:w-64">
+              <Select value={String(selectedStudentId)} onValueChange={(val) => setSelectedStudentId(Number(val))}>
+                <SelectTrigger><SelectValue placeholder="生徒を選択" /></SelectTrigger>
+                <SelectContent>
+                  {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {/* ★修正: ボタンのアイコンとラベルを変更 */}
+          <Button variant="outline" onClick={handlePrint}>
+            <FileText className="w-4 h-4 mr-2" /> PDF出力
+          </Button>
+        </div>
       </div>
 
-      {/* 下段: KPIカード */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* 達成率カード */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              参考書達成率 (平均)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary?.total_progress ?? 0}%</div>
-            <p className="text-xs text-muted-foreground mt-1">全科目の平均進捗</p>
-          </CardContent>
-        </Card>
-
-        {/* 英検カード */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              最新 英検結果
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary?.latest_eiken ? (
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold">{summary.latest_eiken.grade}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded text-white ${
-                        summary.latest_eiken.result === "合格" ? "bg-green-500" : "bg-red-500"
-                    }`}>
-                        {summary.latest_eiken.result}
-                    </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">CSEスコア: {summary.latest_eiken.score}</p>
-              </div>
-            ) : (
-              <div className="text-muted-foreground text-sm">データなし</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* メインコンテンツエリア: 左右2分割 (1:1) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start print:block h-full">
         
-        {/* 学習時間カード (プレースホルダー) */}
-        <Card className="opacity-50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              学習時間 (週間)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Coming Soon</div>
-          </CardContent>
-        </Card>
+        {/* === 左列: グラフ(上) + KPI(下) === */}
+        <div className="flex flex-col gap-4 w-full h-full">
+            
+            {/* 1. グラフコンポーネント (上) */}
+            <div id="chart-container" className="w-full flex-1 min-h-[300px] bg-white p-2 rounded">
+                <ProgressChart studentId={selectedStudentId} />
+            </div>
+
+            {/* 2. KPIカード群 (下: 2x2グリッド) */}
+            <div className="grid grid-cols-2 gap-4 shrink-0">
+                {/* 総学習時間 */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+                        <CardTitle className="text-sm font-medium">総学習時間</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        <div className="text-2xl font-bold">{data?.total_study_time || 0}<span className="text-sm font-normal ml-1">時間</span></div>
+                    </CardContent>
+                </Card>
+
+                {/* 学習予定時間 */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+                        <CardTitle className="text-sm font-medium">学習予定</CardTitle>
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        <div className="text-2xl font-bold">{data?.total_planned_time || 0}<span className="text-sm font-normal ml-1">時間</span></div>
+                    </CardContent>
+                </Card>
+
+                {/* 達成率 */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+                        <CardTitle className="text-sm font-medium">達成率</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        <div className="text-2xl font-bold">{data?.progress_rate || 0}<span className="text-sm font-normal ml-1">%</span></div>
+                    </CardContent>
+                </Card>
+                
+                {/* 英検スコア (3項目表示) */}
+                <Card className="relative">
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="absolute top-2 right-2 h-6 w-6 p-0 print:hidden" 
+                        onClick={() => setIsEikenModalOpen(true)}
+                    >
+                        <Edit2 className="w-3 h-3 text-gray-500" />
+                    </Button>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+                        <CardTitle className="text-sm font-medium">英検スコア</CardTitle>
+                        <Award className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        <div className="flex flex-col gap-0.5">
+                            <div className="text-lg font-bold truncate leading-tight">
+                                {displayEiken.grade} CSE: {displayEiken.score }
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <Calendar className="w-3 h-3" />
+                                {displayEiken.date}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+
+        {/* === 右列: 参考書リスト === */}
+        <div className="w-full h-full overflow-hidden rounded-lg border bg-white shadow-sm print:h-auto print:overflow-visible">
+            <div className="h-full overflow-y-auto p-1">
+                <ProgressList studentId={selectedStudentId} />
+            </div>
+        </div>
+
       </div>
+
+      {/* 英検編集モーダル */}
+      <Dialog open={isEikenModalOpen} onOpenChange={setIsEikenModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader><DialogTitle>英検情報編集</DialogTitle></DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="grade">級</Label>
+                    <Input 
+                        id="grade"
+                        value={editEikenGrade} 
+                        onChange={(e) => setEditEikenGrade(e.target.value)} 
+                        placeholder="例: 準2級" 
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="score">CSEスコア</Label>
+                    <Input 
+                        id="score"
+                        value={editEikenScore} 
+                        onChange={(e) => setEditEikenScore(e.target.value)} 
+                        placeholder="例: 1950" 
+                    />
+                </div>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="date">試験日</Label>
+                <Input 
+                    id="date"
+                    value={editEikenDate} 
+                    onChange={(e) => setEditEikenDate(e.target.value)} 
+                    placeholder="例: 2025-06-01" 
+                />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleUpdateEiken}>更新</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
