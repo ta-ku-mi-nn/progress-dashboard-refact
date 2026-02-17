@@ -4,7 +4,7 @@ from typing import List
 from app.db.database import get_db
 from app.routers import deps
 from app.schemas import schemas
-from app.models.models import models
+from app.models import models
 from app.crud import crud_master, crud_user, crud_student
 
 router = APIRouter()
