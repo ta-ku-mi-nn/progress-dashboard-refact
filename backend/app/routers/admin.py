@@ -96,7 +96,7 @@ def get_admin_presets(session: Session = Depends(get_db)):
 # 2. プリセット作成
 @router.post("/presets")
 def create_preset(
-    data: BulkPresetCreate,
+    data: schemas.BulkPresetCreate,
     session: Session = Depends(get_db)
 ):
     # 重複チェック
