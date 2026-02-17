@@ -102,7 +102,11 @@ class Progress(ProgressBase):
     class Config:
         orm_mode = True
 
-# --- Homework Schemas ---
+# --- Bulk Preset Schemas ---
+class BulkPresetCreate(BaseModel):
+    subject: str
+    preset_name: str
+    book_names: List[str]
 
 
 # --- Past Exam Result Schemas ---
