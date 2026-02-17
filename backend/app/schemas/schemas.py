@@ -204,3 +204,16 @@ class ChangelogCreate(BaseModel):
     title: str
     description: Optional[str] = None
     release_date: Optional[str] = None # 未指定ならサーバー側で現在日付
+
+# --- Master Textbook Schemas ---
+class MasterTextbookCreate(BaseModel):
+    subject: str
+    level: str
+    book_name: str
+    duration: float = 0.0
+
+class MasterTextbookUpdate(BaseModel):
+    subject: Optional[str] = None
+    level: Optional[str] = None
+    book_name: Optional[str] = None
+    duration: Optional[float] = None
