@@ -4,7 +4,7 @@ from typing import List
 from app.db.database import get_db
 from app.routers import deps
 from app.schemas import schemas
-from app.models.models import User, MasterTextbook
+from app.models.models import models
 from app.crud import crud_master, crud_user, crud_student
 
 router = APIRouter()
@@ -22,15 +22,15 @@ def create_textbook(
     session: Session = Depends(get_db)
 ):
     # 重複チェック
-    existing = session.query(MasterTextbook).filter(
-        MasterTextbook.book_name == data.book_name,
-        MasterTextbook.subject == data.subject
+    existing = session.query(models.MasterTextbook).filter(
+        models.MasterTextbook.book_name == data.book_name,
+        models.MasterTextbook.subject == data.subject
     ).first()
     
     if existing:
         raise HTTPException(status_code=400, detail="Textbook already exists")
 
-    new_book = MasterTextbook(
+    new_book = models.MasterTextbook(
         subject=data.subject,
         level=data.level,
         book_name=data.book_name,
@@ -48,7 +48,7 @@ def update_textbook(
     data: schemas.MasterTextbookUpdate,
     session: Session = Depends(get_db)
 ):
-    book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
+    book = session.query(models.MasterTextbook).filter(models.MasterTextbook.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Textbook not found")
     
@@ -68,7 +68,7 @@ def update_textbook(
 # 3. 削除
 @router.delete("/textbooks/{book_id}")
 def delete_textbook(book_id: int, session: Session = Depends(get_db)):
-    book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
+    book = session.query(models.MasterTextbook).filter(models.MasterTextbook.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Textbook not found")
     
@@ -81,7 +81,7 @@ def delete_textbook(book_id: int, session: Session = Depends(get_db)):
 # 1. プリセット一覧取得
 @router.get("/presets")
 def get_admin_presets(session: Session = Depends(get_db)):
-    presets = session.query(BulkPreset).options(joinedload(BulkPreset.books)).all()
+    presets = session.query(models.BulkPreset).options(joinedload(models.BulkPreset.books)).all()
     # シンプルな形式で返す
     return [
         {
@@ -100,16 +100,16 @@ def create_preset(
     session: Session = Depends(get_db)
 ):
     # 重複チェック
-    existing = session.query(BulkPreset).filter(
-        BulkPreset.subject == data.subject,
-        BulkPreset.preset_name == data.preset_name
+    existing = session.query(models.BulkPreset).filter(
+        models.BulkPreset.subject == data.subject,
+        models.BulkPreset.preset_name == data.preset_name
     ).first()
     
     if existing:
         raise HTTPException(status_code=400, detail="Preset already exists")
 
     # プリセット親作成
-    new_preset = BulkPreset(
+    new_preset = models.BulkPreset(
         subject=data.subject,
         preset_name=data.preset_name
     )
@@ -118,7 +118,7 @@ def create_preset(
 
     # 子（本）作成
     for book_name in data.book_names:
-        new_book = BulkPresetBook(
+        new_book = models.BulkPresetBook(
             preset_id=new_preset.id,
             book_name=book_name
         )
@@ -130,7 +130,7 @@ def create_preset(
 # 3. プリセット削除
 @router.delete("/presets/{preset_id}")
 def delete_preset(preset_id: int, session: Session = Depends(get_db)):
-    preset = session.query(BulkPreset).filter(BulkPreset.id == preset_id).first()
+    preset = session.query(models.BulkPreset).filter(models.BulkPreset.id == preset_id).first()
     if not preset:
         raise HTTPException(status_code=404, detail="Preset not found")
     
@@ -142,16 +142,16 @@ def delete_preset(preset_id: int, session: Session = Depends(get_db)):
 def read_users(
     skip: int = 0, limit: int = 100,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    admin: models.User = Depends(get_current_admin)
 ):
     # crud_user.get_users needed
-    return db.query(User).offset(skip).limit(limit).all()
+    return db.query(models.User).offset(skip).limit(limit).all()
 
 @router.post("/users", response_model=schemas.User)
 def create_user(
     user: schemas.UserCreate,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    admin: models.User = Depends(get_current_admin)
 ):
     db_user = crud_user.get_user_by_username(db, username=user.username)
     if db_user:
@@ -162,7 +162,7 @@ def create_user(
 def create_student(
     student: schemas.StudentCreate,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    admin: models.User = Depends(get_current_admin)
 ):
     # Check if student already exists? Unique constraint on (school, name) handles it,
     # but we might want to check nicely.
