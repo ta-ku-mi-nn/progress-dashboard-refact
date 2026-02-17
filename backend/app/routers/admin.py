@@ -76,6 +76,68 @@ def delete_textbook(book_id: int, session: Session = Depends(get_db)):
     session.commit()
     return {"message": "Deleted successfully"}
 
+# --- Preset Management API ---
+
+# 1. プリセット一覧取得
+@router.get("/presets")
+def get_admin_presets(session: Session = Depends(get_db)):
+    presets = session.query(BulkPreset).options(joinedload(BulkPreset.books)).all()
+    # シンプルな形式で返す
+    return [
+        {
+            "id": p.id,
+            "preset_name": p.preset_name,
+            "subject": p.subject,
+            "books": [b.book_name for b in p.books]
+        }
+        for p in presets
+    ]
+
+# 2. プリセット作成
+@router.post("/presets")
+def create_preset(
+    data: BulkPresetCreate,
+    session: Session = Depends(get_db)
+):
+    # 重複チェック
+    existing = session.query(BulkPreset).filter(
+        BulkPreset.subject == data.subject,
+        BulkPreset.preset_name == data.preset_name
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Preset already exists")
+
+    # プリセット親作成
+    new_preset = BulkPreset(
+        subject=data.subject,
+        preset_name=data.preset_name
+    )
+    session.add(new_preset)
+    session.flush() # ID生成のため
+
+    # 子（本）作成
+    for book_name in data.book_names:
+        new_book = BulkPresetBook(
+            preset_id=new_preset.id,
+            book_name=book_name
+        )
+        session.add(new_book)
+    
+    session.commit()
+    return {"message": "Preset created successfully"}
+
+# 3. プリセット削除
+@router.delete("/presets/{preset_id}")
+def delete_preset(preset_id: int, session: Session = Depends(get_db)):
+    preset = session.query(BulkPreset).filter(BulkPreset.id == preset_id).first()
+    if not preset:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    
+    session.delete(preset)
+    session.commit()
+    return {"message": "Deleted successfully"}
+
 @router.get("/users", response_model=List[schemas.User])
 def read_users(
     skip: int = 0, limit: int = 100,
