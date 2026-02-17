@@ -10,7 +10,7 @@ from app.crud import crud_master, crud_user, crud_student
 router = APIRouter()
 
 # Dependency to check if user is admin
-def get_current_admin(current_user: User = Depends(deps.get_current_user)):
+def get_current_admin(current_user: models.User = Depends(deps.get_current_user)):
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Not authorized")
     return current_user
