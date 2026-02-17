@@ -3,13 +3,15 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'; // ★Selectコンポーネントを追加
 import { Plus, Trash2 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 
 export default function TextbookManagement() {
     const [textbooks, setTextbooks] = useState<any[]>([]);
-    const [newBook, setNewBook] = useState({ book_name: '', subject: '英語', level: '標準' });
+    // ★duration を追加、levelの初期値を変更
+    const [newBook, setNewBook] = useState({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
 
     const fetchBooks = async () => {
         try { const res = await api.get('/common/textbooks'); setTextbooks(res.data); } 
@@ -23,7 +25,8 @@ export default function TextbookManagement() {
             await api.post('/admin/textbooks', newBook);
             toast.success("登録しました");
             fetchBooks();
-            setNewBook({ book_name: '', subject: '英語', level: '標準' });
+            // ★リセット時も duration を 0 に、level を初期値に
+            setNewBook({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
         } catch (e) { toast.error("登録失敗"); }
     };
 
@@ -40,10 +43,35 @@ export default function TextbookManagement() {
         <div className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg space-y-4 border">
                 <h4 className="font-medium text-sm">新規参考書登録</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* ★グリッドを4列に変更 */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-1"><Label>参考書名</Label><Input value={newBook.book_name} onChange={e => setNewBook({ ...newBook, book_name: e.target.value })} /></div>
                     <div className="space-y-1"><Label>科目</Label><Input value={newBook.subject} onChange={e => setNewBook({ ...newBook, subject: e.target.value })} /></div>
-                    <div className="space-y-1"><Label>レベル</Label><Input value={newBook.level} onChange={e => setNewBook({ ...newBook, level: e.target.value })} /></div>
+                    
+                    {/* ★レベル選択をプルダウンに変更 */}
+                    <div className="space-y-1">
+                        <Label>レベル</Label>
+                        <Select value={newBook.level} onValueChange={v => setNewBook({ ...newBook, level: v })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="基礎徹底">基礎徹底</SelectItem>
+                                <SelectItem value="日大">日大</SelectItem>
+                                <SelectItem value="MARCH">MARCH</SelectItem>
+                                <SelectItem value="早慶">早慶</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* ★所要時間の入力欄を追加 */}
+                    <div className="space-y-1">
+                        <Label>所要時間 (h)</Label>
+                        <Input 
+                            type="number" 
+                            value={newBook.duration} 
+                            onChange={e => setNewBook({ ...newBook, duration: Number(e.target.value) })} 
+                            min={0}
+                        />
+                    </div>
                 </div>
                 <div className="flex justify-end"><Button onClick={handleCreate}><Plus className="w-4 h-4 mr-2" />追加</Button></div>
             </div>
@@ -54,6 +82,8 @@ export default function TextbookManagement() {
                             <TableHead>参考書名</TableHead>
                             <TableHead>科目</TableHead>
                             <TableHead>レベル</TableHead>
+                            {/* ★ヘッダー追加 */}
+                            <TableHead>時間</TableHead>
                             <TableHead className="w-12"></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -63,6 +93,8 @@ export default function TextbookManagement() {
                                 <TableCell>{t.book_name}</TableCell>
                                 <TableCell>{t.subject}</TableCell>
                                 <TableCell>{t.level}</TableCell>
+                                {/* ★表示追加 */}
+                                <TableCell>{t.duration}h</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id)}>
                                         <Trash2 className="w-4 h-4 text-red-500" />
