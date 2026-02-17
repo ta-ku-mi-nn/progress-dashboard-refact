@@ -18,7 +18,7 @@ def get_current_admin(current_user: User = Depends(deps.get_current_user)):
 # 1. 新規登録
 @router.post("/textbooks")
 def create_textbook(
-    data: MasterTextbookCreate, 
+    data: schemas.MasterTextbookCreate, 
     session: Session = Depends(get_db)
 ):
     # 重複チェック
@@ -45,7 +45,7 @@ def create_textbook(
 @router.patch("/textbooks/{book_id}")
 def update_textbook(
     book_id: int,
-    data: MasterTextbookUpdate,
+    data: schemas.MasterTextbookUpdate,
     session: Session = Depends(get_db)
 ):
     book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
