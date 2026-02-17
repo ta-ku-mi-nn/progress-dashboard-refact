@@ -12,7 +12,6 @@ export default function TextbookManagement() {
     const [textbooks, setTextbooks] = useState<any[]>([]);
     const [newBook, setNewBook] = useState({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
 
-    // データ取得
     const fetchBooks = async () => {
         try { 
             const res = await api.get('/common/textbooks'); 
@@ -23,19 +22,18 @@ export default function TextbookManagement() {
     };
     useEffect(() => { fetchBooks(); }, []);
 
-    // 既存のデータから科目のリストを抽出（重複排除）
-    // データが空の場合に備えてデフォルト科目も結合
-    const defaultSubjects = ['英語', '数学', '国語', '理科', '社会'];
+    // ★修正: デフォルト科目を削除し、登録済みデータのみから抽出
     const existingSubjects = textbooks.map((t: any) => t.subject).filter(Boolean);
-    const uniqueSubjects = Array.from(new Set([...defaultSubjects, ...existingSubjects]));
+    const uniqueSubjects = Array.from(new Set(existingSubjects));
 
     const handleCreate = async () => {
         if (!newBook.book_name) return toast.error("参考書名は必須です");
+        if (!newBook.subject) return toast.error("科目を選択してください"); // 科目未選択チェック追加
+
         try {
             await api.post('/admin/textbooks', newBook);
             toast.success("登録しました");
             fetchBooks();
-            // 初期化
             setNewBook({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
         } catch (e) { 
             toast.error("登録失敗"); 
@@ -55,12 +53,10 @@ export default function TextbookManagement() {
 
     return (
         <div className="space-y-6">
-            {/* --- 新規登録フォーム --- */}
             <div className="bg-gray-50 p-4 rounded-lg space-y-4 border">
                 <h4 className="font-medium text-sm">新規参考書登録</h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     
-                    {/* 参考書名 */}
                     <div className="space-y-1">
                         <Label>参考書名</Label>
                         <Input 
@@ -69,23 +65,29 @@ export default function TextbookManagement() {
                         />
                     </div>
                     
-                    {/* 科目 (プルダウンに変更) */}
                     <div className="space-y-1">
                         <Label>科目</Label>
                         <Select 
                             value={newBook.subject} 
                             onValueChange={v => setNewBook({ ...newBook, subject: v })}
                         >
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger>
+                                {/* 何も選択されていない時の表示対策 */}
+                                <SelectValue placeholder="科目を選択" />
+                            </SelectTrigger>
                             <SelectContent>
                                 {uniqueSubjects.map(subj => (
                                     <SelectItem key={subj} value={subj}>{subj}</SelectItem>
                                 ))}
+                                {uniqueSubjects.length === 0 && (
+                                    <div className="p-2 text-xs text-muted-foreground text-center">
+                                        登録済みの科目がありません
+                                    </div>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
                     
-                    {/* レベル */}
                     <div className="space-y-1">
                         <Label>レベル</Label>
                         <Select 
@@ -102,7 +104,6 @@ export default function TextbookManagement() {
                         </Select>
                     </div>
 
-                    {/* 所要時間 */}
                     <div className="space-y-1">
                         <Label>所要時間 (h)</Label>
                         <Input 
@@ -113,12 +114,8 @@ export default function TextbookManagement() {
                         />
                     </div>
                 </div>
-                <div className="flex justify-end">
-                    <Button onClick={handleCreate}><Plus className="w-4 h-4 mr-2" />追加</Button>
-                </div>
+                <div className="flex justify-end"><Button onClick={handleCreate}><Plus className="w-4 h-4 mr-2" />追加</Button></div>
             </div>
-
-            {/* --- 一覧テーブル --- */}
             <div className="max-h-[500px] overflow-auto border rounded-md">
                 <Table>
                     <TableHeader>
@@ -133,7 +130,6 @@ export default function TextbookManagement() {
                     <TableBody>
                         {textbooks.map((t: any) => (
                             <TableRow key={t.id}>
-                                {/* 修正: t.name ではなく t.book_name を使用 */}
                                 <TableCell className="font-medium">{t.book_name}</TableCell>
                                 <TableCell>{t.subject}</TableCell>
                                 <TableCell>{t.level}</TableCell>
