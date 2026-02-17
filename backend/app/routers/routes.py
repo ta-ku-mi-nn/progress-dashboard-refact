@@ -53,3 +53,39 @@ def download_route_file(file_id: int, session: Session = Depends(get_db)):
             "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
         }
     )
+
+# ★追加: 3. アップロードAPI
+@router.post("/upload")
+async def upload_route_table(
+    file: UploadFile = File(...),
+    subject: str = Form(...),
+    level: str = Form(...),
+    academic_year: int = Form(...),
+    session: Session = Depends(get_db)
+):
+    try:
+        content = await file.read()
+        new_table = RootTable(
+            filename=file.filename,
+            file_content=content,
+            subject=subject,
+            level=level,
+            academic_year=academic_year
+        )
+        session.add(new_table)
+        session.commit()
+        return {"message": "Uploaded successfully", "filename": file.filename}
+    except Exception as e:
+        print(f"Upload Error: {e}")
+        raise HTTPException(status_code=500, detail="Upload failed")
+
+# ★追加: 4. 削除API
+@router.delete("/{file_id}")
+def delete_route_table(file_id: int, session: Session = Depends(get_db)):
+    item = session.query(RootTable).filter(RootTable.id == file_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    session.delete(item)
+    session.commit()
+    return {"message": "Deleted successfully"}
