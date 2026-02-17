@@ -114,3 +114,27 @@ def update_feature_request(row_id: int, update: ReportUpdate, session: Session =
         
     session.commit()
     return {"message": "updated"}
+
+@router.post("/changelog")
+def create_changelog(
+    data: ChangelogCreate,
+    session: Session = Depends(get_db)
+):
+    # 日付がなければ今日の日付を入れる
+    release_date = data.release_date
+    if not release_date:
+        release_date = datetime.now().strftime("%Y-%m-%d")
+
+    new_log = Changelog(
+        version=data.version,
+        title=data.title,
+        description=data.description,
+        release_date=release_date
+    )
+    
+    session.add(new_log)
+    session.commit()
+    session.refresh(new_log)
+    
+    return new_log
+    
