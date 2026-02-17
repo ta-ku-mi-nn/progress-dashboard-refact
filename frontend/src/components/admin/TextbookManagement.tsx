@@ -93,11 +93,11 @@ export default function TextbookManagement() {
                             onValueChange={v => setNewBook({ ...newBook, subject: v })}
                         >
                             <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-                            <SelectContent>
+                            {/* ★修正: max-h-60 (240px) を指定してスクロール可能に */}
+                            <SelectContent className="max-h-60">
                                 {uniqueSubjects.map(subj => (
                                     <SelectItem key={subj} value={subj}>{subj}</SelectItem>
                                 ))}
-                                {/* 新規科目を入力可能にするには別途Inputが必要ですが、今回は選択のみ */}
                             </SelectContent>
                         </Select>
                     </div>
@@ -149,7 +149,8 @@ export default function TextbookManagement() {
                             <SelectTrigger className="h-9 text-xs">
                                 <SelectValue placeholder="全科目" />
                             </SelectTrigger>
-                            <SelectContent>
+                            {/* フィルター側も念のため高さ制限を追加 */}
+                            <SelectContent className="max-h-60">
                                 <SelectItem value="ALL">全科目</SelectItem>
                                 {uniqueSubjects.map(subj => (
                                     <SelectItem key={subj} value={subj}>{subj}</SelectItem>
