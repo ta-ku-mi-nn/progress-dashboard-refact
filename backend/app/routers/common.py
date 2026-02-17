@@ -24,4 +24,13 @@ def read_textbooks(
 ):
     # This might be used by students too, to select textbooks
     items = crud_master.get_master_textbooks(db, subject)
-    return [{"id": i.id, "name": i.book_name, "level": i.level, "subject": i.subject} for i in items]
+    return [
+        {
+            "id": i.id, 
+            "book_name": i.book_name,  # name -> book_name に変更
+            "level": i.level, 
+            "subject": i.subject,
+            "duration": i.duration     # duration を追加
+        } 
+        for i in items
+    ]
