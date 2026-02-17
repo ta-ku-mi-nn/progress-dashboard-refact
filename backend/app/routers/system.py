@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from app.db.database import get_db
 from app.models.models import Changelog, BugReport, FeatureRequest
+from app.schemas.schemas import ChangelogCreate
 
 router = APIRouter()
 
@@ -137,4 +138,3 @@ def create_changelog(
     session.refresh(new_log)
     
     return new_log
-    
