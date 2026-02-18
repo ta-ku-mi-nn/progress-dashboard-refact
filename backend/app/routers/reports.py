@@ -215,113 +215,120 @@ def generate_integrated_report(
     request: IntegratedReportRequest, 
     session: Session = Depends(get_db)
 ):
-    student = session.query(User).filter(User.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+    try:
+        # 1. 生徒存在チェック
+        student = session.query(User).filter(User.id == student_id).first()
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found")
 
-    # コンテキストの初期化
-    context = {
-        "student_name": student.username,
-        "date_str": datetime.now().strftime("%Y年%m月%d日"),
-        "sections": request.sections,
-        "images": request.chart_images,
-        "dashboard": None,
-        "past_exams": [],
-        "mock_exams": [],
-        "calendar": [],
-        "eiken_str": "未登録"
-    }
-
-    # 1. ダッシュボードデータ取得
-    if "dashboard" in request.sections:
-        progress_items = session.query(Progress).filter(Progress.student_id == student_id).all()
-        
-        formatted_items = []
-        total_study_time = 0.0
-        total_progress_pct = 0.0
-        
-        if progress_items:
-            valid_items = [p for p in progress_items if p.total_units > 0]
-            if valid_items:
-                ratios = [min(1.0, p.completed_units / p.total_units) for p in valid_items]
-                total_progress_pct = (sum(ratios) / len(ratios)) * 100
-            
-            for item in progress_items:
-                pct = 0
-                if item.total_units > 0:
-                    pct = round((item.completed_units / item.total_units) * 100)
-                    if item.duration and item.duration > 0:
-                         ratio = min(1.0, item.completed_units / item.total_units)
-                         total_study_time += ratio * item.duration
-                
-                formatted_items.append({
-                    "subject": item.subject or "-",
-                    "book_name": item.book_name,
-                    "pct": pct
-                })
-
-        # 英検情報
-        latest_eiken = session.query(EikenResult).filter(EikenResult.student_id == student_id).order_by(desc(EikenResult.exam_date)).first()
-        if latest_eiken:
-            eiken_str = latest_eiken.grade
-            if latest_eiken.cse_score:
-                eiken_str += f" / CSE {latest_eiken.cse_score}"
-            context["eiken_str"] = eiken_str
-
-        context["dashboard"] = {
-            "total_study_time": round(total_study_time, 1),
-            "total_progress_pct": round(total_progress_pct, 1),
-            "items": formatted_items
+        # 2. 基本コンテキスト
+        context = {
+            "student_name": student.username,
+            "date_str": datetime.now().strftime("%Y年%m月%d日"),
+            "sections": request.sections,
+            "images": request.chart_images,
+            "dashboard": None,
+            "past_exams": [],
+            "mock_exams": [],
+            "calendar": [],
+            "eiken_str": "未登録"
         }
 
-    # 2. 過去問データ取得
-    if "past_exams" in request.sections:
-        results = session.query(PastExamResult).filter(PastExamResult.student_id == student_id).all()
-        formatted_past = []
-        for r in results:
-            formatted_past.append({
-                "date": r.date,
-                "university": r.university_name,
-                "faculty": r.faculty_name,
-                "year": r.year,
-                "subject": r.subject,
-                "correct_answers": r.correct_answers or 0,
-                "total_questions": r.total_questions or 0
-            })
-        context["past_exams"] = formatted_past
+        # 3. データ取得ロジック
+        if "dashboard" in request.sections:
+            progress_items = session.query(Progress).filter(Progress.student_id == student_id).all()
+            formatted_items = []
+            total_study_time = 0.0
+            total_progress_pct = 0.0
+            
+            if progress_items:
+                valid_items = [p for p in progress_items if (p.total_units or 0) > 0]
+                if valid_items:
+                    ratios = [min(1.0, (p.completed_units or 0) / p.total_units) for p in valid_items]
+                    total_progress_pct = (sum(ratios) / len(ratios)) * 100
+                
+                for item in progress_items:
+                    pct = 0
+                    total = item.total_units or 0
+                    completed = item.completed_units or 0
+                    if total > 0:
+                        pct = round((completed / total) * 100)
+                        if (item.duration or 0) > 0:
+                             ratio = min(1.0, completed / total)
+                             total_study_time += ratio * item.duration
+                    
+                    formatted_items.append({
+                        "subject": item.subject or "-",
+                        "book_name": item.book_name,
+                        "pct": pct
+                    })
 
-    # 3. 模試データ取得
-    if "mock_exams" in request.sections:
-        results = session.query(MockExamResult).filter(MockExamResult.student_id == student_id).all()
-        formatted_mock = []
-        for r in results:
-            formatted_mock.append({
-                "name": r.mock_exam_name,
-                "type": r.result_type,
-                "grade": r.grade,
-                "score_summary": f"{r.mock_exam_format}" # 簡易表示
-            })
-        context["mock_exams"] = formatted_mock
+            # 英検
+            latest_eiken = session.query(EikenResult).filter(EikenResult.student_id == student_id).order_by(desc(EikenResult.exam_date)).first()
+            if latest_eiken:
+                eiken_str = latest_eiken.grade
+                if latest_eiken.cse_score:
+                    eiken_str += f" / CSE {latest_eiken.cse_score}"
+                context["eiken_str"] = eiken_str
 
-    # 4. カレンダーデータ取得
-    if "calendar" in request.sections:
-        acceptances = session.query(UniversityAcceptance).filter(UniversityAcceptance.student_id == student_id).all()
-        formatted_cal = []
-        for a in acceptances:
-            formatted_cal.append({
-                "univ": a.university_name,
-                "faculty": a.faculty_name,
-                "exam_date": a.exam_date or "-",
-                "announce_date": a.announcement_date or "-"
-            })
-        context["calendar"] = formatted_cal
+            context["dashboard"] = {
+                "total_study_time": round(total_study_time, 1),
+                "total_progress_pct": round(total_progress_pct, 1),
+                # ★修正: キー名を 'items' から 'progress_list' に変更（衝突回避）
+                "progress_list": formatted_items 
+            }
 
-    # PDF生成
-    pdf_buffer = create_pdf_from_template("integrated_report_template.html", context)
-    filename = f"report_{student_id}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    
-    return StreamingResponse(
-        pdf_buffer, 
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"inline; filename={filename}"}
-    )
+        if "past_exams" in request.sections:
+            results = session.query(PastExamResult).filter(PastExamResult.student_id == student_id).all()
+            formatted_past = []
+            for r in results:
+                formatted_past.append({
+                    "date": r.date,
+                    "university": r.university_name,
+                    "faculty": r.faculty_name,
+                    "year": r.year,
+                    "subject": r.subject,
+                    "correct_answers": r.correct_answers or 0,
+                    "total_questions": r.total_questions or 0
+                })
+            context["past_exams"] = formatted_past
+
+        if "mock_exams" in request.sections:
+            results = session.query(MockExamResult).filter(MockExamResult.student_id == student_id).all()
+            formatted_mock = []
+            for r in results:
+                formatted_mock.append({
+                    "name": r.mock_exam_name,
+                    "type": r.result_type,
+                    "grade": r.grade,
+                    "score_summary": f"{r.mock_exam_format}" if hasattr(r, 'mock_exam_format') else "-"
+                })
+            context["mock_exams"] = formatted_mock
+
+        if "calendar" in request.sections:
+            acceptances = session.query(UniversityAcceptance).filter(UniversityAcceptance.student_id == student_id).all()
+            formatted_cal = []
+            for a in acceptances:
+                formatted_cal.append({
+                    "univ": a.university_name,
+                    "faculty": a.faculty_name,
+                    "exam_date": a.exam_date or "-",
+                    "announce_date": a.announcement_date or "-"
+                })
+            context["calendar"] = formatted_cal
+
+        # 4. PDF生成
+        pdf_buffer = create_pdf_from_template("integrated_report_template.html", context)
+        
+        filename = f"report_{student_id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        
+        return StreamingResponse(
+            pdf_buffer, 
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+
+    except Exception as e:
+        print("PDF Generation Error:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
