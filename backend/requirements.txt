@@ -11,3 +11,5 @@ werkzeug
 reportlab
 jinja2
 xhtml2pdf
+passlib
+bcrypt==4.0.1
