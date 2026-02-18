@@ -2,11 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from fastapi.encoders import jsonable_encoder
 from sqlalchemy import text, inspect
-from datetime import datetime
+from datetime import datetime, date
 import json
 import os
+import decimal
+import uuid
 
 from app.routers import deps
 from app.db.database import get_db
@@ -15,19 +16,32 @@ from app.models.models import User
 
 router = APIRouter()
 
+# --- カスタムJSONエンコーダー ---
+# 日付やUUIDなど、JSONにそのまま書けない型を文字列に変換する関数
+def custom_json_serializer(obj):
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, (decimal.Decimal, uuid.UUID)):
+        return str(obj)
+    # bytes型は文字列にデコードできない場合があるため、安全に文字列表現にする
+    if isinstance(obj, bytes):
+        return f"<bytes: {len(obj)}>"
+    # その他の未知の型は、強制的に文字列化する (str()関数を通す)
+    return str(obj)
+
 @router.get("/export")
 def export_database(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
     try:
-        # 1. テーブル一覧を取得
+        # 1. データベース接続からインスペクターを取得
         bind = db.get_bind()
         inspector = inspect(bind)
         table_names = inspector.get_table_names()
         
         backup_data = {}
-        print(f"DEBUG: Starting backup for tables: {table_names}")
+        print(f"DEBUG: Starting safe backup for tables: {table_names}")
         
         # 2. 各テーブルのデータを取得
         for table in table_names:
@@ -36,16 +50,21 @@ def export_database(
                 query = text(f"SELECT * FROM {table}")
                 result = db.execute(query)
                 
-                # ★修正ポイント: result.mappings() を使用して安全に辞書化
-                # これにより "ValueError" や "zip" の問題を回避
-                rows = [dict(row) for row in result.mappings().all()]
+                # カラム名を取得
+                keys = result.keys()
+                
+                # 行データを辞書リストに変換
+                # zipを使う最も原始的で確実な方法を採用
+                rows = []
+                for row in result.fetchall():
+                    row_dict = dict(zip(keys, row))
+                    rows.append(row_dict)
                 
                 backup_data[table] = rows
                 print(f"DEBUG: Table '{table}' backed up ({len(rows)} rows)")
                 
             except Exception as table_error:
                 print(f"ERROR: Failed to backup table '{table}': {str(table_error)}")
-                # 特定テーブルのエラーはログに出してスキップし、他のテーブルのバックアップを続ける
                 backup_data[table] = {"error": str(table_error)}
             
         # 3. JSONファイルとして保存
@@ -53,21 +72,22 @@ def export_database(
         filename = f"backup_full_{timestamp}.json"
         filepath = os.path.join("/tmp", filename)
         
-        # 4. JSON化 (日付型などを文字列に変換)
-        try:
-            # jsonable_encoder で datetime 型などを JSON 標準型に変換
-            json_compatible_data = jsonable_encoder(backup_data)
-        except Exception as encode_error:
-            print(f"ERROR: JSON encoding failed: {encode_error}")
-            # エンコード失敗時は、最低限のエラー情報を返す
-            json_compatible_data = {"error": "JSON encoding failed", "details": str(encode_error)}
-
+        print("DEBUG: Serializing data to JSON...")
+        
+        # ★ここが修正点: jsonable_encoderを使わず、標準のjson.dumpにカスタム関数を渡す
+        # これにより、どんな特殊な型が来ても custom_json_serializer が文字列に変えてくれる
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(json_compatible_data, f, ensure_ascii=False, indent=2)
+            json.dump(
+                backup_data, 
+                f, 
+                default=custom_json_serializer, # 未知の型はここで変換
+                ensure_ascii=False, 
+                indent=2
+            )
 
         print(f"DEBUG: Backup saved to {filepath}")
 
-        # 5. ダウンロード返却
+        # 4. ダウンロード返却
         return FileResponse(
             path=filepath,
             filename=filename,
@@ -79,4 +99,5 @@ def export_database(
         import traceback
         traceback.print_exc()
         print(f"Backup Global Error: {str(e)}")
+        # 致命的なエラーは 500 で返す
         raise HTTPException(status_code=500, detail=f"Backup process failed: {str(e)}")
