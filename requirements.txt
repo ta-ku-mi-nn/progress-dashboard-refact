@@ -11,3 +11,5 @@ Jinja2
 psycopg2-binary
 python-dotenv
 SQLAlchemy
+passlib[bcrypt]
+bcrypt
