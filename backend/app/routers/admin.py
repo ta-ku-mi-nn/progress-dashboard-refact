@@ -201,3 +201,39 @@ def create_student(
     return crud_student.create_student(db, student)
 
 # Add other admin endpoints (delete user, etc.) as needed
+
+# ファイルの末尾などに追記
+@router.get("/mock_exams")
+def get_all_mock_exams(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    """
+    全生徒の模試結果を取得します。
+    生徒名（User.username）を結合して返します。
+    """
+    results = db.query(
+        models.MockExam.id,
+        models.MockExam.exam_name,
+        models.MockExam.subject,
+        models.MockExam.score,
+        models.MockExam.deviation,
+        models.MockExam.exam_date,
+        models.User.username.label("student_name"),
+        models.User.grade.label("student_grade")
+    ).join(models.User, models.MockExam.user_id == models.User.id).order_by(models.MockExam.exam_date.desc()).all()
+    
+    # 辞書リストに変換して返却
+    return [
+        {
+            "id": r.id,
+            "student_name": r.student_name,
+            "student_grade": r.student_grade,
+            "exam_name": r.exam_name,
+            "subject": r.subject,
+            "score": r.score,
+            "deviation": r.deviation,
+            "exam_date": r.exam_date.strftime('%Y-%m-%d') if r.exam_date else None
+        }
+        for r in results
+    ]
