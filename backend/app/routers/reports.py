@@ -7,10 +7,11 @@ from sqlalchemy import desc
 from typing import Optional, List, Dict
 from pydantic import BaseModel
 from datetime import datetime
+import traceback
 
 from app.db.database import get_db
 from app.models.models import (
-    User, Progress, EikenResult, 
+    User, Progress, EikenResult, Student,
     PastExamResult, MockExamResult, UniversityAcceptance
 )
 from app.utils.pdf_generator import create_pdf_from_template
@@ -33,7 +34,7 @@ def generate_dashboard_report(
     request: ReportRequest, 
     session: Session = Depends(get_db)
 ):
-    student = session.query(User).filter(User.id == student_id).first()
+    student = session.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
