@@ -50,6 +50,11 @@ export default function RouteTableManagement() {
         fetchFiles();
     }, []);
 
+    // 科目リスト生成 (デフォルト + 登録済みから抽出)
+    const defaultSubjects = ["英語", "数学", "国語", "理科", "社会"];
+    const existingSubjects = files.map(f => f.subject).filter(Boolean);
+    const uniqueSubjects = Array.from(new Set([...defaultSubjects, ...existingSubjects]));
+
     // 編集モード開始
     const startEdit = (file: RouteTableItem) => {
         setIsEditing(true);
@@ -60,7 +65,6 @@ export default function RouteTableManagement() {
             year: file.academic_year.toString()
         });
         setSelectedFile(null);
-        // フォームまでスクロール
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -78,6 +82,7 @@ export default function RouteTableManagement() {
     const handleSubmit = async () => {
         if (!isEditing && !selectedFile) return toast.error("ファイルを選択してください");
         if (!formData.level) return toast.error("レベルを入力してください");
+        if (!formData.subject) return toast.error("科目を選択してください");
 
         const data = new FormData();
         if (selectedFile) data.append("file", selectedFile);
@@ -87,9 +92,7 @@ export default function RouteTableManagement() {
 
         try {
             if (isEditing && editId) {
-                // 更新処理 (仮: 本来は PATCH /routes/{id} を呼ぶ)
-                // 現状のバックエンドには更新APIがないため、
-                // 実装されたら await api.patch(...) に切り替えてください。
+                // 更新処理 (仮)
                 toast.info("編集機能はバックエンド実装待ちです");
                 cancelEdit();
             } else {
@@ -146,13 +149,11 @@ export default function RouteTableManagement() {
                     <div className="space-y-1">
                         <Label>科目</Label>
                         <Select value={formData.subject} onValueChange={v => setFormData({...formData, subject: v})}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="英語">英語</SelectItem>
-                                <SelectItem value="数学">数学</SelectItem>
-                                <SelectItem value="国語">国語</SelectItem>
-                                <SelectItem value="理科">理科</SelectItem>
-                                <SelectItem value="社会">社会</SelectItem>
+                            <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
+                            <SelectContent className="max-h-60">
+                                {uniqueSubjects.map(subj => (
+                                    <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -203,24 +204,22 @@ export default function RouteTableManagement() {
             {/* 一覧エリア */}
             <div className="space-y-4">
                 {/* フィルター */}
-                <div className="flex flex-col md:flex-row gap-3 items-end md:items-center bg-white p-2">
+                <div className="flex flex-col md:flex-row gap-3 items-end md:items-center bg-white p-2 border rounded-md shadow-sm">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mr-2">
                         <Filter className="w-4 h-4" /> 絞り込み:
                     </div>
                     <Select value={filterSubject} onValueChange={setFilterSubject}>
                         <SelectTrigger className="w-[120px] h-9 text-xs"><SelectValue placeholder="全科目" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-60">
                             <SelectItem value="ALL">全科目</SelectItem>
-                            <SelectItem value="英語">英語</SelectItem>
-                            <SelectItem value="数学">数学</SelectItem>
-                            <SelectItem value="国語">国語</SelectItem>
-                            <SelectItem value="理科">理科</SelectItem>
-                            <SelectItem value="社会">社会</SelectItem>
+                            {uniqueSubjects.map(subj => (
+                                <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <Select value={filterYear} onValueChange={setFilterYear}>
                         <SelectTrigger className="w-[120px] h-9 text-xs"><SelectValue placeholder="全年度" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-60">
                             <SelectItem value="ALL">全年度</SelectItem>
                             {uniqueYears.map(y => (
                                 <SelectItem key={y} value={y.toString()}>{y}年度</SelectItem>
