@@ -22,7 +22,7 @@ export default function BackupManagement() {
             
             // ファイル名を取得 (ヘッダーから、もしくは現在時刻で生成)
             const contentDisposition = response.headers['content-disposition'];
-            let filename = `backup_${new Date().toISOString().slice(0,10)}.db`;
+            let filename = `backup_${new Date().toISOString().slice(0,10)}.json`; // .db -> .json
             if (contentDisposition) {
                 const match = contentDisposition.match(/filename="?([^"]+)"?/);
                 if (match && match[1]) filename = match[1];
