@@ -1,3 +1,5 @@
+// frontend/src/components/admin/StudentManagement.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -20,7 +22,6 @@ export default function StudentManagement() {
     // 編集・新規兼用モーダルステート
     const [isOpen, setIsOpen] = useState(false);
     const [isNewMode, setIsNewMode] = useState(false);
-    // sub_instructor_ids は配列として管理
     const [formData, setFormData] = useState<any>({ sub_instructor_ids: [] });
 
     useEffect(() => { fetchData(); }, []);
@@ -33,28 +34,35 @@ export default function StudentManagement() {
             ]);
             setStudents(sRes.data);
             setInstructors(iRes.data);
-        } catch (e) { toast.error("データ取得エラー"); }
+        } catch (e) { 
+            console.error(e);
+            toast.error("データ取得エラー"); 
+        }
     };
 
-    // 新規ボタンクリック
     const handleNewClick = () => {
         setIsNewMode(true);
-        setFormData({ name: "", grade: "高1", school: "東京校", main_instructor_id: 0, sub_instructor_ids: [] });
+        // 初期値
+        setFormData({ 
+            name: "", 
+            grade: "高1", 
+            school: "東京校", 
+            previous_school: "",
+            main_instructor_id: 0, 
+            sub_instructor_ids: [] 
+        });
         setIsOpen(true);
     };
 
-    // 編集ボタンクリック
     const handleEditClick = (student: any) => {
         setIsNewMode(false);
         setFormData({ 
             ...student,
-            // IDリストがない場合は空配列にする
             sub_instructor_ids: student.sub_instructor_ids || []
         });
         setIsOpen(true);
     };
 
-    // 保存処理
     const handleSave = async () => {
         if (!formData.name) { toast.error("氏名は必須です"); return; }
         
@@ -68,7 +76,10 @@ export default function StudentManagement() {
             }
             setIsOpen(false);
             fetchData();
-        } catch (e) { toast.error("保存に失敗しました"); }
+        } catch (e) { 
+            console.error(e);
+            toast.error("保存に失敗しました"); 
+        }
     };
 
     const handleDelete = async (id: number) => {
@@ -80,17 +91,14 @@ export default function StudentManagement() {
         } catch (e) { toast.error("削除失敗"); }
     };
 
-    // サブ講師のチェックボックス切り替え処理
     const toggleSubInstructor = (instructorId: number) => {
         const currentIds = formData.sub_instructor_ids || [];
         if (currentIds.includes(instructorId)) {
-            // 削除
             setFormData({
                 ...formData,
                 sub_instructor_ids: currentIds.filter((id: number) => id !== instructorId)
             });
         } else {
-            // 追加
             setFormData({
                 ...formData,
                 sub_instructor_ids: [...currentIds, instructorId]
@@ -158,7 +166,6 @@ export default function StudentManagement() {
                 </Table>
             </CardContent>
 
-            {/* 編集・新規ダイアログ */}
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="max-w-lg overflow-y-auto max-h-[90vh]">
                     <DialogHeader><DialogTitle>{isNewMode ? "新規生徒登録" : "生徒情報編集"}</DialogTitle></DialogHeader>
@@ -169,7 +176,7 @@ export default function StudentManagement() {
                                 <Input value={formData.name || ""} onChange={e => setFormData({...formData, name: e.target.value})} />
                             </div>
                             <div className="space-y-2">
-                                <Label>校舎 *</Label>
+                                <Label>校舎 (システム用)</Label>
                                 <Input value={formData.school || ""} onChange={e => setFormData({...formData, school: e.target.value})} />
                             </div>
                         </div>
@@ -186,20 +193,23 @@ export default function StudentManagement() {
                                 <Input type="number" value={formData.deviation_value || ""} onChange={e => setFormData({...formData, deviation_value: Number(e.target.value)})} />
                             </div>
                         </div>
+                        
+                        {/* previous_school を「在籍校 / 出身校」として使用 */}
                         <div className="space-y-2">
                             <Label>在籍校 / 出身校</Label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input placeholder="在籍校" value={formData.current_school || ""} onChange={e => setFormData({...formData, current_school: e.target.value})} />
-                                <Input placeholder="出身校" value={formData.previous_school || ""} onChange={e => setFormData({...formData, previous_school: e.target.value})} />
-                            </div>
+                            <Input 
+                                placeholder="例: 〇〇高校" 
+                                value={formData.previous_school || ""} 
+                                onChange={e => setFormData({...formData, previous_school: e.target.value})} 
+                            />
                         </div>
+                        
                         <div className="space-y-2">
                             <Label>志望校レベル</Label>
                             <Input value={formData.target_level || ""} onChange={e => setFormData({...formData, target_level: e.target.value})} />
                         </div>
                         
                         <div className="grid gap-4 border-t pt-4">
-                            {/* メイン講師 (単一選択) */}
                             <div className="space-y-2">
                                 <Label className="text-blue-600 font-bold">メイン講師 (校舎責任者)</Label>
                                 <Select value={String(formData.main_instructor_id || "0")} onValueChange={v => setFormData({...formData, main_instructor_id: Number(v)})}>
@@ -211,7 +221,6 @@ export default function StudentManagement() {
                                 </Select>
                             </div>
 
-                            {/* ★サブ講師 (複数選択・チェックボックス) */}
                             <div className="space-y-2">
                                 <Label className="text-gray-600 font-bold">サブ講師 (複数選択可)</Label>
                                 <div className="border rounded-md p-3 h-32 overflow-y-auto bg-gray-50 grid grid-cols-2 gap-2">
@@ -223,10 +232,9 @@ export default function StudentManagement() {
                                                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                 checked={formData.sub_instructor_ids?.includes(i.id)}
                                                 onChange={() => toggleSubInstructor(i.id)}
-                                                // メイン講師と同じ人は選択不可にするなどの制御も可能
                                                 disabled={formData.main_instructor_id === i.id}
                                             />
-                                            <label htmlFor={`sub-${i.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                            <label htmlFor={`sub-${i.id}`} className="text-sm font-medium cursor-pointer">
                                                 {i.username}
                                             </label>
                                         </div>
