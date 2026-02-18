@@ -1,44 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習進捗 統合レポート - {{ student_name }}</title>
     <style>
-        /* 日本語フォント指定 */
-        @font-face {
-            font-family: "JPFont";
-            src: url("{{ font_path }}");
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+            background: white;
         }
         
-        body { 
-            font-family: "JPFont", sans-serif; 
-            padding: 20px; 
-            color: #333; 
+        .page-break {
+            page-break-before: always;
+            break-before: page;
         }
         
-        .page-break { page-break-before: always; }
+        .header-info {
+            text-align: right;
+            color: #666;
+            font-size: 10pt;
+            margin-bottom: 10px;
+        }
         
-        h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        h2 { margin-top: 30px; background-color: #f3f4f6; padding: 10px; border-left: 5px solid #2563eb; font-size: 18pt; }
-        h3 { margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #555; }
+        h1 {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24pt;
+        }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 10pt; }
-        th { background-color: #e5e7eb; font-weight: bold; }
+        .student-name {
+            text-align: center;
+            font-size: 14pt;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
         
-        .header-info { text-align: right; color: #666; font-size: 9pt; margin-bottom: 10px; }
-        .summary-box { border: 1px solid #2563eb; background-color: #eff6ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .summary-item { font-size: 12pt; font-weight: bold; margin: 5px 0; }
+        h2 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            background-color: #f3f4f6;
+            padding: 12px;
+            border-left: 5px solid #2563eb;
+            font-size: 18pt;
+            font-weight: bold;
+        }
         
-        .chart-container { text-align: center; margin: 20px 0; }
-        .chart-img { max-width: 100%; height: auto; max-height: 350px; border: 1px solid #ddd; }
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 5px;
+            color: #555;
+            font-size: 14pt;
+            font-weight: bold;
+        }
+        
+        .summary-box {
+            border: 2px solid #2563eb;
+            background-color: #eff6ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-item {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .chart-placeholder {
+            max-width: 100%;
+            height: 350px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f9fafb;
+            color: #9ca3af;
+            font-size: 14pt;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        
+        th, td {
+            border: 1px solid #999;
+            padding: 10px;
+            text-align: left;
+            font-size: 10pt;
+        }
+        
+        th {
+            background-color: #e5e7eb;
+            font-weight: bold;
+        }
+        
+        tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+
+        @media print {
+            @page {
+                margin: 1.5cm;
+                size: A4;
+            }
+            
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                padding: 0;
+            }
+            
+            .page-break {
+                page-break-before: always;
+                break-before: page;
+            }
+            
+            h2 {
+                page-break-after: avoid;
+            }
+            
+            table {
+                page-break-inside: avoid;
+            }
+        }
+
+        @media screen {
+            body {
+                max-width: 210mm;
+                margin: 0 auto;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header-info">作成日: {{ date_str }}</div>
     <h1>学習進捗 統合レポート</h1>
-    <div style="text-align: center; font-size: 14pt; margin-bottom: 30px;">生徒氏名: {{ student_name }}</div>
+    <div class="student-name">生徒氏名: {{ student_name }}</div>
 
-    {% if "dashboard" in sections %}
+    <!-- Dashboard Section -->
+    {% if 'dashboard' in sections %}
     <div class="section">
         <h2>学習ダッシュボード</h2>
         
@@ -48,12 +178,14 @@
             <div class="summary-item">最新英検結果: {{ eiken_str }}</div>
         </div>
 
-        {% if images.dashboard %}
         <div class="chart-container">
             <h3>学習進捗グラフ</h3>
-            <img src="{{ images.dashboard }}" class="chart-img" />
+            {% if dashboard.chart_url %}
+            <img src="{{ dashboard.chart_url }}" alt="学習進捗グラフ" style="max-width: 100%; height: auto; max-height: 350px;">
+            {% else %}
+            <div class="chart-placeholder">グラフ表示エリア</div>
+            {% endif %}
         </div>
-        {% endif %}
 
         <h3>教材別進捗</h3>
         <table>
@@ -77,15 +209,19 @@
     </div>
     {% endif %}
 
-    {% if "calendar" in sections %}
+    <!-- Calendar Section -->
+    {% if 'calendar' in sections %}
     <div class="page-break"></div>
     <div class="section">
         <h2>入試日程カレンダー</h2>
-        {% if images.calendar %}
+        
         <div class="chart-container">
-             <img src="{{ images.calendar }}" class="chart-img" />
+            {% if calendar_chart_url %}
+            <img src="{{ calendar_chart_url }}" alt="入試日程カレンダー" style="max-width: 100%; height: auto; max-height: 350px;">
+            {% else %}
+            <div class="chart-placeholder">カレンダー表示エリア</div>
+            {% endif %}
         </div>
-        {% endif %}
 
         <table>
             <thead>
@@ -97,32 +233,38 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in calendar %}
-                <tr>
-                    <td>{{ item.univ }}</td>
-                    <td>{{ item.faculty }}</td>
-                    <td>{{ item.exam_date }}</td>
-                    <td>{{ item.announce_date }}</td>
-                </tr>
-                {% endfor %}
-                {% if not calendar %}
-                <tr><td colspan="4" style="text-align: center;">登録データなし</td></tr>
+                {% if calendar|length > 0 %}
+                    {% for item in calendar %}
+                    <tr>
+                        <td>{{ item.univ }}</td>
+                        <td>{{ item.faculty }}</td>
+                        <td>{{ item.exam_date }}</td>
+                        <td>{{ item.announce_date }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="no-data">登録データなし</td>
+                    </tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     {% endif %}
 
-    {% if "mock_exams" in sections %}
+    <!-- Mock Exams Section -->
+    {% if 'mock_exams' in sections %}
     <div class="page-break"></div>
     <div class="section">
         <h2>模試成績一覧</h2>
         
-        {% if images.mock_exams %}
         <div class="chart-container">
-             <img src="{{ images.mock_exams }}" class="chart-img" />
+            {% if mock_exams_chart_url %}
+            <img src="{{ mock_exams_chart_url }}" alt="模試成績グラフ" style="max-width: 100%; height: auto; max-height: 350px;">
+            {% else %}
+            <div class="chart-placeholder">グラフ表示エリア</div>
+            {% endif %}
         </div>
-        {% endif %}
 
         <table>
             <thead>
@@ -134,32 +276,38 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in mock_exams %}
-                <tr>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.type }}</td>
-                    <td>{{ item.grade }}</td>
-                    <td>{{ item.score_summary }}</td>
-                </tr>
-                {% endfor %}
-                 {% if not mock_exams %}
-                <tr><td colspan="4" style="text-align: center;">登録データなし</td></tr>
+                {% if mock_exams|length > 0 %}
+                    {% for item in mock_exams %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.type }}</td>
+                        <td>{{ item.grade }}</td>
+                        <td>{{ item.score_summary }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="no-data">登録データなし</td>
+                    </tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     {% endif %}
 
-    {% if "past_exams" in sections %}
+    <!-- Past Exams Section -->
+    {% if 'past_exams' in sections %}
     <div class="page-break"></div>
     <div class="section">
         <h2>過去問演習記録</h2>
         
-        {% if images.past_exams %}
         <div class="chart-container">
-             <img src="{{ images.past_exams }}" class="chart-img" />
+            {% if past_exams_chart_url %}
+            <img src="{{ past_exams_chart_url }}" alt="過去問演習グラフ" style="max-width: 100%; height: auto; max-height: 350px;">
+            {% else %}
+            <div class="chart-placeholder">グラフ表示エリア</div>
+            {% endif %}
         </div>
-        {% endif %}
 
         <table>
             <thead>
@@ -172,21 +320,31 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in past_exams %}
-                <tr>
-                    <td>{{ item.date }}</td>
-                    <td>{{ item.university }} {{ item.faculty }}</td>
-                    <td>{{ item.year }}</td>
-                    <td>{{ item.subject }}</td>
-                    <td>{{ item.correct_answers }} / {{ item.total_questions }}</td>
-                </tr>
-                {% endfor %}
-                 {% if not past_exams %}
-                <tr><td colspan="5" style="text-align: center;">登録データなし</td></tr>
+                {% if past_exams|length > 0 %}
+                    {% for item in past_exams %}
+                    <tr>
+                        <td>{{ item.date }}</td>
+                        <td>{{ item.university }} {{ item.faculty }}</td>
+                        <td>{{ item.year }}</td>
+                        <td>{{ item.subject }}</td>
+                        <td>{{ item.correct_answers }} / {{ item.total_questions }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="no-data">登録データなし</td>
+                    </tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     {% endif %}
+
+    <script>
+        // ページ読み込み後に自動印刷ダイアログを表示（オプション）
+        // window.addEventListener('load', function() {
+        //     window.print();
+        // });
+    </script>
 </body>
 </html>
