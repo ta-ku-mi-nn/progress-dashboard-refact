@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { Edit, Trash2, UserPlus, Save, X, UserCog } from 'lucide-react';
+import { Edit, Trash2, UserPlus, Save, X, UserCog, Building2 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 
@@ -14,9 +14,9 @@ export default function UserManagement() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editForm, setEditForm] = useState<any>({});
     
-    // 新規作成用ステート
+    // 新規作成用フォーム: emailなし、schoolあり
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [createForm, setCreateForm] = useState({ username: "", email: "", password: "", role: "admin" });
+    const [createForm, setCreateForm] = useState({ username: "", school: "", password: "", role: "admin" });
 
     useEffect(() => { fetchUsers(); }, []);
 
@@ -27,7 +27,6 @@ export default function UserManagement() {
         } catch (e) { toast.error("取得エラー"); }
     };
 
-    // 新規作成
     const handleCreate = async () => {
         if (!createForm.username || !createForm.password) {
             toast.error("ユーザー名とパスワードは必須です");
@@ -37,12 +36,12 @@ export default function UserManagement() {
             await api.post('/admin/users', createForm);
             toast.success("講師を作成しました");
             setIsCreateOpen(false);
-            setCreateForm({ username: "", email: "", password: "", role: "admin" });
+            // フォームリセット
+            setCreateForm({ username: "", school: "", password: "", role: "admin" });
             fetchUsers();
         } catch (e) { toast.error("作成失敗: ユーザー名が重複している可能性があります"); }
     };
 
-    // 更新・削除 (既存ロジック)
     const handleSave = async () => {
         try {
             await api.patch(`/admin/users/${editingId}`, editForm);
@@ -76,8 +75,8 @@ export default function UserManagement() {
                     <TableHeader className="bg-gray-50">
                         <TableRow>
                             <TableHead>ID</TableHead>
-                            <TableHead>ユーザー名</TableHead>
-                            <TableHead>メール</TableHead>
+                            <TableHead>氏名 (ユーザー名)</TableHead>
+                            <TableHead>所属校舎</TableHead>
                             <TableHead>権限</TableHead>
                             <TableHead className="text-right">操作</TableHead>
                         </TableRow>
@@ -88,22 +87,53 @@ export default function UserManagement() {
                                 <TableCell>{u.id}</TableCell>
                                 {editingId === u.id ? (
                                     <>
-                                        <TableCell><Input value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} /></TableCell>
-                                        <TableCell><Input value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></TableCell>
+                                        <TableCell>
+                                            <Input 
+                                                value={editForm.username} 
+                                                onChange={e => setEditForm({...editForm, username: e.target.value})} 
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                                value={editForm.school || ""} 
+                                                onChange={e => setEditForm({...editForm, school: e.target.value})} 
+                                                placeholder="例: 東京校"
+                                            />
+                                        </TableCell>
                                         <TableCell>{u.role}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button size="icon" variant="ghost" className="text-green-600" onClick={handleSave}><Save className="w-4 h-4" /></Button>
-                                            <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}><X className="w-4 h-4" /></Button>
+                                            <div className="flex justify-end gap-1">
+                                                <Button size="icon" variant="ghost" className="text-green-600" onClick={handleSave}>
+                                                    <Save className="w-4 h-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </>
                                 ) : (
                                     <>
                                         <TableCell className="font-medium">{u.username}</TableCell>
-                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell>
+                                            {u.school ? (
+                                                <div className="flex items-center gap-1 text-gray-700">
+                                                    <Building2 className="w-3 h-3" /> {u.school}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">-</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell><span className="px-2 py-1 rounded bg-blue-100 text-xs">{u.role}</span></TableCell>
                                         <TableCell className="text-right">
-                                            <Button size="icon" variant="ghost" onClick={() => { setEditingId(u.id); setEditForm({...u}); }}><Edit className="w-4 h-4" /></Button>
-                                            <Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDelete(u.id)}><Trash2 className="w-4 h-4" /></Button>
+                                            <div className="flex justify-end gap-1">
+                                                <Button size="icon" variant="ghost" onClick={() => { setEditingId(u.id); setEditForm({...u}); }}>
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDelete(u.id)}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </>
                                 )}
@@ -113,22 +143,32 @@ export default function UserManagement() {
                 </Table>
             </CardContent>
 
-            {/* 新規作成モーダル */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>新規講師登録</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-2">
                         <div className="space-y-2">
                             <Label>ユーザー名 (必須)</Label>
-                            <Input value={createForm.username} onChange={e => setCreateForm({...createForm, username: e.target.value})} />
+                            <Input 
+                                value={createForm.username} 
+                                onChange={e => setCreateForm({...createForm, username: e.target.value})} 
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>パスワード (必須)</Label>
-                            <Input type="password" value={createForm.password} onChange={e => setCreateForm({...createForm, password: e.target.value})} />
+                            <Input 
+                                type="password" 
+                                value={createForm.password} 
+                                onChange={e => setCreateForm({...createForm, password: e.target.value})} 
+                            />
                         </div>
                         <div className="space-y-2">
-                            <Label>メールアドレス</Label>
-                            <Input value={createForm.email} onChange={e => setCreateForm({...createForm, email: e.target.value})} />
+                            <Label>所属校舎</Label>
+                            <Input 
+                                value={createForm.school} 
+                                onChange={e => setCreateForm({...createForm, school: e.target.value})} 
+                                placeholder="例: 大阪校"
+                            />
                         </div>
                     </div>
                     <DialogFooter>
