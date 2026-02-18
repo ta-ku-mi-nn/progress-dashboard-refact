@@ -5,54 +5,77 @@ import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Plus, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, Edit, Save, X } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 
 export default function TextbookManagement() {
     const [textbooks, setTextbooks] = useState<any[]>([]);
-    const [newBook, setNewBook] = useState({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
+    
+    // 編集モード管理
+    const [isEditing, setIsEditing] = useState(false);
+    const [editId, setEditId] = useState<number | null>(null);
 
-    // フィルター用ステート
+    // フォームデータ
+    const [formData, setFormData] = useState({
+        book_name: '',
+        subject: '英語',
+        level: '基礎徹底',
+        duration: 0
+    });
+
+    // フィルター
     const [filterSubject, setFilterSubject] = useState("ALL");
     const [filterLevel, setFilterLevel] = useState("ALL");
     const [filterName, setFilterName] = useState("");
 
-    // データ取得
     const fetchBooks = async () => {
-        try { 
-            const res = await api.get('/common/textbooks'); 
-            setTextbooks(res.data); 
-        } catch (e) { 
-            toast.error("データ取得失敗"); 
-        }
+        try { const res = await api.get('/common/textbooks'); setTextbooks(res.data); } 
+        catch (e) { toast.error("データ取得失敗"); }
     };
     useEffect(() => { fetchBooks(); }, []);
 
-    // 科目リスト抽出
-    const existingSubjects = textbooks.map((t: any) => t.subject).filter(Boolean);
-    const uniqueSubjects = Array.from(new Set(existingSubjects));
+    // ユニークな科目リスト生成
+    const uniqueSubjects = Array.from(new Set(textbooks.map(t => t.subject).filter(Boolean)));
+    if (uniqueSubjects.length === 0) uniqueSubjects.push("英語", "数学", "国語");
 
-    // フィルタリングロジック
-    const filteredTextbooks = textbooks.filter(t => {
-        const matchSubject = filterSubject === "ALL" || t.subject === filterSubject;
-        const matchLevel = filterLevel === "ALL" || t.level === filterLevel;
-        const matchName = t.book_name.toLowerCase().includes(filterName.toLowerCase());
-        return matchSubject && matchLevel && matchName;
-    });
+    // 編集開始
+    const startEdit = (book: any) => {
+        setIsEditing(true);
+        setEditId(book.id);
+        setFormData({
+            book_name: book.book_name,
+            subject: book.subject,
+            level: book.level,
+            duration: book.duration
+        });
+    };
 
-    const handleCreate = async () => {
-        if (!newBook.book_name) return toast.error("参考書名は必須です");
-        if (!newBook.subject) return toast.error("科目を選択してください");
+    // 編集キャンセル
+    const cancelEdit = () => {
+        setIsEditing(false);
+        setEditId(null);
+        setFormData({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
+    };
+
+    // 保存 (新規作成 or 更新)
+    const handleSave = async () => {
+        if (!formData.book_name) return toast.error("参考書名は必須です");
+        if (!formData.subject) return toast.error("科目を選択してください");
 
         try {
-            await api.post('/admin/textbooks', newBook);
-            toast.success("登録しました");
+            if (isEditing && editId) {
+                // 更新
+                await api.patch(`/admin/textbooks/${editId}`, formData);
+                toast.success("更新しました");
+            } else {
+                // 新規
+                await api.post('/admin/textbooks', formData);
+                toast.success("登録しました");
+            }
             fetchBooks();
-            setNewBook({ book_name: '', subject: '英語', level: '基礎徹底', duration: 0 });
-        } catch (e) { 
-            toast.error("登録失敗"); 
-        }
+            cancelEdit();
+        } catch (e) { toast.error("保存失敗"); }
     };
 
     const handleDelete = async (id: number) => {
@@ -61,41 +84,44 @@ export default function TextbookManagement() {
             await api.delete(`/admin/textbooks/${id}`);
             toast.success("削除しました");
             fetchBooks();
-        } catch (e) { 
-            toast.error("削除失敗"); 
-        }
+        } catch (e) { toast.error("削除失敗"); }
     };
+
+    // フィルタリング
+    const filteredTextbooks = textbooks.filter(t => {
+        const matchSubject = filterSubject === "ALL" || t.subject === filterSubject;
+        const matchLevel = filterLevel === "ALL" || t.level === filterLevel;
+        const matchName = t.book_name.toLowerCase().includes(filterName.toLowerCase());
+        return matchSubject && matchLevel && matchName;
+    });
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full items-start">
             
-            {/* --- 左列: 新規登録フォーム (4/12カラム) --- */}
+            {/* 左列: フォーム (4/12) */}
             <Card className="lg:col-span-4 bg-gray-50/50">
                 <CardHeader>
                     <CardTitle className="text-base font-medium flex items-center gap-2">
-                        <Plus className="w-4 h-4" /> 新規参考書登録
+                        {isEditing ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        {isEditing ? "参考書を編集" : "新規参考書登録"}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
                         <Label>参考書名 <span className="text-red-500">*</span></Label>
                         <Input 
-                            value={newBook.book_name} 
-                            onChange={e => setNewBook({ ...newBook, book_name: e.target.value })} 
+                            value={formData.book_name} 
+                            onChange={e => setFormData({ ...formData, book_name: e.target.value })} 
                             placeholder="例: システム英単語"
                         />
                     </div>
                     
                     <div className="space-y-1">
                         <Label>科目 <span className="text-red-500">*</span></Label>
-                        <Select 
-                            value={newBook.subject} 
-                            onValueChange={v => setNewBook({ ...newBook, subject: v })}
-                        >
+                        <Select value={formData.subject} onValueChange={v => setFormData({ ...formData, subject: v })}>
                             <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-                            {/* ★修正: max-h-60 (240px) を指定してスクロール可能に */}
                             <SelectContent className="max-h-60">
-                                {uniqueSubjects.map(subj => (
+                                {uniqueSubjects.map((subj: any) => (
                                     <SelectItem key={subj} value={subj}>{subj}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -104,10 +130,7 @@ export default function TextbookManagement() {
                     
                     <div className="space-y-1">
                         <Label>レベル</Label>
-                        <Select 
-                            value={newBook.level} 
-                            onValueChange={v => setNewBook({ ...newBook, level: v })}
-                        >
+                        <Select value={formData.level} onValueChange={v => setFormData({ ...formData, level: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="基礎徹底">基礎徹底</SelectItem>
@@ -122,60 +145,51 @@ export default function TextbookManagement() {
                         <Label>所要時間 (h)</Label>
                         <Input 
                             type="number" 
-                            value={newBook.duration} 
-                            onChange={e => setNewBook({ ...newBook, duration: Number(e.target.value) })} 
+                            value={formData.duration} 
+                            onChange={e => setFormData({ ...formData, duration: Number(e.target.value) })} 
                             min={0}
                         />
                     </div>
 
-                    <Button className="w-full mt-4" onClick={handleCreate}>
-                        <Plus className="w-4 h-4 mr-2" /> 追加する
-                    </Button>
+                    <div className="flex gap-2 mt-4">
+                        {isEditing && (
+                            <Button variant="outline" className="flex-1" onClick={cancelEdit}>
+                                <X className="w-4 h-4 mr-2" /> キャンセル
+                            </Button>
+                        )}
+                        <Button className="flex-1" onClick={handleSave}>
+                            {isEditing ? <Save className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                            {isEditing ? "更新する" : "追加する"}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
-            {/* --- 右列: 参考書リスト & フィルター (8/12カラム) --- */}
+            {/* 右列: 一覧 (8/12) */}
             <div className="lg:col-span-8 space-y-4">
-                
-                {/* フィルターエリア */}
                 <div className="flex flex-col md:flex-row gap-3 items-end md:items-center bg-white p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mr-2">
                         <Filter className="w-4 h-4" /> 絞り込み:
                     </div>
-                    
-                    {/* 科目フィルター */}
-                    <div className="w-full md:w-32">
-                        <Select value={filterSubject} onValueChange={setFilterSubject}>
-                            <SelectTrigger className="h-9 text-xs">
-                                <SelectValue placeholder="全科目" />
-                            </SelectTrigger>
-                            {/* フィルター側も念のため高さ制限を追加 */}
-                            <SelectContent className="max-h-60">
-                                <SelectItem value="ALL">全科目</SelectItem>
-                                {uniqueSubjects.map(subj => (
-                                    <SelectItem key={subj} value={subj}>{subj}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* レベルフィルター */}
-                    <div className="w-full md:w-32">
-                        <Select value={filterLevel} onValueChange={setFilterLevel}>
-                            <SelectTrigger className="h-9 text-xs">
-                                <SelectValue placeholder="全レベル" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">全レベル</SelectItem>
-                                <SelectItem value="基礎徹底">基礎徹底</SelectItem>
-                                <SelectItem value="日大">日大</SelectItem>
-                                <SelectItem value="MARCH">MARCH</SelectItem>
-                                <SelectItem value="早慶">早慶</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* 名前検索 */}
+                    <Select value={filterSubject} onValueChange={setFilterSubject}>
+                        <SelectTrigger className="w-[110px] h-9 text-xs"><SelectValue placeholder="全科目" /></SelectTrigger>
+                        <SelectContent className="max-h-60">
+                            <SelectItem value="ALL">全科目</SelectItem>
+                            {uniqueSubjects.map((subj: any) => (
+                                <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filterLevel} onValueChange={setFilterLevel}>
+                        <SelectTrigger className="w-[110px] h-9 text-xs"><SelectValue placeholder="全レベル" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ALL">全レベル</SelectItem>
+                            <SelectItem value="基礎徹底">基礎徹底</SelectItem>
+                            <SelectItem value="日大">日大</SelectItem>
+                            <SelectItem value="MARCH">MARCH</SelectItem>
+                            <SelectItem value="早慶">早慶</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <div className="flex-1 w-full relative">
                         <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                         <Input 
@@ -187,7 +201,6 @@ export default function TextbookManagement() {
                     </div>
                 </div>
 
-                {/* リスト表示エリア */}
                 <div className="border rounded-md bg-white shadow-sm overflow-hidden flex flex-col h-[500px]">
                     <div className="overflow-auto flex-1">
                         <Table>
@@ -196,8 +209,8 @@ export default function TextbookManagement() {
                                     <TableHead>参考書名</TableHead>
                                     <TableHead className="w-24">科目</TableHead>
                                     <TableHead className="w-24">レベル</TableHead>
-                                    <TableHead className="w-20 text-right">時間</TableHead>
-                                    <TableHead className="w-12"></TableHead>
+                                    <TableHead className="w-16 text-right">時間</TableHead>
+                                    <TableHead className="w-24 text-right">操作</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -211,25 +224,20 @@ export default function TextbookManagement() {
                                         </TableCell>
                                         <TableCell className="py-2 text-xs text-muted-foreground">{t.level}</TableCell>
                                         <TableCell className="text-right py-2 text-xs">{t.duration}h</TableCell>
-                                        <TableCell className="py-2">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => handleDelete(t.id)}>
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
+                                        <TableCell className="py-2 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500" onClick={() => startEdit(t)}>
+                                                    <Edit className="w-3.5 h-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => handleDelete(t.id)}>
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {filteredTextbooks.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                            {textbooks.length === 0 ? "データがありません" : "条件に一致する参考書が見つかりません"}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
                             </TableBody>
                         </Table>
-                    </div>
-                    <div className="bg-gray-50 border-t p-2 text-xs text-muted-foreground text-right">
-                        合計: {filteredTextbooks.length} 冊 (全 {textbooks.length} 冊中)
                     </div>
                 </div>
             </div>
