@@ -4,11 +4,12 @@ import { Button } from '../ui/button';
 import { Printer, Loader2 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
+import html2canvas from 'html2canvas'; // ★追加
 
 interface PrintSettingsDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    studentId: number | null; // ★変更: 対象の生徒IDを親から受け取る
+    studentId: number | null;
 }
 
 export default function PrintSettingsDialog({ open, onOpenChange, studentId }: PrintSettingsDialogProps) {
@@ -16,7 +17,6 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
     const [loading, setLoading] = useState(false);
 
     const handlePrint = async () => {
-        // 生徒IDがない場合はエラー（通常ここには到達しないはずですが念のため）
         if (!studentId) {
             toast.error("対象の生徒が特定できません。");
             return;
@@ -24,12 +24,33 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
 
         setLoading(true);
         try {
+            const chartImages: Record<string, string> = {};
+
+            // ★グラフの画像化処理
+            if (selected.includes("dashboard")) {
+                // ダッシュボードにあるグラフコンテナを取得
+                const chartElement = document.getElementById('chart-container');
+                if (chartElement) {
+                    try {
+                        // html2canvasでキャプチャ
+                        const canvas = await html2canvas(chartElement, {
+                            scale: 2, // 高解像度
+                            useCORS: true, // 外部画像対策
+                            backgroundColor: '#ffffff', // 背景白
+                            logging: false
+                        });
+                        chartImages['dashboard'] = canvas.toDataURL('image/png');
+                    } catch (err) {
+                        console.warn("Chart capture failed:", err);
+                    }
+                }
+            }
+
             const payload = {
                 sections: selected,
-                chart_images: {} 
+                chart_images: chartImages // 画像データを送信
             };
 
-            // 受け取った studentId を使ってAPIリクエスト
             const response = await api.post(
                 `/reports/integrated/${studentId}`, 
                 payload, 
@@ -73,7 +94,7 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
                     <div className="grid grid-cols-1 gap-3">
                         <label className={`flex items-center space-x-3 border p-3 rounded-md cursor-pointer transition-colors ${selected.includes("dashboard") ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                             <input type="checkbox" className="h-4 w-4 text-blue-600 rounded" checked={selected.includes("dashboard")} onChange={() => toggle("dashboard")} />
-                            <span className="font-medium text-sm">学習ダッシュボード</span>
+                            <span className="font-medium text-sm">学習ダッシュボード (グラフ付き)</span>
                         </label>
                         <label className={`flex items-center space-x-3 border p-3 rounded-md cursor-pointer transition-colors ${selected.includes("calendar") ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"}`}>
                             <input type="checkbox" className="h-4 w-4 text-blue-600 rounded" checked={selected.includes("calendar")} onChange={() => toggle("calendar")} />
@@ -94,7 +115,6 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                         キャンセル
                     </Button>
-                    {/* 生徒IDがない場合はボタンを押せないようにする */}
                     <Button onClick={handlePrint} disabled={loading || selected.length === 0 || !studentId}>
                         {loading ? (
                             <>
