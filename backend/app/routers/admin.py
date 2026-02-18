@@ -261,3 +261,180 @@ def get_all_mock_exams(
         print("ERROR in get_all_mock_exams:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
+
+# ==========================================
+#  講師 (User) 管理機能
+# ==========================================
+
+# 1. 講師一覧取得 (role='admin' のユーザーを取得)
+@router.get("/instructors")
+def read_instructors(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    """
+    管理者権限を持つユーザー（講師）の一覧を取得します。
+    生徒の担当講師設定のドロップダウンなどで使用します。
+    """
+    admins = db.query(models.User).filter(models.User.role == 'admin').all()
+    return admins
+
+# 2. 講師情報の更新
+@router.patch("/users/{user_id}")
+def update_user(
+    user_id: int,
+    data: dict, # 柔軟な更新のためdictで受け取ります
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # パスワード更新が含まれる場合はハッシュ化が必要ですが、
+    # ここでは簡易的に属性更新のみ実装します
+    for key, value in data.items():
+        if hasattr(user, key) and key != "id" and key != "password":
+            setattr(user, key, value)
+    
+    db.commit()
+    db.refresh(user)
+    return user
+
+# 3. 講師の削除
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 紐づくデータ(StudentInstructorなど)の削除設定はモデルのcascade設定に依存
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
+
+# ==========================================
+#  生徒 (Student) 管理機能
+# ==========================================
+
+# 1. 生徒一覧取得 (担当講師情報を含めて取得)
+@router.get("/students_list")
+def read_students_with_details(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    students = db.query(models.Student).all()
+    results = []
+    
+    for s in students:
+        # StudentInstructorテーブルからメイン・サブ講師を探す
+        # s.instructors は relationship で定義されている前提
+        main_instructor = None
+        sub_instructor = None
+        
+        # instructorsリレーションがロードできているか確認
+        if hasattr(s, "instructors"):
+            for link in s.instructors:
+                if link.is_main and link.user:
+                    main_instructor = {"id": link.user.id, "name": link.user.username}
+                elif not link.is_main and link.user:
+                    sub_instructor = {"id": link.user.id, "name": link.user.username}
+
+        results.append({
+            "id": s.id,
+            "name": s.name,
+            "grade": s.grade,
+            "school": getattr(s, "current_school", s.school), # 新旧カラム対応
+            "previous_school": s.previous_school,
+            "deviation_value": s.deviation_value,
+            "target_level": s.target_level,
+            "main_instructor": main_instructor,
+            "sub_instructor": sub_instructor,
+            "main_instructor_id": main_instructor["id"] if main_instructor else None,
+            "sub_instructor_id": sub_instructor["id"] if sub_instructor else None,
+        })
+    
+    return results
+
+# 2. 生徒情報の更新 (メイン/サブ講師の紐付け処理含む)
+@router.patch("/students/{student_id}")
+def update_student(
+    student_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 基本情報の更新
+    updatable_fields = ["name", "grade", "current_school", "previous_school", "deviation_value", "target_level"]
+    for field in updatable_fields:
+        if field in data:
+            setattr(student, field, data[field])
+            
+    # "school" (校舎名) の更新リクエストが来た場合の対応（必要なら）
+    if "school" in data and hasattr(student, "school"):
+         setattr(student, "school", data["school"])
+
+    # --- 講師の紐付け更新ロジック ---
+    
+    # メイン講師の更新
+    if "main_instructor_id" in data:
+        new_main_id = data["main_instructor_id"]
+        # 既存のメイン講師設定を削除
+        db.query(models.StudentInstructor).filter(
+            models.StudentInstructor.student_id == student_id,
+            models.StudentInstructor.is_main == True
+        ).delete()
+        
+        # 新しいIDが指定されていれば追加 (0やNoneでなければ)
+        if new_main_id:
+            db.add(models.StudentInstructor(
+                student_id=student_id,
+                user_id=new_main_id,
+                is_main=True
+            ))
+
+    # サブ講師の更新
+    if "sub_instructor_id" in data:
+        new_sub_id = data["sub_instructor_id"]
+        # 既存のサブ講師設定を削除
+        db.query(models.StudentInstructor).filter(
+            models.StudentInstructor.student_id == student_id,
+            models.StudentInstructor.is_main == False
+        ).delete()
+        
+        # 新しいIDが指定されていれば追加
+        if new_sub_id:
+            db.add(models.StudentInstructor(
+                student_id=student_id,
+                user_id=new_sub_id,
+                is_main=False
+            ))
+
+    db.commit()
+    db.refresh(student)
+    return {"message": "Student updated successfully"}
+
+# 3. 生徒の削除
+@router.delete("/students/{student_id}")
+def delete_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Cascade設定がモデルにあれば関連データも消えますが、念のため生徒本体を削除
+    db.delete(student)
+    db.commit()
+    return {"message": "Student deleted successfully"}
