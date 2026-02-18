@@ -20,7 +20,8 @@ export default function StudentManagement() {
     // 編集・新規兼用モーダルステート
     const [isOpen, setIsOpen] = useState(false);
     const [isNewMode, setIsNewMode] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    // sub_instructor_ids は配列として管理
+    const [formData, setFormData] = useState<any>({ sub_instructor_ids: [] });
 
     useEffect(() => { fetchData(); }, []);
 
@@ -38,14 +39,18 @@ export default function StudentManagement() {
     // 新規ボタンクリック
     const handleNewClick = () => {
         setIsNewMode(true);
-        setFormData({ name: "", grade: "高1", school: "東京校", main_instructor_id: 0, sub_instructor_id: 0 });
+        setFormData({ name: "", grade: "高1", school: "東京校", main_instructor_id: 0, sub_instructor_ids: [] });
         setIsOpen(true);
     };
 
     // 編集ボタンクリック
     const handleEditClick = (student: any) => {
         setIsNewMode(false);
-        setFormData({ ...student });
+        setFormData({ 
+            ...student,
+            // IDリストがない場合は空配列にする
+            sub_instructor_ids: student.sub_instructor_ids || []
+        });
         setIsOpen(true);
     };
 
@@ -73,6 +78,24 @@ export default function StudentManagement() {
             fetchData();
             toast.success("削除しました");
         } catch (e) { toast.error("削除失敗"); }
+    };
+
+    // サブ講師のチェックボックス切り替え処理
+    const toggleSubInstructor = (instructorId: number) => {
+        const currentIds = formData.sub_instructor_ids || [];
+        if (currentIds.includes(instructorId)) {
+            // 削除
+            setFormData({
+                ...formData,
+                sub_instructor_ids: currentIds.filter((id: number) => id !== instructorId)
+            });
+        } else {
+            // 追加
+            setFormData({
+                ...formData,
+                sub_instructor_ids: [...currentIds, instructorId]
+            });
+        }
     };
 
     const filteredStudents = students.filter(s => 
@@ -115,8 +138,12 @@ export default function StudentManagement() {
                                 <TableCell>{s.school}</TableCell>
                                 <TableCell>
                                     <div className="text-xs">
-                                        <div>主: {s.main_instructor?.name || "-"}</div>
-                                        <div className="text-gray-400">副: {s.sub_instructor?.name || "-"}</div>
+                                        <div><span className="font-bold text-gray-500">主:</span> {s.main_instructor?.name || "-"}</div>
+                                        <div className="text-gray-400">
+                                            <span className="font-bold">副:</span> {s.sub_instructors && s.sub_instructors.length > 0 
+                                                ? s.sub_instructors.map((sub: any) => sub.name).join(", ") 
+                                                : "-"}
+                                        </div>
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -171,26 +198,40 @@ export default function StudentManagement() {
                             <Input value={formData.target_level || ""} onChange={e => setFormData({...formData, target_level: e.target.value})} />
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                        <div className="grid gap-4 border-t pt-4">
+                            {/* メイン講師 (単一選択) */}
                             <div className="space-y-2">
-                                <Label className="text-blue-600">メイン講師</Label>
+                                <Label className="text-blue-600 font-bold">メイン講師 (校舎責任者)</Label>
                                 <Select value={String(formData.main_instructor_id || "0")} onValueChange={v => setFormData({...formData, main_instructor_id: Number(v)})}>
-                                    <SelectTrigger><SelectValue placeholder="なし" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder="未設定" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="0">なし</SelectItem>
+                                        <SelectItem value="0">未設定</SelectItem>
                                         {instructors.map(i => <SelectItem key={i.id} value={String(i.id)}>{i.username}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {/* ★サブ講師 (複数選択・チェックボックス) */}
                             <div className="space-y-2">
-                                <Label>サブ講師</Label>
-                                <Select value={String(formData.sub_instructor_id || "0")} onValueChange={v => setFormData({...formData, sub_instructor_id: Number(v)})}>
-                                    <SelectTrigger><SelectValue placeholder="なし" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">なし</SelectItem>
-                                        {instructors.map(i => <SelectItem key={i.id} value={String(i.id)}>{i.username}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Label className="text-gray-600 font-bold">サブ講師 (複数選択可)</Label>
+                                <div className="border rounded-md p-3 h-32 overflow-y-auto bg-gray-50 grid grid-cols-2 gap-2">
+                                    {instructors.map(i => (
+                                        <div key={i.id} className="flex items-center space-x-2">
+                                            <input 
+                                                type="checkbox" 
+                                                id={`sub-${i.id}`}
+                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                checked={formData.sub_instructor_ids?.includes(i.id)}
+                                                onChange={() => toggleSubInstructor(i.id)}
+                                                // メイン講師と同じ人は選択不可にするなどの制御も可能
+                                                disabled={formData.main_instructor_id === i.id}
+                                            />
+                                            <label htmlFor={`sub-${i.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                {i.username}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
