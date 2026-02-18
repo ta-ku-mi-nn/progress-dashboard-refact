@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, FileText } from 'lucide-react';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar } from 'lucide-react';
 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
 import ProgressList from './ProgressList';
-import html2canvas from 'html2canvas';
+// ★追加: 印刷設定ダイアログ
+import PrintSettingsDialog from './common/PrintSettingsDialog';
 
 // 型定義
 interface Student {
@@ -43,6 +44,9 @@ export default function Dashboard() {
   const [editEikenGrade, setEditEikenGrade] = useState("");
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
+
+  // ★追加: 印刷ダイアログ開閉ステート
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
 
   // 表示用に整形したデータを保持するState
   const [displayEiken, setDisplayEiken] = useState({
@@ -85,7 +89,6 @@ export default function Dashboard() {
       let s = res.data.eiken_score || "";
       let d = res.data.eiken_date || "";
 
-      // 連結文字列の場合の分解処理
       if (s.includes(" / ")) {
           const parts = s.split(" / ");
           g = parts[0] || ""; 
@@ -93,7 +96,6 @@ export default function Dashboard() {
           d = parts[2] || ""; 
       }
 
-      // クレンジング
       g = g.replace(" None", "").replace(" 合格", "").replace(" 不合格", "").trim();
       s = s.replace("CSE ", "").trim();
 
@@ -130,45 +132,6 @@ export default function Dashboard() {
     }
   };
 
-  const handlePrint = async () => {
-    if (!selectedStudentId) {
-        alert("生徒が選択されていません");
-        return;
-    }
-
-    try {
-        // 1. グラフの要素を取得
-        const chartElement = document.getElementById('chart-container');
-        let chartImage = "";
-
-        if (chartElement) {
-            // 2. html2canvasで画像化 (Base64文字列を取得)
-            const canvas = await html2canvas(chartElement, {
-                scale: 2, // 高画質化
-                backgroundColor: null // 背景透明維持
-            } as any);
-            chartImage = canvas.toDataURL('image/png');
-        }
-
-        // 3. バックエンドに画像付きでリクエスト (POSTに変更)
-        // responseType: 'blob' が重要 (バイナリデータとして受け取るため)
-        const res = await api.post(`reports/dashboard/${selectedStudentId}`, {
-            chart_image: chartImage
-        }, {
-            responseType: 'blob'
-        });
-
-        // 4. 受け取ったPDF BlobをURLに変換して開く
-        const pdfBlob = new Blob([res.data], { type: 'application/pdf' });
-        const pdfUrl = window.URL.createObjectURL(pdfBlob);
-        window.open(pdfUrl, '_blank');
-
-    } catch (e) {
-        console.error("PDF generation failed:", e);
-        alert("PDF作成に失敗しました");
-    }
-  };
-
   if (loading) return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
   if (!selectedStudentId) return <div className="p-8 text-center">生徒が選択されていません</div>;
 
@@ -188,27 +151,27 @@ export default function Dashboard() {
               </Select>
             </div>
           )}
-          {/* ★修正: ボタンのアイコンとラベルを変更 */}
-          <Button variant="outline" onClick={handlePrint}>
-            <FileText className="w-4 h-4 mr-2" /> PDF出力
+          
+          {/* ★修正: 印刷ボタン (ダイアログを開く) */}
+          <Button variant="outline" onClick={() => setIsPrintDialogOpen(true)}>
+            <Printer className="w-4 h-4 mr-2" /> レポート出力
           </Button>
         </div>
       </div>
 
-      {/* メインコンテンツエリア: 左右2分割 (1:1) */}
+      {/* メインコンテンツエリア */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start print:block h-full">
         
         {/* === 左列: グラフ(上) + KPI(下) === */}
         <div className="flex flex-col gap-4 w-full h-full">
             
-            {/* 1. グラフコンポーネント (上) */}
-            <div id="chart-container" className="w-full flex-1 min-h-[300px] bg-white p-2 rounded">
+            {/* 1. グラフコンポーネント */}
+            <div id="chart-container" className="w-full flex-1 min-h-[300px] bg-white p-2 rounded border">
                 <ProgressChart studentId={selectedStudentId} />
             </div>
 
-            {/* 2. KPIカード群 (下: 2x2グリッド) */}
+            {/* 2. KPIカード群 */}
             <div className="grid grid-cols-2 gap-4 shrink-0">
-                {/* 総学習時間 */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
                         <CardTitle className="text-sm font-medium">総学習時間</CardTitle>
@@ -219,7 +182,6 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                {/* 学習予定時間 */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
                         <CardTitle className="text-sm font-medium">学習予定</CardTitle>
@@ -230,7 +192,6 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                {/* 達成率 */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
                         <CardTitle className="text-sm font-medium">達成率</CardTitle>
@@ -241,7 +202,6 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
                 
-                {/* 英検スコア (3項目表示) */}
                 <Card className="relative">
                     <Button 
                         variant="ghost" 
@@ -258,7 +218,7 @@ export default function Dashboard() {
                     <CardContent className="px-4 pb-4">
                         <div className="flex flex-col gap-0.5">
                             <div className="text-lg font-bold truncate leading-tight">
-                                {displayEiken.grade} CSE: {displayEiken.score }
+                                {displayEiken.grade} <span className="text-sm font-normal">CSE: {displayEiken.score}</span>
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <Calendar className="w-3 h-3" />
@@ -287,31 +247,16 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="grade">級</Label>
-                    <Input 
-                        id="grade"
-                        value={editEikenGrade} 
-                        onChange={(e) => setEditEikenGrade(e.target.value)} 
-                        placeholder="例: 準2級" 
-                    />
+                    <Input id="grade" value={editEikenGrade} onChange={(e) => setEditEikenGrade(e.target.value)} placeholder="例: 準2級" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="score">CSEスコア</Label>
-                    <Input 
-                        id="score"
-                        value={editEikenScore} 
-                        onChange={(e) => setEditEikenScore(e.target.value)} 
-                        placeholder="例: 1950" 
-                    />
+                    <Input id="score" value={editEikenScore} onChange={(e) => setEditEikenScore(e.target.value)} placeholder="例: 1950" />
                 </div>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="date">試験日</Label>
-                <Input 
-                    id="date"
-                    value={editEikenDate} 
-                    onChange={(e) => setEditEikenDate(e.target.value)} 
-                    placeholder="例: 2025-06-01" 
-                />
+                <Input id="date" value={editEikenDate} onChange={(e) => setEditEikenDate(e.target.value)} placeholder="例: 2025-06-01" />
             </div>
           </div>
           <DialogFooter>
@@ -319,6 +264,13 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ★追加: 印刷設定ダイアログ */}
+      <PrintSettingsDialog 
+        open={isPrintDialogOpen} 
+        onOpenChange={setIsPrintDialogOpen}
+        studentId={selectedStudentId}
+      />
     </div>
   );
 }
