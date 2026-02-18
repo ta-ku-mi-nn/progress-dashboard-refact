@@ -21,7 +21,7 @@ class Student(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     school = Column(String, nullable=False)
-    deviation_value = Column(Integer)
+    deviation_value = Column(Float)
     target_level = Column(String)
     grade = Column(String)
     previous_school = Column(String)
