@@ -7,17 +7,17 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 from app.db.database import get_db
-from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User
+# ★修正: Student モデルを追加インポート
+from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User, Student
 
 router = APIRouter()
 
 # --- Pydantic Schemas ---
-# フロントエンドに返すデータの型を厳格に定義します
 class DashboardData(BaseModel):
     student_id: int
-    total_study_time: float      # 総学習時間（完了した時間）
-    total_planned_time: float    # 学習予定（全教材の目安時間の合計）
-    progress_rate: float         # 達成率（%）
+    total_study_time: float      
+    total_planned_time: float    
+    progress_rate: float         
     eiken_grade: Optional[str] = "未登録"
     eiken_score: Optional[str] = "-"
     eiken_date: Optional[str] = "-"
@@ -42,9 +42,13 @@ class ProgressCreate(BaseModel):
 @router.get("/{student_id}", response_model=DashboardData)
 def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     # 1. 生徒存在確認
-    # UserテーブルかStudentテーブルか、環境に合わせて調整（今回はUserで検索後、なければStudentも考慮など不要ならシンプルに）
-    # ここでは既存コードに合わせてUserテーブルから検索します
-    student = session.query(User).filter(User.id == student_id).first()
+    # ★修正: まず Student テーブルを探す
+    student = session.query(Student).filter(Student.id == student_id).first()
+    
+    # Studentになければ User テーブルを探す (互換性のため)
+    if not student:
+        student = session.query(User).filter(User.id == student_id).first()
+    
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
@@ -55,25 +59,18 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     total_planned_time = 0.0
     total_progress_pct = 0.0
     
-    # === ★計算ロジック修正箇所 ===
     if progress_items:
-        # 時間設定(duration)があるアイテムの計算
         for item in progress_items:
-            # durationがある場合のみ加算
             if item.duration and item.duration > 0:
                 total_planned_time += item.duration
                 
-                # 完了時間の計算 (進捗率 * duration)
                 if (item.total_units or 0) > 0:
                     ratio = min(1.0, (item.completed_units or 0) / item.total_units)
                     total_completed_time += ratio * item.duration
 
-        # 達成率の計算
         if total_planned_time > 0:
-            # 時間設定がある場合: (完了時間 / 予定時間) * 100
             total_progress_pct = (total_completed_time / total_planned_time) * 100
         else:
-            # 時間設定が全くない場合のフォールバック: (各教材の進捗率の単純平均)
             valid_items = [p for p in progress_items if (p.total_units or 0) > 0]
             if valid_items:
                 ratios = [min(1.0, (p.completed_units or 0) / p.total_units) for p in valid_items]
@@ -98,7 +95,6 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
         eiken_score = str(latest_eiken.cse_score) if latest_eiken.cse_score is not None else "-"
         eiken_date = str(latest_eiken.exam_date) if latest_eiken.exam_date else "-"
 
-    # 型定義(DashboardData)に合わせてデータを返す
     return {
         "student_id": student.id,
         "total_study_time": round(total_completed_time, 1),
@@ -110,12 +106,12 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     }
 
 
-# --- 以下、グラフ用APIなどもロジックを合わせる ---
+# --- グラフ用API ---
 
 @router.get("/chart/{student_id}")
 def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
     items = session.query(Progress).filter(Progress.student_id == student_id).all()
-    subject_stats = {} # {subj: {"planned": 0.0, "completed": 0.0, "ratios": []}}
+    subject_stats = {} 
     
     for item in items:
         if (item.total_units or 0) <= 0:
@@ -126,7 +122,7 @@ def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
             subject_stats[subj] = {"planned": 0.0, "completed": 0.0, "ratios": []}
 
         ratio = min(1.0, (item.completed_units or 0) / item.total_units)
-        subject_stats[subj]["ratios"].append(ratio * 100) # 単純平均用
+        subject_stats[subj]["ratios"].append(ratio * 100)
         
         if item.duration and item.duration > 0:
             subject_stats[subj]["planned"] += item.duration
@@ -135,10 +131,8 @@ def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
     result = []
     for subj, stats in subject_stats.items():
         if stats["planned"] > 0:
-            # 時間ベース
             avg_progress = (stats["completed"] / stats["planned"]) * 100
         elif stats["ratios"]:
-            # 単純平均ベース
             avg_progress = sum(stats["ratios"]) / len(stats["ratios"])
         else:
             avg_progress = 0.0
@@ -150,7 +144,7 @@ def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
         
     return result
 
-# --- 既存のCRUD系API（変更なし） ---
+# --- 既存のCRUD系API ---
 
 @router.get("/list/{student_id}")
 def get_progress_list(student_id: int, session: Session = Depends(get_db)) -> List[Dict[str, Any]]:
@@ -194,7 +188,6 @@ def add_progress_batch(
     session: Session = Depends(get_db)
 ):
     added_items = []
-    # 既存のロジック維持
     for book_id in data.book_ids:
         master_book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
         if not master_book: continue
