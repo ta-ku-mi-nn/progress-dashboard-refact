@@ -202,38 +202,54 @@ def create_student(
 
 # Add other admin endpoints (delete user, etc.) as needed
 
-# ファイルの末尾などに追記
 @router.get("/mock_exams")
 def get_all_mock_exams(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
-    """
-    全生徒の模試結果を取得します。
-    生徒名（User.username）を結合して返します。
-    """
-    results = db.query(
-        models.MockExam.id,
-        models.MockExam.exam_name,
-        models.MockExam.subject,
-        models.MockExam.score,
-        models.MockExam.deviation,
-        models.MockExam.exam_date,
-        models.User.username.label("student_name"),
-        models.User.grade.label("student_grade")
-    ).join(models.User, models.MockExam.user_id == models.User.id).order_by(models.MockExam.exam_date.desc()).all()
-    
-    # 辞書リストに変換して返却
-    return [
-        {
-            "id": r.id,
-            "student_name": r.student_name,
-            "student_grade": r.student_grade,
-            "exam_name": r.exam_name,
-            "subject": r.subject,
-            "score": r.score,
-            "deviation": r.deviation,
-            "exam_date": r.exam_date.strftime('%Y-%m-%d') if r.exam_date else None
-        }
-        for r in results
-    ]
+    try:
+        print("DEBUG: Fetching all mock exams via models.MockExam")
+        
+        # models.MockExam と models.User を使用してクエリ
+        # gradeカラムが存在しない場合を考慮し、まずは確実に存在するカラムで取得
+        query = db.query(
+            models.MockExam.id,
+            models.MockExam.exam_name,
+            models.MockExam.subject,
+            models.MockExam.score,
+            models.MockExam.deviation,
+            models.MockExam.exam_date,
+            models.User.username.label("student_name"),
+            # Userモデルにgradeがあるか不明なため、一旦ここでは取得せず後で処理
+        ).join(models.User, models.MockExam.user_id == models.User.id)\
+         .order_by(models.MockExam.exam_date.desc())
+        
+        results = query.all()
+        
+        final_results = []
+        for r in results:
+            # 各レコードのuserオブジェクトを個別に参照してgradeを確認（エラー回避用）
+            user_obj = db.query(models.User).filter(models.User.username == r.student_name).first()
+            # grade属性があれば取得、なければ "不明" にする
+            grade = getattr(user_obj, "grade", "不明")
+
+            final_results.append({
+                "id": r.id,
+                "student_name": r.student_name,
+                "student_grade": grade,
+                "exam_name": r.exam_name,
+                "subject": r.subject,
+                "score": r.score,
+                "deviation": r.deviation,
+                "exam_date": r.exam_date.strftime('%Y-%m-%d') if r.exam_date else None
+            })
+
+        return final_results
+
+    except Exception as e:
+        print("ERROR in get_all_mock_exams:")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Internal Server Error: {str(e)}"
+        )
