@@ -268,28 +268,36 @@ def get_all_mock_exams(
 #  講師 (User) 管理 API
 # -------------------------------------------
 
-# 1. 講師一覧取得
 @router.get("/instructors")
 def read_instructors(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
-    # ★修正点: roleによるフィルタを削除し、全ユーザーを表示
+    # 全ユーザー（講師候補）を返す
     return db.query(models.User).order_by(models.User.id).all()
 
 @router.post("/users")
-def create_user(data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)):
+def create_user(
+    data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
+):
     if db.query(models.User).filter(models.User.username == data["username"]).first():
         raise HTTPException(status_code=400, detail="Username already registered")
     hashed_pw = pwd_context.hash(data["password"])
-    new_user = models.User(username=data["username"], email=data.get("email", ""), role=data.get("role", "admin"), hashed_password=hashed_pw)
+    new_user = models.User(
+        username=data["username"], 
+        email=data.get("email", ""), 
+        role=data.get("role", "admin"), 
+        hashed_password=hashed_pw
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
 @router.patch("/users/{user_id}")
-def update_user(user_id: int, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)):
+def update_user(
+    user_id: int, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(404, "User not found")
     for key, value in data.items():
@@ -299,7 +307,9 @@ def update_user(user_id: int, data: dict, db: Session = Depends(get_db), current
     return user
 
 @router.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)):
+def delete_user(
+    user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
         db.delete(user)
@@ -311,7 +321,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: model
 #  生徒 (Student) 管理 API
 # -------------------------------------------
 
-# 1. 生徒一覧取得 (サブ講師をリストで返す)
 @router.get("/students_list")
 def read_students_with_details(
     db: Session = Depends(get_db),
@@ -319,38 +328,41 @@ def read_students_with_details(
 ):
     students = db.query(models.Student).all()
     results = []
+    
     for s in students:
         main_inst = None
-        sub_insts = [] # ★複数対応: リストに変更
+        sub_insts = []
         
+        # 講師情報の取得
+        # models.StudentInstructor の定義に従い、is_main (Integer) を判定
         try:
             if hasattr(s, "instructors"):
                 for link in s.instructors:
                     if link.user:
                         info = {"id": link.user.id, "name": link.user.username}
-                        if link.is_main:
+                        # is_main == 1 をメイン講師とする
+                        if link.is_main == 1:
                             main_inst = info
                         else:
                             sub_insts.append(info)
-        except Exception: pass
+        except Exception:
+            pass
 
         results.append({
             "id": s.id,
             "name": s.name,
             "grade": getattr(s, "grade", None),
-            "school": getattr(s, "school", ""),
-            "current_school": getattr(s, "current_school", getattr(s, "school", "")),
-            "previous_school": getattr(s, "previous_school", ""),
+            "school": getattr(s, "school", ""), # 塾の校舎名
+            "previous_school": getattr(s, "previous_school", ""), # 在籍/出身校
             "deviation_value": getattr(s, "deviation_value", None),
             "target_level": getattr(s, "target_level", ""),
             "main_instructor": main_inst,
-            "sub_instructors": sub_insts, # リストを返す
+            "sub_instructors": sub_insts,
             "main_instructor_id": main_inst["id"] if main_inst else 0,
-            "sub_instructor_ids": [sub["id"] for sub in sub_insts], # フロントエンド編集用のIDリスト
+            "sub_instructor_ids": [sub["id"] for sub in sub_insts],
         })
     return results
 
-# 2. 生徒新規作成 (サブ講師複数対応)
 @router.post("/students")
 def create_student(
     data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
@@ -359,8 +371,7 @@ def create_student(
         name=data["name"],
         school=data.get("school", "未設定"),
         grade=data.get("grade"),
-        current_school=data.get("current_school"),
-        previous_school=data.get("previous_school"),
+        previous_school=data.get("previous_school"), # 在籍/出身校
         deviation_value=data.get("deviation_value"),
         target_level=data.get("target_level")
     )
@@ -368,20 +379,26 @@ def create_student(
     db.commit()
     db.refresh(new_student)
 
-    # メイン講師
+    # 講師設定 (is_main=1 or 0)
     if data.get("main_instructor_id"):
-        db.add(models.StudentInstructor(student_id=new_student.id, user_id=data["main_instructor_id"], is_main=True))
+        db.add(models.StudentInstructor(
+            student_id=new_student.id, 
+            user_id=data["main_instructor_id"], 
+            is_main=1 # Integer
+        ))
     
-    # サブ講師 (リストで受け取る)
     if "sub_instructor_ids" in data and isinstance(data["sub_instructor_ids"], list):
         for sub_id in data["sub_instructor_ids"]:
             if sub_id:
-                db.add(models.StudentInstructor(student_id=new_student.id, user_id=sub_id, is_main=False))
+                db.add(models.StudentInstructor(
+                    student_id=new_student.id, 
+                    user_id=sub_id, 
+                    is_main=0 # Integer
+                ))
     
     db.commit()
     return new_student
 
-# 3. 生徒更新 (サブ講師複数対応)
 @router.patch("/students/{student_id}")
 def update_student(
     student_id: int, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
@@ -389,24 +406,46 @@ def update_student(
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if not student: raise HTTPException(404, "Student not found")
 
-    fields = ["name", "grade", "school", "current_school", "previous_school", "deviation_value", "target_level"]
+    fields = ["name", "grade", "school", "previous_school", "deviation_value", "target_level"]
     for f in fields:
-        if f in data and hasattr(student, f): setattr(student, f, data[f])
+        if f in data and hasattr(student, f):
+            setattr(student, f, data[f])
 
-    # メイン講師更新
+    # 講師設定の更新
+    # 既存の紐付けを一度削除してから再登録する方式で更新
+    
+    # メイン講師 (is_main=1) の更新
     if "main_instructor_id" in data:
-        db.query(models.StudentInstructor).filter(models.StudentInstructor.student_id == student_id, models.StudentInstructor.is_main == True).delete()
+        # 既存のメイン講師を削除
+        db.query(models.StudentInstructor).filter(
+            models.StudentInstructor.student_id == student_id,
+            models.StudentInstructor.is_main == 1
+        ).delete()
+        
+        # 新しいメイン講師を追加
         if data["main_instructor_id"]:
-            db.add(models.StudentInstructor(student_id=student_id, user_id=data["main_instructor_id"], is_main=True))
+            db.add(models.StudentInstructor(
+                student_id=student_id, 
+                user_id=data["main_instructor_id"], 
+                is_main=1
+            ))
 
-    # ★サブ講師更新 (リスト処理)
+    # サブ講師 (is_main=0) の更新
     if "sub_instructor_ids" in data and isinstance(data["sub_instructor_ids"], list):
-        # 既存のサブ講師を全削除
-        db.query(models.StudentInstructor).filter(models.StudentInstructor.student_id == student_id, models.StudentInstructor.is_main == False).delete()
-        # リストにあるIDを全て追加
+        # 既存のサブ講師を削除
+        db.query(models.StudentInstructor).filter(
+            models.StudentInstructor.student_id == student_id,
+            models.StudentInstructor.is_main == 0
+        ).delete()
+        
+        # 新しいサブ講師を追加
         for sub_id in data["sub_instructor_ids"]:
             if sub_id:
-                db.add(models.StudentInstructor(student_id=student_id, user_id=sub_id, is_main=False))
+                db.add(models.StudentInstructor(
+                    student_id=student_id, 
+                    user_id=sub_id, 
+                    is_main=0
+                ))
 
     db.commit()
     return {"status": "updated"}
