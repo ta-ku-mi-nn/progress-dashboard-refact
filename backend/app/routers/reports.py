@@ -216,17 +216,25 @@ def generate_integrated_report(
     session: Session = Depends(get_db)
 ):
     try:
-        # 1. 生徒存在チェック
-        student = session.query(User).filter(User.id == student_id).first()
+        # ★修正: Userテーブルではなく、Studentテーブルから検索する
+        student = session.query(Student).filter(Student.id == student_id).first()
         if not student:
-            raise HTTPException(status_code=404, detail="Student not found")
+            # IDが合わない場合、念のためUserテーブルも探す（旧仕様との互換性）
+            student_fallback = session.query(User).filter(User.id == student_id).first()
+            if student_fallback:
+                student = student_fallback
+            else:
+                raise HTTPException(status_code=404, detail="Student not found")
+
+        # 名前フィールドの取得 (Studentモデルはname, Userモデルはusername)
+        student_name = getattr(student, "name", getattr(student, "username", "不明"))
 
         # 2. 基本コンテキスト
         context = {
-            "student_name": student.username,
+            "student_name": student_name, # ★正しい名前が入る
             "date_str": datetime.now().strftime("%Y年%m月%d日"),
             "sections": request.sections,
-            "images": request.chart_images,
+            "images": request.chart_images, # フロントから送られた画像データ
             "dashboard": None,
             "past_exams": [],
             "mock_exams": [],
