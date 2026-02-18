@@ -273,21 +273,24 @@ def read_instructors(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
-    # 全ユーザー（講師候補）を返す
     return db.query(models.User).order_by(models.User.id).all()
 
 @router.post("/users")
 def create_user(
     data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
 ):
+    # ユーザー名重複チェック
     if db.query(models.User).filter(models.User.username == data["username"]).first():
         raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # パスワードハッシュ化
     hashed_pw = pwd_context.hash(data["password"])
+    
     new_user = models.User(
-        username=data["username"], 
-        email=data.get("email", ""), 
-        role=data.get("role", "admin"), 
-        hashed_password=hashed_pw
+        username=data["username"],
+        password=hashed_pw,  # ★修正: モデルに合わせて 'password' に保存
+        role=data.get("role", "admin"),
+        school=data.get("school", "") # ★追加: 校舎情報
     )
     db.add(new_user)
     db.commit()
@@ -300,9 +303,14 @@ def update_user(
 ):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(404, "User not found")
+    
     for key, value in data.items():
-        if key == "password" and value: user.hashed_password = pwd_context.hash(value)
-        elif hasattr(user, key) and key != "id": setattr(user, key, value)
+        if key == "password" and value: 
+            # パスワード変更時も 'password' カラムを更新
+            user.password = pwd_context.hash(value)
+        elif hasattr(user, key) and key != "id": 
+            setattr(user, key, value)
+            
     db.commit()
     return user
 
