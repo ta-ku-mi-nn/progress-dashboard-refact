@@ -138,6 +138,34 @@ def delete_preset(preset_id: int, session: Session = Depends(get_db)):
     session.commit()
     return {"message": "Deleted successfully"}
 
+@router.put("/presets/{preset_id}")
+def update_preset(
+    preset_id: int,
+    data: schemas.BulkPresetUpdate,
+    session: Session = Depends(get_db)
+):
+    preset = session.query(models.BulkPreset).filter(models.BulkPreset.id == preset_id).first()
+    if not preset:
+        raise HTTPException(status_code=404, detail="Preset not found")
+
+    if data.preset_name is not None:
+        preset.preset_name = data.preset_name
+    if data.subject is not None:
+        preset.subject = data.subject
+    
+    if data.book_names is not None:
+        # 既存の紐付けを削除して再登録
+        session.query(models.BulkPresetBook).filter(models.BulkPresetBook.preset_id == preset.id).delete()
+        for book_name in data.book_names:
+            new_book = models.BulkPresetBook(
+                preset_id=preset.id,
+                book_name=book_name
+            )
+            session.add(new_book)
+            
+    session.commit()
+    return {"message": "Updated successfully"}
+
 @router.get("/users", response_model=List[schemas.User])
 def read_users(
     skip: int = 0, limit: int = 100,
