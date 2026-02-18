@@ -10,6 +10,7 @@ from app.crud import crud_master, crud_user, crud_student
 import traceback
 
 router = APIRouter()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Dependency to check if user is admin
 def get_current_admin(current_user: models.User = Depends(deps.get_current_user)):
