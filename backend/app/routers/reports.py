@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel
 from datetime import datetime
 
