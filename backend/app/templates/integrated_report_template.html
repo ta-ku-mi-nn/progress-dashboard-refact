@@ -3,15 +3,13 @@
 <head>
     <meta charset="utf-8">
     <style>
-        /* 日本語フォント指定 (環境に合わせて調整が必要) */
+        /* 日本語フォント指定 */
         @font-face {
             font-family: "JPFont";
-            /* Render環境でのフォントパス例 */
             src: url("/usr/share/fonts/truetype/fonts-japanese-gothic.ttf");
         }
         body { font-family: "JPFont", sans-serif; padding: 20px; color: #333; }
         
-        /* ページ区切りクラス */
         .page-break { page-break-before: always; }
         
         h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
@@ -62,7 +60,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in dashboard.items %}
+                {% for item in dashboard.progress_list %}
                 <tr>
                     <td>{{ item.subject }}</td>
                     <td>{{ item.book_name }}</td>
