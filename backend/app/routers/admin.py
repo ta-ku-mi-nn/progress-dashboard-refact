@@ -209,43 +209,49 @@ def get_all_mock_exams(
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
     try:
-        # MockExamResult -> Student -> User の順に結合して取得
+        # MockExamResult と Student を結合して取得
+        # Student.user_id ではなく Student.name を使用する
         results = db.query(
             models.MockExamResult,
-            models.User.username.label("student_name")
+            models.Student.name.label("student_name")
         ).join(models.Student, models.MockExamResult.student_id == models.Student.id)\
-         .join(models.User, models.Student.user_id == models.User.id)\
          .order_by(models.MockExamResult.exam_date.desc()).all()
         
         final_list = []
 
-        # 1つのレコード（1回の模試）から各科目のデータを抽出してリスト化
         for record, student_name in results:
-            # 抽出したい科目とカラムの対応表
-            # (表示名, 記述式のカラム, マーク式のカラム)
-            subject_map = [
+            # モデル定義（subject_xxx_xxx）に基づいた科目マップ
+            # (表示名, 記述式のカラム名, マーク式のカラム名)
+            subject_configs = [
                 ("英語", "subject_english_desc", "subject_english_r_mark"),
                 ("数学", "subject_math_desc", "subject_math1a_mark"),
                 ("国語", "subject_kokugo_desc", "subject_kokugo_mark"),
-                ("理科", "subject_rika1_desc", "subject_rika1_mark"),
-                ("社会", "subject_shakai1_desc", "subject_shakai1_mark"),
+                ("理科1", "subject_rika1_desc", "subject_rika1_mark"),
+                ("理科2", "subject_rika2_desc", "subject_rika2_mark"),
+                ("社会1", "subject_shakai1_desc", "subject_shakai1_mark"),
+                ("社会2", "subject_shakai2_desc", "subject_shakai2_mark"),
+                ("理科基礎1", None, "subject_rika_kiso1_mark"),
+                ("理科基礎2", None, "subject_rika_kiso2_mark"),
+                ("情報", None, "subject_info_mark"),
             ]
 
-            for label, desc_col, mark_col in subject_map:
-                # 記述かマーク、どちらかに点数があればデータを作成
-                score_desc = getattr(record, desc_col, None)
-                score_mark = getattr(record, mark_col, None)
+            for label, desc_col, mark_col in subject_configs:
+                score_desc = getattr(record, desc_col, None) if desc_col else None
+                score_mark = getattr(record, mark_col, None) if mark_col else None
                 
-                # 点数が存在する場合のみリストに追加
+                # いずれかに値があればデータ行を作成
                 if score_desc is not None or score_mark is not None:
+                    # 両方ある場合は（英語のR/L合算などの複雑化を避け）優先順位で取得
+                    val = score_desc if score_desc is not None else score_mark
+                    
                     final_list.append({
-                        "id": f"{record.id}_{label}", # 一意のID
+                        "id": f"{record.id}_{label}", 
                         "student_name": student_name,
-                        "student_grade": record.grade,
-                        "exam_name": f"{record.mock_exam_name} ({record.round}回)",
+                        "student_grade": record.grade, # MockExamResultのgradeを使用
+                        "exam_name": f"{record.mock_exam_name} (第{record.round}回)",
                         "subject": label,
-                        "score": score_desc if score_desc is not None else score_mark,
-                        "deviation": None, # 現在のモデルに偏差値カラムがないためNone
+                        "score": val,
+                        "deviation": None, # 必要に応じてモデルにdeviationカラムを追加してください
                         "exam_date": record.exam_date.strftime('%Y-%m-%d') if record.exam_date else "不明"
                     })
 
@@ -254,4 +260,4 @@ def get_all_mock_exams(
     except Exception as e:
         print("ERROR in get_all_mock_exams:")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
