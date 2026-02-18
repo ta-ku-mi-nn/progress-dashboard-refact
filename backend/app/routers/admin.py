@@ -6,6 +6,7 @@ from app.routers import deps
 from app.schemas import schemas
 from app.models import models
 from app.crud import crud_master, crud_user, crud_student
+import traceback
 
 router = APIRouter()
 
