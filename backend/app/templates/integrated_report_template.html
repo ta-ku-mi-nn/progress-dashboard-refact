@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        /* 日本語フォント指定 (環境に合わせて調整が必要) */
+        @font-face {
+            font-family: "JPFont";
+            /* Render環境でのフォントパス例 */
+            src: url("/usr/share/fonts/truetype/fonts-japanese-gothic.ttf");
+        }
+        body { font-family: "JPFont", sans-serif; padding: 20px; color: #333; }
+        
+        /* ページ区切りクラス */
+        .page-break { page-break-before: always; }
+        
+        h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+        h2 { margin-top: 30px; background-color: #f3f4f6; padding: 10px; border-left: 5px solid #2563eb; font-size: 18pt; }
+        h3 { margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #555; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 10pt; }
+        th { background-color: #e5e7eb; font-weight: bold; }
+        
+        .header-info { text-align: right; color: #666; font-size: 9pt; margin-bottom: 10px; }
+        .summary-box { border: 1px solid #2563eb; background-color: #eff6ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .summary-item { font-size: 12pt; font-weight: bold; margin: 5px 0; }
+        
+        .chart-container { text-align: center; margin: 20px 0; }
+        .chart-img { max-width: 100%; height: auto; max-height: 350px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="header-info">作成日: {{ date_str }}</div>
+    <h1>学習進捗 統合レポート</h1>
+    <div style="text-align: center; font-size: 14pt; margin-bottom: 30px;">生徒氏名: {{ student_name }}</div>
+
+    {% if "dashboard" in sections %}
+    <div class="section">
+        <h2>学習ダッシュボード</h2>
+        
+        <div class="summary-box">
+            <div class="summary-item">総学習時間（推定）: {{ dashboard.total_study_time }} 時間</div>
+            <div class="summary-item">全体進捗率: {{ dashboard.total_progress_pct }} %</div>
+            <div class="summary-item">最新英検結果: {{ eiken_str }}</div>
+        </div>
+
+        {% if images.dashboard %}
+        <div class="chart-container">
+            <h3>学習進捗グラフ</h3>
+            <img src="{{ images.dashboard }}" class="chart-img" />
+        </div>
+        {% endif %}
+
+        <h3>教材別進捗</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 20%;">科目</th>
+                    <th style="width: 60%;">参考書名</th>
+                    <th style="width: 20%;">進捗率</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dashboard.items %}
+                <tr>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.book_name }}</td>
+                    <td>{{ item.pct }} %</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if "calendar" in sections %}
+    <div class="page-break"></div>
+    <div class="section">
+        <h2>入試日程カレンダー</h2>
+        {% if images.calendar %}
+        <div class="chart-container">
+             <img src="{{ images.calendar }}" class="chart-img" />
+        </div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>大学名</th>
+                    <th>学部</th>
+                    <th>試験日</th>
+                    <th>合格発表日</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in calendar %}
+                <tr>
+                    <td>{{ item.univ }}</td>
+                    <td>{{ item.faculty }}</td>
+                    <td>{{ item.exam_date }}</td>
+                    <td>{{ item.announce_date }}</td>
+                </tr>
+                {% endfor %}
+                {% if not calendar %}
+                <tr><td colspan="4" style="text-align: center;">登録データなし</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if "mock_exams" in sections %}
+    <div class="page-break"></div>
+    <div class="section">
+        <h2>模試成績一覧</h2>
+        
+        {% if images.mock_exams %}
+        <div class="chart-container">
+             <img src="{{ images.mock_exams }}" class="chart-img" />
+        </div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>模試名</th>
+                    <th>型</th>
+                    <th>判定</th>
+                    <th>詳細</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in mock_exams %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.type }}</td>
+                    <td>{{ item.grade }}</td>
+                    <td>{{ item.score_summary }}</td>
+                </tr>
+                {% endfor %}
+                 {% if not mock_exams %}
+                <tr><td colspan="4" style="text-align: center;">登録データなし</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if "past_exams" in sections %}
+    <div class="page-break"></div>
+    <div class="section">
+        <h2>過去問演習記録</h2>
+        
+        {% if images.past_exams %}
+        <div class="chart-container">
+             <img src="{{ images.past_exams }}" class="chart-img" />
+        </div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>実施日</th>
+                    <th>大学・学部</th>
+                    <th>年度</th>
+                    <th>科目</th>
+                    <th>正答数</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in past_exams %}
+                <tr>
+                    <td>{{ item.date }}</td>
+                    <td>{{ item.university }} {{ item.faculty }}</td>
+                    <td>{{ item.year }}</td>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.correct_answers }} / {{ item.total_questions }}</td>
+                </tr>
+                {% endfor %}
+                 {% if not past_exams %}
+                <tr><td colspan="5" style="text-align: center;">登録データなし</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</body>
+</html>
