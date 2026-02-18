@@ -221,3 +221,8 @@ class MasterTextbookUpdate(BaseModel):
     level: Optional[str] = None
     book_name: Optional[str] = None
     duration: Optional[float] = None
+
+class BulkPresetUpdate(BaseModel):
+    preset_name: Optional[str] = None
+    subject: Optional[str] = None
+    book_names: Optional[List[str]] = None
