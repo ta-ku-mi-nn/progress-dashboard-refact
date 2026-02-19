@@ -9,110 +9,379 @@
             src: url("{{ font_path }}");
         }
         
-        body { 
-            font-family: "JPFont", sans-serif; 
-            padding: 20px; 
-            color: #333; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
-        .page-break { page-break-before: always; }
+        body { 
+            font-family: "JPFont", sans-serif; 
+            padding: 30px 40px;
+            color: #1f2937;
+            background-color: #ffffff;
+            line-height: 1.6;
+        }
         
-        h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        h2 { margin-top: 30px; background-color: #f3f4f6; padding: 10px; border-left: 5px solid #2563eb; font-size: 18pt; }
-        h3 { margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #555; }
+        .page-break { 
+            page-break-before: always; 
+        }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 10pt; }
-        th { background-color: #e5e7eb; font-weight: bold; }
+        /* ヘッダー */
+        .report-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
         
-        .header-info { text-align: right; color: #666; font-size: 9pt; margin-bottom: 10px; }
-        .summary-box { border: 1px solid #2563eb; background-color: #eff6ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .summary-item { font-size: 12pt; font-weight: bold; margin: 5px 0; }
+        .report-title {
+            font-size: 28pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
         
-        .chart-container { text-align: center; margin: 20px 0; }
-        .chart-img { max-width: 100%; height: auto; max-height: 350px; border: 1px solid #ddd; }
+        .student-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12pt;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .student-name {
+            font-size: 16pt;
+            font-weight: bold;
+        }
+        
+        .report-date {
+            font-size: 10pt;
+            opacity: 0.9;
+        }
+        
+        /* セクション */
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        h2 { 
+            font-size: 20pt;
+            color: #1e40af;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3b82f6;
+            display: flex;
+            align-items: center;
+        }
+        
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 24px;
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            margin-right: 12px;
+            border-radius: 2px;
+        }
+        
+        h3 { 
+            font-size: 14pt;
+            color: #374151;
+            margin: 20px 0 10px 0;
+            padding-left: 10px;
+            border-left: 4px solid #60a5fa;
+        }
+        
+        /* サマリーボックス */
+        .summary-box { 
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 2px solid #3b82f6;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .summary-item { 
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary-label {
+            font-size: 9pt;
+            color: #6b7280;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-value {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1e40af;
+        }
+        
+        .summary-unit {
+            font-size: 10pt;
+            color: #6b7280;
+            margin-left: 5px;
+        }
+        
+        /* テーブル */
+        table { 
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0 25px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        th { 
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td { 
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 10px;
+            font-size: 10pt;
+            color: #374151;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:hover {
+            background-color: #f9fafb;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #9ca3af;
+            font-style: italic;
+            padding: 30px;
+        }
+        
+        /* 進捗バー */
+        .progress-cell {
+            position: relative;
+            min-width: 120px;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 3px;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            font-size: 9pt;
+            color: #6b7280;
+            text-align: right;
+        }
+        
+        /* チャート */
+        .chart-container { 
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .chart-img { 
+            max-width: 100%;
+            height: auto;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* バッジ */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        /* スコア表示 */
+        .score-display {
+            font-weight: bold;
+            color: #1e40af;
+        }
+        
+        /* フッター */
+        .report-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            font-size: 9pt;
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
-    <div class="header-info">作成日: {{ date_str }}</div>
-    <h1>学習進捗 統合レポート</h1>
-    <div style="text-align: center; font-size: 14pt; margin-bottom: 30px;">生徒氏名: {{ student_name }}</div>
+    <!-- レポートヘッダー -->
+    <div class="report-header">
+        <div class="report-title">📊 学習進捗 統合レポート</div>
+        <div class="student-info">
+            <div class="student-name">生徒氏名: {{ student_name }}</div>
+            <div class="report-date">作成日: {{ date_str }}</div>
+        </div>
+    </div>
 
+    <!-- ダッシュボードセクション -->
     {% if "dashboard" in sections %}
     <div class="section">
         <h2>学習ダッシュボード</h2>
         
         <div class="summary-box">
-            <div class="summary-item">総学習時間（推定）: {{ dashboard.total_study_time }} 時間</div>
-            <div class="summary-item">全体進捗率: {{ dashboard.total_progress_pct }} %</div>
-            <div class="summary-item">最新英検結果: {{ eiken_str }}</div>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">総学習時間（推定）</div>
+                    <div class="summary-value">{{ dashboard.total_study_time }}<span class="summary-unit">時間</span></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">全体進捗率</div>
+                    <div class="summary-value">{{ dashboard.total_progress_pct }}<span class="summary-unit">%</span></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">最新英検結果</div>
+                    <div class="summary-value" style="font-size: 14pt;">{{ eiken_str }}</div>
+                </div>
+            </div>
         </div>
 
         {% if images.dashboard %}
         <div class="chart-container">
-            <h3>学習進捗グラフ</h3>
+            <h3 style="border: none; padding: 0; margin-bottom: 15px;">📈 学習進捗グラフ</h3>
             <img src="{{ images.dashboard }}" class="chart-img" />
         </div>
         {% endif %}
 
-        <h3>教材別進捗</h3>
+        <h3>📚 教材別進捗</h3>
         <table>
             <thead>
                 <tr>
-                    <th style="width: 20%;">科目</th>
-                    <th style="width: 60%;">参考書名</th>
-                    <th style="width: 20%;">進捗率</th>
+                    <th style="width: 15%;">科目</th>
+                    <th style="width: 45%;">参考書名</th>
+                    <th style="width: 40%;">進捗率</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in dashboard.progress_list %}
                 <tr>
-                    <td>{{ item.subject }}</td>
+                    <td><span class="badge badge-info">{{ item.subject }}</span></td>
                     <td>{{ item.book_name }}</td>
-                    <td>{{ item.pct }} %</td>
+                    <td class="progress-cell">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {{ item.pct }}%;"></div>
+                        </div>
+                        <div class="progress-text">{{ item.pct }}%</div>
+                    </td>
                 </tr>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-
-    {% if "calendar" in sections %}
-    <div class="page-break"></div>
-    <div class="section">
-        <h2>入試日程カレンダー</h2>
-        {% if images.calendar %}
-        <div class="chart-container">
-             <img src="{{ images.calendar }}" class="chart-img" />
-        </div>
-        {% endif %}
-
-        <table>
-            <thead>
-                <tr>
-                    <th>大学名</th>
-                    <th>学部</th>
-                    <th>試験日</th>
-                    <th>合格発表日</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in calendar %}
-                <tr>
-                    <td>{{ item.univ }}</td>
-                    <td>{{ item.faculty }}</td>
-                    <td>{{ item.exam_date }}</td>
-                    <td>{{ item.announce_date }}</td>
-                </tr>
-                {% endfor %}
-                {% if not calendar %}
-                <tr><td colspan="4" style="text-align: center;">登録データなし</td></tr>
+                {% if not dashboard.progress_list %}
+                <tr><td colspan="3" class="no-data">登録データなし</td></tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     {% endif %}
 
+    <!-- 入試カレンダーセクション -->
+    {% if "calendar" in sections %}
+    <div class="page-break"></div>
+    <div class="section">
+        <h2>入試日程カレンダー</h2>
+        
+        {% if images.calendar %}
+        <div class="chart-container">
+            <h3 style="border: none; padding: 0; margin-bottom: 15px;">📅 入試スケジュール</h3>
+            <img src="{{ images.calendar }}" class="chart-img" />
+        </div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">大学名</th>
+                    <th style="width: 30%;">学部</th>
+                    <th style="width: 20%;">試験日</th>
+                    <th style="width: 20%;">合格発表日</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in calendar %}
+                <tr>
+                    <td><strong>{{ item.univ }}</strong></td>
+                    <td>{{ item.faculty }}</td>
+                    <td>{{ item.exam_date }}</td>
+                    <td>{{ item.announce_date }}</td>
+                </tr>
+                {% endfor %}
+                {% if not calendar %}
+                <tr><td colspan="4" class="no-data">登録データなし</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- 模試成績セクション -->
     {% if "mock_exams" in sections %}
     <div class="page-break"></div>
     <div class="section">
@@ -120,36 +389,38 @@
         
         {% if images.mock_exams %}
         <div class="chart-container">
-             <img src="{{ images.mock_exams }}" class="chart-img" />
+            <h3 style="border: none; padding: 0; margin-bottom: 15px;">📊 模試成績推移</h3>
+            <img src="{{ images.mock_exams }}" class="chart-img" />
         </div>
         {% endif %}
 
         <table>
             <thead>
                 <tr>
-                    <th>模試名</th>
-                    <th>型</th>
-                    <th>判定</th>
-                    <th>詳細</th>
+                    <th style="width: 35%;">模試名</th>
+                    <th style="width: 15%;">型</th>
+                    <th style="width: 15%;">判定</th>
+                    <th style="width: 35%;">詳細</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in mock_exams %}
                 <tr>
                     <td>{{ item.name }}</td>
-                    <td>{{ item.type }}</td>
-                    <td>{{ item.grade }}</td>
+                    <td><span class="badge badge-info">{{ item.type }}</span></td>
+                    <td><span class="badge badge-success">{{ item.grade }}</span></td>
                     <td>{{ item.score_summary }}</td>
                 </tr>
                 {% endfor %}
-                 {% if not mock_exams %}
-                <tr><td colspan="4" style="text-align: center;">登録データなし</td></tr>
+                {% if not mock_exams %}
+                <tr><td colspan="4" class="no-data">登録データなし</td></tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     {% endif %}
 
+    <!-- 過去問演習セクション -->
     {% if "past_exams" in sections %}
     <div class="page-break"></div>
     <div class="section">
@@ -157,36 +428,44 @@
         
         {% if images.past_exams %}
         <div class="chart-container">
-             <img src="{{ images.past_exams }}" class="chart-img" />
+            <h3 style="border: none; padding: 0; margin-bottom: 15px;">📝 過去問正答率推移</h3>
+            <img src="{{ images.past_exams }}" class="chart-img" />
         </div>
         {% endif %}
 
         <table>
             <thead>
                 <tr>
-                    <th>実施日</th>
-                    <th>大学・学部</th>
-                    <th>年度</th>
-                    <th>科目</th>
-                    <th>正答数</th>
+                    <th style="width: 12%;">実施日</th>
+                    <th style="width: 28%;">大学</th>
+                    <th style="width: 20%;">学部</th>
+                    <th style="width: 10%;">年度</th>
+                    <th style="width: 15%;">科目</th>
+                    <th style="width: 15%;">正答数</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in past_exams %}
                 <tr>
                     <td>{{ item.date }}</td>
-                    <td>{{ item.university }} {{ item.faculty }}</td>
+                    <td><strong>{{ item.university }}</strong></td>
+                    <td>{{ item.faculty }}</td>
                     <td>{{ item.year }}</td>
-                    <td>{{ item.subject }}</td>
-                    <td>{{ item.correct_answers }} / {{ item.total_questions }}</td>
+                    <td><span class="badge badge-info">{{ item.subject }}</span></td>
+                    <td class="score-display">{{ item.correct_answers }} / {{ item.total_questions }}</td>
                 </tr>
                 {% endfor %}
-                 {% if not past_exams %}
-                <tr><td colspan="5" style="text-align: center;">登録データなし</td></tr>
+                {% if not past_exams %}
+                <tr><td colspan="6" class="no-data">登録データなし</td></tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     {% endif %}
+
+    <!-- フッター -->
+    <div class="report-footer">
+        このレポートは学習進捗管理システムにより自動生成されました
+    </div>
 </body>
 </html>
