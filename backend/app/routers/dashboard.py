@@ -146,8 +146,12 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     simple_ratios = [] 
 
     if progress_items:
-        all_masters = session.query(MasterTextbook).all()
-        master_map = { (m.subject, m.book_name): m for m in all_masters }
+# その生徒が登録している参考書名だけを抽出
+        book_names = list(set([item.book_name for item in progress_items if item.book_name]))
+        
+        # 必要なマスターデータだけをDBから取得（大幅な高速化）
+        masters = session.query(MasterTextbook).filter(MasterTextbook.book_name.in_(book_names)).all()
+        master_map = { (m.subject, m.book_name): m for m in masters }
 
         for item in progress_items:
             duration = item.duration

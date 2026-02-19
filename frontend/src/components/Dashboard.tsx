@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar } from 'lucide-react';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2 } from 'lucide-react';
 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
@@ -132,7 +132,15 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">読み込み中...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center w-full h-[80vh] gap-4">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+        <p className="text-lg font-medium text-gray-600">学習データを解析中...</p>
+        <p className="text-sm text-gray-400">偏差値と学習ルートの傾斜計算を行っています</p>
+      </div>
+    );
+  }
   if (!selectedStudentId) return <div className="p-8 text-center">生徒が選択されていません</div>;
 
   return (
