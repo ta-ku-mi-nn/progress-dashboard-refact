@@ -63,8 +63,9 @@ def get_progress_chart(
     
     progress_list = query.all()
     
-    all_masters = session.query(MasterTextbook).all()
-    master_map = { (m.subject, m.book_name): m for m in all_masters }
+    book_names = list(set([item.book_name for item in progress_list if item.book_name]))
+    masters = session.query(MasterTextbook).filter(MasterTextbook.book_name.in_(book_names)).all()
+    master_map = { (m.subject, m.book_name): m for m in masters }
     
     if subject == "全体" or subject is None:
         aggregated_data = {}
