@@ -16,13 +16,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# --- ★修正: ご指定の偏差値連動ロジック ---
 def get_adjusted_duration(base_duration: float, book_level: str, student_dev: Optional[float]) -> float:
-    # ベース時間、生徒の偏差値、レベルのいずれかがない場合は元の時間をそのまま返す
     if not base_duration or not student_dev or not book_level:
         return float(base_duration or 0.0)
 
-    # ご指定のレベル数値マッピング
     level_map = {
         "基礎徹底": 50,
         "日大": 60,
@@ -32,23 +29,18 @@ def get_adjusted_duration(base_duration: float, book_level: str, student_dev: Op
 
     target_dev = None
     for key, val in level_map.items():
-        if key in book_level: # 部分一致（「日大レベル」などに対応）
+        if key in book_level:
             target_dev = val
             break
             
     if target_dev is None:
         return float(base_duration)
 
-    # ご指定の計算式: (所要時間) = (マスタの所要時間) + (マスタの所要時間) * ((ルート数値) - (本人の偏差値)) * 0.025
     diff = target_dev - student_dev
     adjusted_time = base_duration + base_duration * diff * 0.025
-
-    # 計算結果がゼロやマイナスになるのを防ぐ（最低0.1時間とする）
     adjusted_time = max(0.1, adjusted_time)
-
     return round(adjusted_time, 1)
 
-# --- Pydantic Schemas ---
 class DashboardData(BaseModel):
     student_id: int
     total_study_time: float      
@@ -73,7 +65,67 @@ class ProgressCreate(BaseModel):
     book_ids: List[int] = [] 
     custom_books: List[CustomBookSchema] = []
 
-# --- Endpoints ---
+# ==========================================
+# ★修正: 固定パスのエンドポイントを上に移動！
+# ==========================================
+
+@router.get("/presets")
+def get_presets(session: Session = Depends(get_db)):
+    presets = session.query(BulkPreset).options(joinedload(BulkPreset.books)).all()
+    all_masters = session.query(MasterTextbook).all()
+    master_map = { (m.subject, m.book_name): m for m in all_masters }
+
+    result = []
+    for p in presets:
+        books_data = []
+        for pb in p.books:
+            key = (p.subject, pb.book_name)
+            master_info = master_map.get(key)
+            if master_info:
+                books_data.append({"id": master_info.id, "subject": master_info.subject, "level": master_info.level, "book_name": master_info.book_name, "duration": master_info.duration, "is_master": True})
+            else:
+                books_data.append({"id": None, "subject": p.subject, "level": "プリセット", "book_name": pb.book_name, "duration": 0, "is_master": False})
+        result.append({"id": p.id, "name": p.preset_name, "subject": p.subject, "books": books_data})
+    return result
+
+@router.get("/books/master")
+def get_master_books(session: Session = Depends(get_db)):
+    return session.query(MasterTextbook).all()
+
+@router.post("/progress/batch")
+def add_progress_batch(data: ProgressCreate, session: Session = Depends(get_db)):
+    added_items = []
+    for book_id in data.book_ids:
+        master_book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
+        if not master_book: continue
+        exists = session.query(Progress).filter(Progress.student_id == data.student_id, Progress.book_name == master_book.book_name).first()
+        if exists: continue
+        new_progress = Progress(
+            student_id=data.student_id, subject=master_book.subject, level=master_book.level,
+            book_name=master_book.book_name, duration=master_book.duration,
+            is_planned=True, is_done=False, completed_units=0, total_units=1 
+        )
+        session.add(new_progress)
+        added_items.append(new_progress)
+
+    for custom in data.custom_books:
+        exists = session.query(Progress).filter(Progress.student_id == data.student_id, Progress.book_name == custom.book_name).first()
+        if exists: continue
+        new_progress = Progress(
+            student_id=data.student_id, subject=custom.subject, level=custom.level,
+            book_name=custom.book_name, duration=custom.duration,
+            is_planned=True, is_done=False, completed_units=0, total_units=1 
+        )
+        session.add(new_progress)
+        added_items.append(new_progress)
+    
+    session.commit()
+    return {"message": f"{len(added_items)} items added"}
+
+
+# ==========================================
+# 変数パス(/{student_id} など)を下に配置
+# ==========================================
 
 @router.get("/{student_id}", response_model=DashboardData)
 def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
@@ -110,7 +162,6 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
             
             duration = float(duration or 0)
             
-            # 偏差値傾斜を適用
             adjusted_duration = get_adjusted_duration(duration, book_level, student_dev)
 
             ratio = 0.0
@@ -203,7 +254,6 @@ def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
         
     return result
 
-# --- 既存のCRUD系API ---
 @router.get("/list/{student_id}")
 def get_progress_list(student_id: int, session: Session = Depends(get_db)) -> List[Dict[str, Any]]:
     items = session.query(Progress).filter(Progress.student_id == student_id).all()
@@ -219,59 +269,6 @@ def update_progress(row_id: int, update_data: ProgressUpdate, session: Session =
     session.commit()
     session.refresh(progress_item)
     return progress_item
-
-@router.get("/books/master")
-def get_master_books(session: Session = Depends(get_db)):
-    return session.query(MasterTextbook).all()
-
-@router.post("/progress/batch")
-def add_progress_batch(data: ProgressCreate, session: Session = Depends(get_db)):
-    added_items = []
-    for book_id in data.book_ids:
-        master_book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
-        if not master_book: continue
-        exists = session.query(Progress).filter(Progress.student_id == data.student_id, Progress.book_name == master_book.book_name).first()
-        if exists: continue
-        new_progress = Progress(
-            student_id=data.student_id, subject=master_book.subject, level=master_book.level,
-            book_name=master_book.book_name, duration=master_book.duration,
-            is_planned=True, is_done=False, completed_units=0, total_units=1 
-        )
-        session.add(new_progress)
-        added_items.append(new_progress)
-
-    for custom in data.custom_books:
-        exists = session.query(Progress).filter(Progress.student_id == data.student_id, Progress.book_name == custom.book_name).first()
-        if exists: continue
-        new_progress = Progress(
-            student_id=data.student_id, subject=custom.subject, level=custom.level,
-            book_name=custom.book_name, duration=custom.duration,
-            is_planned=True, is_done=False, completed_units=0, total_units=1 
-        )
-        session.add(new_progress)
-        added_items.append(new_progress)
-    
-    session.commit()
-    return {"message": f"{len(added_items)} items added"}
-
-@router.get("/presets")
-def get_presets(session: Session = Depends(get_db)):
-    presets = session.query(BulkPreset).options(joinedload(BulkPreset.books)).all()
-    all_masters = session.query(MasterTextbook).all()
-    master_map = { (m.subject, m.book_name): m for m in all_masters }
-
-    result = []
-    for p in presets:
-        books_data = []
-        for pb in p.books:
-            key = (p.subject, pb.book_name)
-            master_info = master_map.get(key)
-            if master_info:
-                books_data.append({"id": master_info.id, "subject": master_info.subject, "level": master_info.level, "book_name": master_info.book_name, "duration": master_info.duration, "is_master": True})
-            else:
-                books_data.append({"id": None, "subject": p.subject, "level": "プリセット", "book_name": pb.book_name, "duration": 0, "is_master": False})
-        result.append({"id": p.id, "name": p.preset_name, "subject": p.subject, "books": books_data})
-    return result
 
 @router.delete("/progress/{row_id}")
 def delete_progress(row_id: int, session: Session = Depends(get_db)):
