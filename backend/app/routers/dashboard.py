@@ -6,9 +6,15 @@ from sqlalchemy import desc
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from datetime import datetime
+import logging
+
 from app.db.database import get_db
-# ★修正: Student モデルを追加インポート
+# Student モデルを含むようにインポート
 from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User, Student
+
+# ロギング設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -42,10 +48,7 @@ class ProgressCreate(BaseModel):
 @router.get("/{student_id}", response_model=DashboardData)
 def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     # 1. 生徒存在確認
-    # ★修正: まず Student テーブルを探す
     student = session.query(Student).filter(Student.id == student_id).first()
-    
-    # Studentになければ User テーブルを探す (互換性のため)
     if not student:
         student = session.query(User).filter(User.id == student_id).first()
     
@@ -57,27 +60,56 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
     
     total_completed_time = 0.0
     total_planned_time = 0.0
+    
+    # 達成率計算用
+    weighted_progress_sum = 0.0 # (進捗率 * 時間) の合計
+    total_duration_for_rate = 0.0 # 時間の合計
+    
+    simple_ratios = [] # 時間がない場合の予備用
+
+    if progress_items:
+        # マスターデータのキャッシュを作成（N+1問題回避のため）
+        all_masters = session.query(MasterTextbook).all()
+        master_map = { (m.subject, m.book_name): m.duration for m in all_masters }
+
+        for item in progress_items:
+            # durationの取得（データになければマスターから補完）
+            duration = item.duration
+            if (duration is None or duration <= 0) and item.subject and item.book_name:
+                duration = master_map.get((item.subject, item.book_name), 0.0)
+                # 補完できた場合はDBも更新しておくと良いが、今回は計算のみに使用
+            
+            duration = float(duration or 0)
+
+            # 進捗率 (0.0 ~ 1.0)
+            ratio = 0.0
+            if (item.total_units or 0) > 0:
+                ratio = min(1.0, (item.completed_units or 0) / item.total_units)
+            
+            # リストに追加 (時間がない場合の単純平均用)
+            simple_ratios.append(ratio)
+
+            # 計算加算
+            if duration > 0:
+                total_planned_time += duration
+                total_completed_time += ratio * duration
+                
+                weighted_progress_sum += ratio * duration
+                total_duration_for_rate += duration
+
+    # 達成率の計算
     total_progress_pct = 0.0
     
-    if progress_items:
-        for item in progress_items:
-            if item.duration and item.duration > 0:
-                total_planned_time += item.duration
-                
-                if (item.total_units or 0) > 0:
-                    ratio = min(1.0, (item.completed_units or 0) / item.total_units)
-                    total_completed_time += ratio * item.duration
+    if total_duration_for_rate > 0:
+        # 時間の重み付け平均
+        total_progress_pct = (weighted_progress_sum / total_duration_for_rate) * 100
+    elif len(simple_ratios) > 0:
+        # 時間設定が全くない場合は単純平均
+        total_progress_pct = (sum(simple_ratios) / len(simple_ratios)) * 100
 
-        if total_planned_time > 0:
-            total_progress_pct = (total_completed_time / total_planned_time) * 100
-        else:
-            valid_items = [p for p in progress_items if (p.total_units or 0) > 0]
-            if valid_items:
-                ratios = [min(1.0, (p.completed_units or 0) / p.total_units) for p in valid_items]
-                total_progress_pct = (sum(ratios) / len(ratios)) * 100
-            else:
-                total_progress_pct = 0.0
-    
+    # ログ出力（デバッグ用）
+    logger.info(f"Student {student_id}: Planned={total_planned_time}, Completed={total_completed_time}, Rate={total_progress_pct}")
+
     # 3. 英検結果取得
     latest_eiken = (
         session.query(EikenResult)
@@ -105,7 +137,6 @@ def get_dashboard_data(student_id: int, session: Session = Depends(get_db)):
         "eiken_date": eiken_date
     }
 
-
 # --- グラフ用API ---
 
 @router.get("/chart/{student_id}")
@@ -113,6 +144,10 @@ def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
     items = session.query(Progress).filter(Progress.student_id == student_id).all()
     subject_stats = {} 
     
+    # マスターデータのマップ作成
+    all_masters = session.query(MasterTextbook).all()
+    master_map = { (m.subject, m.book_name): m.duration for m in all_masters }
+
     for item in items:
         if (item.total_units or 0) <= 0:
             continue
@@ -121,12 +156,18 @@ def get_subject_chart(student_id: int, session: Session = Depends(get_db)):
         if subj not in subject_stats:
             subject_stats[subj] = {"planned": 0.0, "completed": 0.0, "ratios": []}
 
+        # duration補完
+        duration = item.duration
+        if (duration is None or duration <= 0) and item.subject and item.book_name:
+            duration = master_map.get((item.subject, item.book_name), 0.0)
+        duration = float(duration or 0)
+
         ratio = min(1.0, (item.completed_units or 0) / item.total_units)
         subject_stats[subj]["ratios"].append(ratio * 100)
         
-        if item.duration and item.duration > 0:
-            subject_stats[subj]["planned"] += item.duration
-            subject_stats[subj]["completed"] += ratio * item.duration
+        if duration > 0:
+            subject_stats[subj]["planned"] += duration
+            subject_stats[subj]["completed"] += ratio * duration
             
     result = []
     for subj, stats in subject_stats.items():
@@ -199,7 +240,7 @@ def add_progress_batch(
             subject=master_book.subject,
             level=master_book.level,
             book_name=master_book.book_name,
-            duration=master_book.duration,
+            duration=master_book.duration, # ここで入るはずだが、念のため
             is_planned=True, is_done=False, completed_units=0, total_units=1 
         )
         session.add(new_progress)
