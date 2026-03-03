@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from app.models.models import User
 from app.core.security import get_password_hash, verify_password
 from sqlalchemy.orm import Session
+from app.routers.deps import get_current_user, get_current_admin_user
 
 router = APIRouter()
 
