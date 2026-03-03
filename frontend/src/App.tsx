@@ -11,6 +11,7 @@ import RootTable from './pages/RootTable';
 import Statistics from './pages/Statistics';
 import BugReport from './pages/BugReport';
 import Changelog from './pages/Changelog';
+import DeveloperMenu from './pages/DeveloperMenu';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -40,6 +41,11 @@ const App: React.FC = () => {
             <Route path="admin" element={
               <ProtectedRoute roles={['admin']}>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="developer" element={
+              <ProtectedRoute roles={['admin']}>
+                <DeveloperMenu />
               </ProtectedRoute>
             } />
           </Route>
