@@ -1,5 +1,4 @@
 // frontend/src/components/admin/StudentManagement.tsx
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -11,15 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Edit, Trash2, Users, Search, UserPlus } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '../../contexts/AuthContext'; // 追加
 
 const GRADE_OPTIONS = ["中1", "中2", "中3", "高1", "高2", "高3", "既卒", "退塾済"];
 
 export default function StudentManagement() {
+    const { user } = useAuth(); // ログインユーザー情報を取得
     const [students, setStudents] = useState<any[]>([]);
     const [instructors, setInstructors] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     
-    // 編集・新規兼用モーダルステート
     const [isOpen, setIsOpen] = useState(false);
     const [isNewMode, setIsNewMode] = useState(false);
     const [formData, setFormData] = useState<any>({ sub_instructor_ids: [] });
@@ -42,11 +42,11 @@ export default function StudentManagement() {
 
     const handleNewClick = () => {
         setIsNewMode(true);
-        // 初期値
         setFormData({ 
             name: "", 
             grade: "高1", 
-            school: "東京校", 
+            // adminならログインユーザーの校舎をセット。developerなら一旦空文字にするか別途仕様を決定。
+            school: user?.role === 'admin' ? user.school : "", 
             previous_school: "",
             main_instructor_id: 0, 
             sub_instructor_ids: [] 
@@ -111,6 +111,10 @@ export default function StudentManagement() {
         (s.school && s.school.includes(searchTerm))
     );
 
+    // 役割ごとに講師をフィルタリング
+    const mainInstructors = instructors.filter(i => i.role === 'admin');
+    const subInstructors = instructors.filter(i => i.role === 'user');
+
     return (
         <Card className="h-full flex flex-col">
             <CardHeader className="pb-3">
@@ -129,6 +133,7 @@ export default function StudentManagement() {
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-0">
                 <Table>
+                    {/* ... 既存のテーブル部分 ... */}
                     <TableHeader className="bg-gray-50 sticky top-0 z-10">
                         <TableRow>
                             <TableHead>氏名</TableHead>
@@ -176,8 +181,14 @@ export default function StudentManagement() {
                                 <Input value={formData.name || ""} onChange={e => setFormData({...formData, name: e.target.value})} />
                             </div>
                             <div className="space-y-2">
-                                <Label>校舎 (システム用)</Label>
-                                <Input value={formData.school || ""} onChange={e => setFormData({...formData, school: e.target.value})} />
+                                <Label>校舎</Label>
+                                <Input 
+                                    value={formData.school || ""} 
+                                    onChange={e => setFormData({...formData, school: e.target.value})} 
+                                    // developer以外（admin等）は校舎を変更できないようにする
+                                    disabled={user?.role !== 'developer'}
+                                    title={user?.role !== 'developer' ? "校舎の変更は開発者権限が必要です" : ""}
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -194,7 +205,6 @@ export default function StudentManagement() {
                             </div>
                         </div>
                         
-                        {/* previous_school を「在籍校 / 出身校」として使用 */}
                         <div className="space-y-2">
                             <Label>在籍校 / 出身校</Label>
                             <Input 
@@ -211,20 +221,22 @@ export default function StudentManagement() {
                         
                         <div className="grid gap-4 border-t pt-4">
                             <div className="space-y-2">
-                                <Label className="text-blue-600 font-bold">メイン講師 (校舎責任者)</Label>
+                                <Label className="text-blue-600 font-bold">メイン講師 (校舎責任者: Admin)</Label>
                                 <Select value={String(formData.main_instructor_id || "0")} onValueChange={v => setFormData({...formData, main_instructor_id: Number(v)})}>
                                     <SelectTrigger><SelectValue placeholder="未設定" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="0">未設定</SelectItem>
-                                        {instructors.map(i => <SelectItem key={i.id} value={String(i.id)}>{i.username}</SelectItem>)}
+                                        {/* admin 権限を持つユーザーのみ表示 */}
+                                        {mainInstructors.map(i => <SelectItem key={i.id} value={String(i.id)}>{i.username}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-gray-600 font-bold">サブ講師 (複数選択可)</Label>
+                                <Label className="text-gray-600 font-bold">サブ講師 (一般講師: User)</Label>
                                 <div className="border rounded-md p-3 h-32 overflow-y-auto bg-gray-50 grid grid-cols-2 gap-2">
-                                    {instructors.map(i => (
+                                    {/* user 権限を持つユーザーのみ表示 */}
+                                    {subInstructors.map(i => (
                                         <div key={i.id} className="flex items-center space-x-2">
                                             <input 
                                                 type="checkbox" 
@@ -239,6 +251,9 @@ export default function StudentManagement() {
                                             </label>
                                         </div>
                                     ))}
+                                    {subInstructors.length === 0 && (
+                                        <span className="text-sm text-gray-500 col-span-2">該当する講師がいません</span>
+                                    )}
                                 </div>
                             </div>
                         </div>
