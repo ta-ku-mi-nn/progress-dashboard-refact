@@ -4,6 +4,8 @@ from app.core.config import settings
 from app.core.scheduler import start_scheduler
 from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup, developer
 
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="Progress Dashboard API",
     description="API for Learning Progress Dashboard",
