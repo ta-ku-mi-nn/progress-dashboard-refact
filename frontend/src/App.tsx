@@ -39,12 +39,14 @@ const App: React.FC = () => {
             
             {/* 管理者専用ページ */}
             <Route path="admin" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['admin', 'developer']}>
                 <Admin />
               </ProtectedRoute>
             } />
+
+            {/*開発者用ページ*/}
             <Route path="developer" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['developer']}>
                 <DeveloperMenu />
               </ProtectedRoute>
             } />
