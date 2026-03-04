@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface User {
     username: string;
-    role: string;
+    role: 'developer' | 'admin' | 'user';
     school?: string;
 }
 

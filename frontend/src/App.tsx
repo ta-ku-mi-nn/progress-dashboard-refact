@@ -11,6 +11,7 @@ import RootTable from './pages/RootTable';
 import Statistics from './pages/Statistics';
 import BugReport from './pages/BugReport';
 import Changelog from './pages/Changelog';
+import DeveloperDashboard from './pages/DeveloperDashboard';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -38,8 +39,15 @@ const App: React.FC = () => {
             
             {/* 管理者専用ページ */}
             <Route path="admin" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['admin', 'developer']}>
                 <Admin />
+              </ProtectedRoute>
+            } />
+
+            {/*開発者用ページ*/}
+            <Route path="developer" element={
+              <ProtectedRoute roles={['developer']}>
+                <DeveloperDashboard />
               </ProtectedRoute>
             } />
           </Route>

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup
+from app.core.scheduler import start_scheduler
+from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup, developer
 
 app = FastAPI(
     title="Progress Dashboard API",
@@ -33,6 +34,7 @@ app.include_router(routes.router, prefix=f"{settings.API_V1_STR}/routes", tags=[
 app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"])
 app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"])
 app.include_router(backup.router, prefix=f"{settings.API_V1_STR}/backup", tags=["backup"])
+app.include_router(developer.router, prefix=f"{settings.API_V1_STR}/developer", tags=["developer"])
 from app.routers import fix_db
 app.include_router(fix_db.router, prefix=settings.API_V1_STR, tags=["fix"])
 
@@ -40,3 +42,7 @@ app.include_router(fix_db.router, prefix=settings.API_V1_STR, tags=["fix"])
 @app.get("/")
 def root():
     return {"message": "Hello from Progress Dashboard API"}
+
+@app.on_event("startup")
+def on_startup():
+    start_scheduler()

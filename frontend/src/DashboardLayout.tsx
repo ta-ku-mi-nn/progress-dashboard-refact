@@ -1,13 +1,28 @@
-import React from 'react';
+// frontend/src/DashboardLayout.tsx
+
+import React, { useState } from 'react'; // useState を追加
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
-import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare } from 'lucide-react';
+// Key アイコンを追加
+import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench } from 'lucide-react';
+
+// Dialog コンポーネントをインポート
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/ui/dialog";
+import ChangePasswordForm from './components/ChangePasswordForm';
 
 export default function DashboardLayout() {
     const { user, logout } = useAuth();
     const location = useLocation();
+    // モーダルの開閉状態を管理
+    const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
     const navItems = [
         { name: 'ダッシュボード', path: '/', icon: Home },
@@ -18,8 +33,12 @@ export default function DashboardLayout() {
         { name: '更新履歴', path: '/changelog', icon: ScrollText },
     ];
 
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'developer') {
         navItems.push({ name: '管理者ページ', path: '/admin', icon: Settings });
+    }
+    
+    if (user?.role === 'developer') {
+        navItems.push({ name: '開発者ページ', path: '/developer', icon: Wrench});
     }
 
     return (
@@ -45,7 +64,24 @@ export default function DashboardLayout() {
                         </Link>
                     ))}
                 </nav>
-                <div className="p-4 border-t">
+                <div className="p-4 border-t space-y-2">
+                    {/* パスワード変更モーダル */}
+                    <Dialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" className="w-full justify-start text-gray-700 hover:bg-gray-100">
+                                <Key className="w-5 h-5 mr-3" />
+                                パスワード変更
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>パスワードの変更</DialogTitle>
+                            </DialogHeader>
+                            <ChangePasswordForm onSuccess={() => setIsPasswordOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* ログアウトボタン */}
                     <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-700 hover:bg-red-50" onClick={logout}>
                         <LogOut className="w-5 h-5 mr-3" />
                         ログアウト
