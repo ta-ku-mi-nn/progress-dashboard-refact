@@ -18,26 +18,27 @@ import SystemBanner from './components/SystemBanner';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
 
-// --- メンテナンスモードを制御するガードコンポーネント ---
+// メンテナンスモードのガードコンポーネント
 const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { settings, loading } = useSystem();
-  const { user } = useAuth();
+  const { settings, loading: systemLoading } = useSystem();
+  const { user } = useAuth(); // ← authLoading を削除しました！
   const location = useLocation();
 
-  // 設定読み込み中
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center bg-gray-50 text-gray-500">Loading system settings...</div>;
+  // システム設定のロード中のみ待機
+  if (systemLoading) return null; 
 
-  // メンテナンスモードがONの場合の処理
+  // 1. ログイン画面へのアクセスは常に許可 (開発者が入るため)
+  if (location.pathname === '/login') {
+    return <>{children}</>;
+  }
+
+  // 2. メンテナンスモードONの場合
   if (settings?.maintenance_mode) {
-    // 開発者(developer)は通常通り全画面アクセス可能
+    // 開発者(developer)ロールなら通過
     if (user?.role === 'developer') {
       return <>{children}</>;
     }
-    // ログイン画面は通す（開発者がログイン操作をするため）
-    if (location.pathname === '/login') {
-      return <>{children}</>;
-    }
-    // それ以外の一般ユーザー・Adminがアクセスした場合はメンテナンス画面を表示
+    // それ以外はメンテナンス画面を表示
     return <Maintenance />;
   }
 
