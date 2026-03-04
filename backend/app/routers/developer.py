@@ -154,7 +154,6 @@ def update_system_settings(
 class UserResponse(BaseModel):
     id: int
     username: str
-    email: str
     role: str
 
     class Config:
@@ -165,7 +164,6 @@ class UserRoleUpdate(BaseModel):
 
 class DeveloperCreate(BaseModel):
     username: str
-    email: str
     password: str
 
 # ==========================================
@@ -215,26 +213,22 @@ def create_developer_account(
 ):
     """新しい開発者アカウント(role='developer')を作成する"""
     
-    # 1. すでに同じメールアドレスやユーザー名が存在するかチェック
-    existing_user = db.query(User).filter(
-        (User.email == new_dev.email) | (User.username == new_dev.username)
-    ).first()
+    # 重複チェックは username のみに変更
+    existing_user = db.query(User).filter(User.username == new_dev.username).first()
     
     if existing_user:
         raise HTTPException(
             status_code=400, 
-            detail="このユーザー名またはメールアドレスは既に登録されています。"
+            detail="このユーザー名は既に登録されています。"
         )
 
-    # 2. ご提示いただいた関数でパスワードをハッシュ化
     hashed_pw = get_password_hash(new_dev.password)
     
-    # 3. 新しい開発者ユーザーの作成
+    # DB保存時も email を渡さない
     db_user = User(
         username=new_dev.username,
-        email=new_dev.email,
         hashed_password=hashed_pw,
-        role="developer"  # ここで強制的にdeveloper権限を付与
+        role="developer" 
     )
     
     db.add(db_user)
