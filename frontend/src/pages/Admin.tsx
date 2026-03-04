@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component } from 'lucide-react';
 
 // コンポーネントのインポート
 import UserManagement from '../components/admin/UserManagement';
@@ -12,6 +12,8 @@ import PresetManagement from '../components/admin/PresetManagement';
 import ChangelogManagement from '../components/admin/ChangelogManagement';
 import MockExamList from '../components/admin/MockExamList';
 import BackupManagement from '../components/admin/BackupManagement';
+import AuditLogViewer from '../components/developer/AuditLogViewer';
+import { title } from 'node:process';
 
 export default function Admin() {
     const features = [
@@ -22,7 +24,8 @@ export default function Admin() {
         { title: "参考書プリセット管理", icon: Library, description: "一括登録用プリセットの作成", component: <PresetManagement /> },
         { title: "リリースノート更新", icon: FileText, description: "更新履歴の追加・編集", component: <ChangelogManagement /> },
         { title: "模試結果一覧", icon: BarChart2, description: "全生徒の模試結果データを閲覧", component: <MockExamList /> },
-        { title: "データバックアップ", icon: Database, description: "システムデータのダウンロード", component: <BackupManagement /> },
+        { title: "監査ログ", icon: FileSearch, description: "進捗更新履歴の確認", Component: <AuditLogViewer />},
+//        { title: "データバックアップ", icon: Database, description: "システムデータのダウンロード", component: <BackupManagement /> },
     ];
 
     return (

@@ -12,6 +12,7 @@ from app.db.database import get_db, SessionLocal
 from app.models.models import User, Student, SystemSetting
 from app.routers.deps import get_current_developer_user
 from app.routers.auth import get_password_hash
+from app.routers.audit import log_action
 
 # --- Logger Setup ---
 logging.basicConfig(level=logging.INFO)
@@ -238,3 +239,33 @@ def create_developer_account(
     logger.info(f"New developer account '{db_user.username}' created by '{current_user.username}'")
     
     return {"message": f"開発者アカウント「{db_user.username}」を作成しました。"}
+
+@router.put("/users/{user_id}/role")
+def update_user_role(
+    user_id: int, 
+    role_data: UserRoleUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_developer_user)
+):
+    # 自分自身の権限をうっかり下げてしまわないためのガード（既存）
+    if user_id == current_user.id and role_data.role != "developer":
+        raise HTTPException(status_code=400, detail="自分自身のDeveloper権限は外せません。")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません。")
+
+    user.role = role_data.role.lower()
+    db.commit()
+    
+    # 🌟🌟 ここに「監査ログの記録」を追加！ 🌟🌟
+    # （※ user.branch_id が無いエラーが出たら、ここは None にしてください）
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="UPDATE_ROLE",
+        branch_id=getattr(user, 'branch_id', None), # userモデルにbranch_idがあれば取得、なければNone
+        details=f"ユーザーID:{user_id} ({user.username}) の権限を {user.role} に変更しました"
+    )
+    
+    return {"message": "ロールを更新しました。", "new_role": user.role}
