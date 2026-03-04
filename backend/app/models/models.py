@@ -229,3 +229,13 @@ class SystemSetting(Base):
     maintenance_mode = Column(Boolean, default=False)
     announcement_enabled = Column(Boolean, default=False)
     announcement_message = Column(String, default="")
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))  # 「誰が」操作したか
+    action = Column(String, index=True)                # 「何を」したか (例: "CREATE_USER", "UPDATE_ROLE", "LOGIN")
+    branch_id = Column(Integer, index=True)            # 「どの校舎の」データか（Adminの絞り込み用！）
+    details = Column(String)                           # 「詳細」 (例: "user_id 5 の権限を admin に変更")
+    timestamp = Column(DateTime, default=datetime.utcnow) # 「いつ」操作したか
