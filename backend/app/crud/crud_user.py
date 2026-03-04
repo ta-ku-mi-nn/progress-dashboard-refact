@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.models import User
 from app.schemas.schemas import UserCreate
 from app.core.security import get_password_hash
+from typing import List
 
 def get_users(db: Session, current_user: User) -> List[User]:
     if current_user.role == 'developer':
