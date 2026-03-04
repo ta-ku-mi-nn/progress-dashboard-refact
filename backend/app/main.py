@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.models import models 
 from app.core.scheduler import start_scheduler
 from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup, developer
 
