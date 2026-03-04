@@ -40,7 +40,7 @@ class AdminPasswordResetRequest(BaseModel):
 def admin_reset_password(
     data: AdminPasswordResetRequest, 
     session: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_admin_user) # ログイン中のユーザー情報を取得
+    current_user: User = Depends(get_current_admin_user) # ログイン中のユーザー情報を取得
 ):
     # 管理者権限チェック
     user = session.query(User).filter(User.username == data.username).first()
