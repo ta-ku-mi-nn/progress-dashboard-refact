@@ -1,3 +1,4 @@
+// frontend/src/components/admin/UserManagement.tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -5,26 +6,41 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Edit, Trash2, UserPlus, Save, X, UserCog, Building2 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 
 export default function UserManagement() {
     const [users, setUsers] = useState<any[]>([]);
+    const [schools, setSchools] = useState<string[]>([]); // 校舎リスト用のState
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editForm, setEditForm] = useState<any>({});
     
-    // 新規作成用フォーム: emailなし、schoolあり
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [createForm, setCreateForm] = useState({ username: "", school: "", password: "", role: "admin" });
+    const [createForm, setCreateForm] = useState({ username: "", school: "", password: "", role: "user" }); // デフォルトをuserに
 
-    useEffect(() => { fetchUsers(); }, []);
+    // 自由入力かドロップダウンかを選択するフラグ
+    const [isNewSchool, setIsNewSchool] = useState(false); 
+
+    useEffect(() => { 
+        fetchUsers(); 
+        fetchSchools(); // コンポーネントマウント時に校舎リストを取得
+    }, []);
 
     const fetchUsers = async () => {
         try {
             const res = await api.get('/admin/instructors');
             setUsers(res.data);
         } catch (e) { toast.error("取得エラー"); }
+    };
+
+    const fetchSchools = async () => {
+        try {
+            const res = await api.get('/admin/schools');
+            setSchools(res.data);
+            if (res.data.length === 0) setIsNewSchool(true); // 登録校舎がない場合は自由入力をデフォルトに
+        } catch (e) { console.error("校舎取得エラー", e); }
     };
 
     const handleCreate = async () => {
@@ -36,9 +52,10 @@ export default function UserManagement() {
             await api.post('/admin/users', createForm);
             toast.success("講師を作成しました");
             setIsCreateOpen(false);
-            // フォームリセット
-            setCreateForm({ username: "", school: "", password: "", role: "admin" });
+            setCreateForm({ username: "", school: "", password: "", role: "user" });
+            setIsNewSchool(false);
             fetchUsers();
+            fetchSchools(); // 校舎が増えたかもしれないので更新
         } catch (e) { toast.error("作成失敗: ユーザー名が重複している可能性があります"); }
     };
 
@@ -48,6 +65,7 @@ export default function UserManagement() {
             toast.success("更新しました");
             setEditingId(null);
             fetchUsers();
+            fetchSchools();
         } catch (e) { toast.error("更新失敗"); }
     };
 
@@ -100,7 +118,16 @@ export default function UserManagement() {
                                                 placeholder="例: 東京校"
                                             />
                                         </TableCell>
-                                        <TableCell>{u.role}</TableCell>
+                                        <TableCell>
+                                            <Select value={editForm.role} onValueChange={v => setEditForm({...editForm, role: v})}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="admin">Admin</SelectItem>
+                                                    <SelectItem value="user">User</SelectItem>
+                                                    {/* DeveloperがDeveloperを編集する場合などは要件に合わせて追加 */}
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
                                                 <Button size="icon" variant="ghost" className="text-green-600" onClick={handleSave}>
@@ -163,12 +190,48 @@ export default function UserManagement() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>所属校舎</Label>
-                            <Input 
-                                value={createForm.school} 
-                                onChange={e => setCreateForm({...createForm, school: e.target.value})} 
-                                placeholder="例: 大阪校"
-                            />
+                            <Label>権限 (ロール)</Label>
+                            <Select value={createForm.role} onValueChange={v => setCreateForm({...createForm, role: v})}>
+                                <SelectTrigger><SelectValue placeholder="権限を選択" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">管理者 (Admin)</SelectItem>
+                                    <SelectItem value="user">一般講師 (User)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label>所属校舎</Label>
+                                {schools.length > 0 && (
+                                    <Button 
+                                        variant="link" 
+                                        className="h-auto p-0 text-xs text-blue-600" 
+                                        onClick={() => {
+                                            setIsNewSchool(!isNewSchool);
+                                            setCreateForm({...createForm, school: ""});
+                                        }}
+                                    >
+                                        {isNewSchool ? "リストから選択する" : "新しい校舎を入力する"}
+                                    </Button>
+                                )}
+                            </div>
+                            
+                            {isNewSchool || schools.length === 0 ? (
+                                <Input 
+                                    value={createForm.school} 
+                                    onChange={e => setCreateForm({...createForm, school: e.target.value})} 
+                                    placeholder="新しい校舎名を入力"
+                                />
+                            ) : (
+                                <Select value={createForm.school} onValueChange={v => setCreateForm({...createForm, school: v})}>
+                                    <SelectTrigger><SelectValue placeholder="校舎を選択してください" /></SelectTrigger>
+                                    <SelectContent>
+                                        {schools.map(school => (
+                                            <SelectItem key={school} value={school}>{school}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                     </div>
                     <DialogFooter>
