@@ -22,7 +22,7 @@ export const SystemProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const fetchSettings = async () => {
     try {
       // 誰でもアクセスできる公開APIエンドポイントから取得する想定
-      const response = await api.get('/system/settings/public');
+      const response = await api.get('/system_status/settings/public');
       setSettings(response.data);
     } catch (error) {
       console.error('Failed to fetch system settings:', error);
