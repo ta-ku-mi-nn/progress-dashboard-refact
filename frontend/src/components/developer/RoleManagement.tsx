@@ -42,7 +42,7 @@ const RoleManagement: React.FC = () => {
     try {
       await api.put(`/developer/users/${userId}/role`, { role: newRole });
       alert('権限を更新しました。');
-      fetchUsers(); // 成功したら一覧を再取得して画面を更新
+      fetchUsers(); // 成功したら一覧を再取得
     } catch (err: any) {
       alert(err.response?.data?.detail || '権限の更新に失敗しました。');
       console.error(err);
@@ -51,7 +51,6 @@ const RoleManagement: React.FC = () => {
     }
   };
 
-  // 権限ごとのアイコンを出し分ける関数
   const getRoleIcon = (role: string) => {
     switch (role?.toLowerCase()) {
       case 'developer': return <ShieldAlert className="w-4 h-4 text-red-600" />;
