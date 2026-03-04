@@ -190,29 +190,6 @@ def read_users(
         query = query.filter(models.User.school == current_user.school)
     return query.offset(skip).limit(limit).all()
 
-@router.post("/users", response_model=schemas.User)
-def create_user(
-    user: schemas.UserCreate,
-    db: Session = Depends(get_db),
-    admin: models.User = Depends(get_current_admin)
-):
-    # adminが講師を作成する場合、強制的に自分の校舎を設定する保護ロジック
-    target_school = data.get("school", "")
-    if current_user.role == 'admin':
-        target_school = current_user.school
-
-    hashed_pw = pwd_context.hash(data["password"])
-    new_user = models.User(
-        username=data["username"],
-        password=hashed_pw,
-        role=data.get("role", "user"), # ★修正: admin決め打ちではなくリクエストを反映（デフォルトは安全なuser）
-        school=target_school
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-
 @router.post("/students", response_model=schemas.Student)
 def create_student(
     student: schemas.StudentCreate,
