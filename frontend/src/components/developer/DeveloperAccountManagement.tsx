@@ -4,11 +4,7 @@ import { UserPlus, RefreshCw, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import api from '../../lib/api';
 
 const DeveloperAccountManagement: React.FC = () => {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +24,7 @@ const DeveloperAccountManagement: React.FC = () => {
     try {
       const response = await api.post('/developer/accounts', formData);
       setSuccess(response.data.message);
-      // 成功したらフォームを空にする
-      setFormData({ username: '', email: '', password: '' }); 
+      setFormData({ username: '', email: '', password: '' }); // 成功したらクリア
     } catch (err: any) {
       setError(err.response?.data?.detail || 'アカウントの作成に失敗しました。');
       console.error(err);
@@ -81,7 +76,7 @@ const DeveloperAccountManagement: React.FC = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
           <input
-            type="email"
+            type="text" // backendでstrにしたのでtype="text"でOKですが、ブラウザ検証用にemailでも構いません
             name="email"
             required
             value={formData.email}
@@ -92,7 +87,7 @@ const DeveloperAccountManagement: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">パスワード</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">初期パスワード</label>
           <input
             type="password"
             name="password"
