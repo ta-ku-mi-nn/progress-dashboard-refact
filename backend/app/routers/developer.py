@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import List
 import os
 import subprocess
@@ -165,7 +165,7 @@ class UserRoleUpdate(BaseModel):
 
 class DeveloperCreate(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     password: str
 
 # ==========================================
