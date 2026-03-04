@@ -4,8 +4,9 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 from app.db.database import get_db
-from app.models.models import Changelog, BugReport, FeatureRequest
+from app.models.models import Changelog, BugReport, FeatureRequest, User
 from app.schemas.schemas import ChangelogCreate
+from app.routers.deps import get_current_user, get_current_admin_user
 
 router = APIRouter()
 
@@ -69,7 +70,7 @@ def create_bug_report(report: ReportCreate, session: Session = Depends(get_db)):
 
 # ★追加: バグ報告更新 (管理者用)
 @router.patch("/bug_reports/{row_id}")
-def update_bug_report(row_id: int, update: ReportUpdate, session: Session = Depends(get_db)):
+def update_bug_report(row_id: int, update: ReportUpdate, session: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     item = session.query(BugReport).filter(BugReport.id == row_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Not found")
@@ -103,7 +104,7 @@ def create_feature_request(report: ReportCreate, session: Session = Depends(get_
 
 # ★追加: 機能要望更新 (管理者用)
 @router.patch("/feature_requests/{row_id}")
-def update_feature_request(row_id: int, update: ReportUpdate, session: Session = Depends(get_db)):
+def update_feature_request(row_id: int, update: ReportUpdate, session: Session = Depends(get_db), current_user: User = Depends(get_current_admin_user)):
     item = session.query(FeatureRequest).filter(FeatureRequest.id == row_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Not found")

@@ -34,6 +34,11 @@ def get_current_active_user(current_user = Depends(get_current_user)):
     return current_user
 
 def get_current_admin_user(current_user = Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=400, detail="The user does not have enough privileges")
+    if current_user.role not in ["admin", "developer"]:
+        raise HTTPException(status_code=403, detail="The user does not have enough privileges")
+    return current_user
+
+def get_current_developer_user(current_user = Depends(get_current_user)):
+    if current_user.role != "developer":
+        raise HTTPException(status_code=403, detail="The user does not have enough privileges")
     return current_user

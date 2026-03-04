@@ -169,14 +169,25 @@ def update_preset(
     session.commit()
     return {"message": "Updated successfully"}
 
+@router.get("/schools", response_model=List[str])
+def get_schools(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
+    # ユーザーテーブルに存在する校舎の一覧を重複なしで取得
+    schools = db.query(models.User.school).filter(models.User.school != "", models.User.school.isnot(None)).distinct().all()
+    return [s[0] for s in schools]
+
 @router.get("/users", response_model=List[schemas.User])
 def read_users(
     skip: int = 0, limit: int = 100,
     db: Session = Depends(get_db),
     admin: models.User = Depends(get_current_admin)
 ):
-    # crud_user.get_users needed
-    return db.query(models.User).offset(skip).limit(limit).all()
+    query = db.query(models.User)
+    if current_user.role == 'admin':
+        query = query.filter(models.User.school == current_user.school)
+    return query.offset(skip).limit(limit).all()
 
 @router.post("/users", response_model=schemas.User)
 def create_user(
@@ -184,10 +195,22 @@ def create_user(
     db: Session = Depends(get_db),
     admin: models.User = Depends(get_current_admin)
 ):
-    db_user = crud_user.get_user_by_username(db, username=user.username)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    return crud_user.create_user(db, user=user)
+    # adminが講師を作成する場合、強制的に自分の校舎を設定する保護ロジック
+    target_school = data.get("school", "")
+    if current_user.role == 'admin':
+        target_school = current_user.school
+
+    hashed_pw = pwd_context.hash(data["password"])
+    new_user = models.User(
+        username=data["username"],
+        password=hashed_pw,
+        role=data.get("role", "user"), # ★修正: admin決め打ちではなくリクエストを反映（デフォルトは安全なuser）
+        school=target_school
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 @router.post("/students", response_model=schemas.Student)
 def create_student(
@@ -211,8 +234,15 @@ def get_all_mock_exams(
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
     try:
-        # MockExamResult と Student を結合して取得
-        # Student.user_id ではなく Student.name を使用する
+        query = db.query(
+            models.MockExamResult,
+            models.Student.name.label("student_name")
+        ).join(models.Student, models.MockExamResult.student_id == models.Student.id)
+
+        # adminの場合は自校舎の生徒の模試結果のみに絞る
+        if current_user.role == 'admin':
+            query = query.filter(models.Student.school == current_user.school)
+
         results = db.query(
             models.MockExamResult,
             models.Student.name.label("student_name")
@@ -273,7 +303,7 @@ def read_instructors(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
-    return db.query(models.User).order_by(models.User.id).all()
+    return crud_user.get_users(db, current_user)
 
 @router.post("/users")
 def create_user(
@@ -301,14 +331,17 @@ def create_user(
 def update_user(
     user_id: int, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
 ):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: raise HTTPException(404, "User not found")
-    
+    # adminは別校舎のユーザーを編集できないように保護
+    if current_user.role == 'admin' and user.school != current_user.school:
+        raise HTTPException(status_code=403, detail="Cannot edit users from other schools")
+
     for key, value in data.items():
         if key == "password" and value: 
-            # パスワード変更時も 'password' カラムを更新
             user.password = pwd_context.hash(value)
         elif hasattr(user, key) and key != "id": 
+            # adminは他人のroleをdeveloperに引き上げることはできない等の保護（任意）
+            if key == "role" and current_user.role == 'admin' and value == 'developer':
+                raise HTTPException(status_code=403, detail="Admin cannot create developer")
             setattr(user, key, value)
             
     db.commit()
@@ -334,7 +367,7 @@ def read_students_with_details(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
-    students = db.query(models.Student).all()
+    students = crud_student.get_students_for_user(db, current_user)
     results = []
     
     for s in students:
@@ -375,9 +408,14 @@ def read_students_with_details(
 def create_student(
     data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
 ):
+    # adminが生徒を作成する場合、強制的に自分の校舎を設定
+    target_school = data.get("school", "未設定")
+    if current_user.role == 'admin':
+        target_school = current_user.school
+
     new_student = models.Student(
         name=data["name"],
-        school=data.get("school", "未設定"),
+        school=target_school,
         grade=data.get("grade"),
         previous_school=data.get("previous_school"), # 在籍/出身校
         deviation_value=data.get("deviation_value"),
@@ -414,9 +452,16 @@ def update_student(
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if not student: raise HTTPException(404, "Student not found")
 
+    # adminは別校舎の生徒を編集できない保護
+    if current_user.role == 'admin' and student.school != current_user.school:
+        raise HTTPException(status_code=403, detail="Cannot edit students from other schools")
+
     fields = ["name", "grade", "school", "previous_school", "deviation_value", "target_level"]
     for f in fields:
         if f in data and hasattr(student, f):
+            # adminは校舎を変更できない保護
+            if f == "school" and current_user.role == 'admin' and data[f] != current_user.school:
+                continue
             setattr(student, f, data[f])
 
     # 講師設定の更新

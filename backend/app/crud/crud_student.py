@@ -4,11 +4,14 @@ from app.schemas.schemas import StudentCreate, StudentUpdate
 from typing import List
 
 def get_students_for_user(db: Session, user: User) -> List[Student]:
-    if user.role == 'admin':
-        # Admin sees all students in their school
+    if user.role == 'developer':
+        # Developer は全校舎の全生徒を取得
+        return db.query(Student).all()
+    elif user.role == 'admin':
+        # Admin は自分の所属する校舎の生徒のみを取得
         return db.query(Student).filter(Student.school == user.school).all()
     else:
-        # User sees students assigned to them
+        # 一般 User は自分に割り当てられた生徒のみを取得
         return db.query(Student).join(StudentInstructor).filter(StudentInstructor.user_id == user.id).all()
 
 def get_student(db: Session, student_id: int):
