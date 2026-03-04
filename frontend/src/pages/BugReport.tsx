@@ -26,7 +26,7 @@ interface ReportItem {
 const BugReport: React.FC = () => {
   const { user } = useAuth();
   // 管理者判定: userオブジェクトの構造に合わせて調整してください (例: user.role === 'admin')
-  const isAdmin = (user as any)?.role === 'admin';
+  const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'developer';
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
