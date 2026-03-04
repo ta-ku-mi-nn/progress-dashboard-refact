@@ -4,7 +4,7 @@ import { UserPlus, RefreshCw, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import api from '../../lib/api';
 
 const DeveloperAccountManagement: React.FC = () => {
-  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ const DeveloperAccountManagement: React.FC = () => {
     try {
       const response = await api.post('/developer/accounts', formData);
       setSuccess(response.data.message);
-      setFormData({ username: '', email: '', password: '' }); // 成功したらクリア
+      setFormData({ username: '', password: '' }); // 成功したらクリア
     } catch (err: any) {
       setError(err.response?.data?.detail || 'アカウントの作成に失敗しました。');
       console.error(err);
@@ -70,19 +70,6 @@ const DeveloperAccountManagement: React.FC = () => {
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-slate-900 focus:border-slate-900"
             placeholder="例: admin_taro"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
-          <input
-            type="text" // backendでstrにしたのでtype="text"でOKですが、ブラウザ検証用にemailでも構いません
-            name="email"
-            required
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-slate-900 focus:border-slate-900"
-            placeholder="例: developer@example.com"
           />
         </div>
 
