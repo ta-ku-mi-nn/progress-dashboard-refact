@@ -222,3 +222,10 @@ class RootTable(Base):
     level = Column(String)
     academic_year = Column(Integer)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    maintenance_mode = Column(Boolean, default=False)
+    announcement_enabled = Column(Boolean, default=False)
+    announcement_message = Column(String, default="")

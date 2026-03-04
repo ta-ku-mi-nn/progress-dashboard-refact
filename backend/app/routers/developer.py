@@ -7,7 +7,7 @@ import subprocess
 import logging
 
 from app.db.database import get_db, SessionLocal
-from app.models.models import User, Student
+from app.models.models import User, Student, SystemSetting
 from app.routers.deps import get_current_developer_user
 
 # --- Logger Setup ---
@@ -96,3 +96,50 @@ def get_system_info(
         "active_users": db.query(User).count(),
         "total_students": db.query(Student).count()
     }
+
+# --- 設定更新用のスキーマ ---
+class SystemSettingUpdate(BaseModel):
+    maintenance_mode: bool
+    announcement_enabled: bool
+    announcement_message: str
+
+# --- 初期設定を取得（または作成）するヘルパー関数 ---
+def get_or_create_settings(db: Session):
+    settings = db.query(SystemSetting).filter(SystemSetting.id == 1).first()
+    if not settings:
+        settings = SystemSetting(id=1)
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+# --- 設定の取得API (Developer向け) ---
+@router.get("/settings")
+def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_developer_user)
+):
+    settings = get_or_create_settings(db)
+    return {
+        "maintenance_mode": settings.maintenance_mode,
+        "announcement_enabled": settings.announcement_enabled,
+        "announcement_message": settings.announcement_message
+    }
+
+# --- 設定の更新API (Developer向け) ---
+@router.put("/settings")
+def update_system_settings(
+    update_data: SystemSettingUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_developer_user)
+):
+    settings = get_or_create_settings(db)
+    
+    settings.maintenance_mode = update_data.maintenance_mode
+    settings.announcement_enabled = update_data.announcement_enabled
+    settings.announcement_message = update_data.announcement_message
+    
+    db.commit()
+    logger.info(f"👨‍💻 Developer {current_user.username} updated system settings.")
+    
+    return {"message": "設定を保存しました"}
