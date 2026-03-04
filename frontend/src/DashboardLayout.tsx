@@ -33,9 +33,13 @@ export default function DashboardLayout() {
         { name: '更新履歴', path: '/changelog', icon: ScrollText },
     ];
 
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'developer') {
         navItems.push({ name: '管理者ページ', path: '/admin', icon: Settings });
+    }
+    
+    if (user?.role === 'developer') {
         navItems.push({ name: '開発者ページ', path: '/developer', icon: Wrench});
+    }
 
     return (
         <div className="flex h-screen bg-gray-100">
@@ -90,5 +94,5 @@ export default function DashboardLayout() {
                 <Outlet />
             </main>
         </div>
-    );}
+    );
 }
