@@ -40,12 +40,9 @@ class AdminPasswordResetRequest(BaseModel):
 def admin_reset_password(
     data: AdminPasswordResetRequest, 
     session: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) # ログイン中のユーザー情報を取得
+    current_user: User = Depends(deps.get_current_admin_user) # ログイン中のユーザー情報を取得
 ):
     # 管理者権限チェック
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=403, detail="この操作を実行する権限がありません。")
-        
     user = session.query(User).filter(User.username == data.username).first()
     if not user:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません。")
