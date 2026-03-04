@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
+from typing import List
 import os
 import subprocess
 import logging
@@ -10,6 +11,7 @@ import logging
 from app.db.database import get_db, SessionLocal
 from app.models.models import User, Student, SystemSetting
 from app.routers.deps import get_current_developer_user
+from app.routers.auth import get_password_hash
 
 # --- Logger Setup ---
 logging.basicConfig(level=logging.INFO)
@@ -144,3 +146,101 @@ def update_system_settings(
     logger.info(f"👨‍💻 Developer {current_user.username} updated system settings.")
     
     return {"message": "設定を保存しました"}
+
+# ==========================================
+# スキーマ定義 (ファイルの上のほうの class SystemSettingUpdate の下あたりに追加)
+# ==========================================
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: str
+
+    class Config:
+        from_attributes = True
+
+class UserRoleUpdate(BaseModel):
+    role: str  # 'user', 'admin', 'developer' のいずれか
+
+class DeveloperCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+# ==========================================
+# APIエンドポイント (ファイルの下部に追加)
+# ==========================================
+
+@router.get("/users", response_model=List[UserResponse])
+def get_all_users(
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_developer_user)
+):
+    """全ユーザーのリストと現在のロールを取得"""
+    users = db.query(User).all()
+    return users
+
+@router.put("/users/{user_id}/role")
+def update_user_role(
+    user_id: int, 
+    role_data: UserRoleUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_developer_user)
+):
+    """特定のユーザーのロール（権限）を変更"""
+    # 自分自身の権限をうっかり下げてしまわないためのガード
+    if user_id == current_user.id and role_data.role != "developer":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="自分自身のDeveloper権限は外せません。"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません。")
+
+    # ロールの文字列を小文字に統一して保存
+    user.role = role_data.role.lower()
+    db.commit()
+    logger.info(f"User {user_id} role updated to {user.role} by {current_user.username}")
+    
+    return {"message": "ロールを更新しました。", "new_role": user.role}
+
+@router.post("/accounts")
+def create_developer_account(
+    new_dev: DeveloperCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_developer_user)
+):
+    """新しい開発者アカウント(role='developer')を作成する"""
+    
+    # 1. すでに同じメールアドレスやユーザー名が存在するかチェック
+    existing_user = db.query(User).filter(
+        (User.email == new_dev.email) | (User.username == new_dev.username)
+    ).first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=400, 
+            detail="このユーザー名またはメールアドレスは既に登録されています。"
+        )
+
+    # 2. ご提示いただいた関数でパスワードをハッシュ化
+    hashed_pw = get_password_hash(new_dev.password)
+    
+    # 3. 新しい開発者ユーザーの作成
+    db_user = User(
+        username=new_dev.username,
+        email=new_dev.email,
+        hashed_password=hashed_pw,
+        role="developer"  # ここで強制的にdeveloper権限を付与
+    )
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    logger.info(f"New developer account '{db_user.username}' created by '{current_user.username}'")
+    
+    return {"message": f"開発者アカウント「{db_user.username}」を作成しました。"}
