@@ -227,7 +227,7 @@ def create_developer_account(
     # DB保存時も email を渡さない
     db_user = User(
         username=new_dev.username,
-        hashed_password=hashed_pw,
+        password=hashed_pw,
         role="developer" 
     )
     
