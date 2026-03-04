@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.core.scheduler import start_scheduler
 from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup
 
 app = FastAPI(
@@ -40,3 +41,7 @@ app.include_router(fix_db.router, prefix=settings.API_V1_STR, tags=["fix"])
 @app.get("/")
 def root():
     return {"message": "Hello from Progress Dashboard API"}
+
+@app.on_event("startup")
+def on_startup():
+    start_scheduler()
