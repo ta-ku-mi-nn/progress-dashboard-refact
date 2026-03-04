@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+from pydantic import BaseModel
 from passlib.context import CryptContext
 from app.db.database import get_db
 from app.routers import deps
@@ -305,26 +306,55 @@ def read_instructors(
 ):
     return crud_user.get_users(db, current_user)
 
+# ==========================================
+# 1. 受け取るデータの「設計図」を作る
+# ==========================================
+class AdminUserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = "user"  # 指定がなければ一般講師(user)
+    school: str = ""    # 指定がなければ空文字
+
+# ==========================================
+# 2. API本体 (dictではなく設計図を使う！)
+# ==========================================
 @router.post("/users")
 def create_user(
-    data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
+    user_in: AdminUserCreate, # ← 🌟 ここを変更！
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(deps.get_current_admin_user)
 ):
     # ユーザー名重複チェック
-    if db.query(models.User).filter(models.User.username == data["username"]).first():
+    if db.query(models.User).filter(models.User.username == user_in.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
     
     # パスワードハッシュ化
-    hashed_pw = pwd_context.hash(data["password"])
+    hashed_pw = pwd_context.hash(user_in.password)
     
+    # データベースに保存
     new_user = models.User(
-        username=data["username"],
-        password=hashed_pw,  # ★修正: モデルに合わせて 'password' に保存
-        role=data.get("role", "admin"),
-        school=data.get("school", "") # ★追加: 校舎情報
+        username=user_in.username,
+        password=hashed_pw,
+        role=user_in.role,
+        school=user_in.school  # ← user_in.school でアクセスできます！
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # 🌟🌟 せっかくなので、ここにも監査ログを仕込みましょう！ 🌟🌟
+    # ※ファイル上部で `from app.routers.audit import log_action` している前提です
+    try:
+        log_action(
+            db=db,
+            user_id=current_user.id,
+            action="CREATE_USER",
+            branch_id=getattr(current_user, 'branch_id', None),
+            details=f"新規ユーザー '{new_user.username}' (校舎: {new_user.school}) を作成しました"
+        )
+    except Exception as e:
+        print(f"監査ログの記録に失敗しましたが、ユーザー作成は継続します: {e}")
+
     return new_user
 
 @router.patch("/users/{user_id}")
