@@ -3,7 +3,7 @@ services:
   - type: web
     name: progress-dashboard-backend
     runtime: python
-    region: sgp
+    region: singapore
     buildCommand: |
       cd backend
       pip install -r requirements.txt
