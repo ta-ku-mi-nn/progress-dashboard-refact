@@ -338,12 +338,20 @@ def create_user(
 def update_user(
     user_id: int, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(deps.get_current_admin_user)
 ):
+    # 🌟 修正ポイント1：まずはデータベースから対象のユーザーを探して `user` 変数に入れる！
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    
+    # 🌟 修正ポイント2：もしユーザーが存在しなかったら404エラーを返す
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     # adminは別校舎のユーザーを編集できないように保護
     if current_user.role == 'admin' and user.school != current_user.school:
         raise HTTPException(status_code=403, detail="Cannot edit users from other schools")
 
     for key, value in data.items():
         if key == "password" and value: 
+            # ※pwd_context が未定義エラーにならないよう、ファイルの上のほうで import されているか確認してください
             user.password = pwd_context.hash(value)
         elif hasattr(user, key) and key != "id": 
             # adminは他人のroleをdeveloperに引き上げることはできない等の保護（任意）
@@ -352,6 +360,7 @@ def update_user(
             setattr(user, key, value)
             
     db.commit()
+    db.refresh(user) # 念のため最新のDBの状態を反映させる
     return user
 
 @router.delete("/users/{user_id}")
