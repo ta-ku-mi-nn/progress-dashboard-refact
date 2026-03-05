@@ -270,7 +270,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
   // --- サブコンポーネント ---
 
   // 1. プリセット一覧 (修正版)
-  const LeftColumnPresetList = () => {
+  const renderLeftColumnPresetList = () => {
       const filteredPresets = presets.filter(p => 
           filterPresetSubject === "" || p.subject === filterPresetSubject
       );
@@ -341,7 +341,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
   };
 
   // 2. マスタ一覧
-  const LeftColumnMasterList = () => (
+  const renderLeftColumnMasterList = () => (
     <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
         <div className="p-3 bg-muted/30 font-bold text-sm border-b">参考書一覧 (DB)</div>
         <div className="p-2 grid grid-cols-3 gap-2 border-b bg-gray-50/50">
@@ -381,7 +381,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
   );
 
   // 3. カスタムフォーム
-  const LeftColumnCustomForm = () => (
+  const renderLeftColumnCustomForm = () => (
     <div className="border rounded-md flex flex-col h-full overflow-hidden bg-yellow-50/50">
         <div className="p-3 font-bold text-sm text-yellow-800 flex items-center border-b border-yellow-200 bg-yellow-100/30">
             <BookOpen className="w-4 h-4 mr-2" />
@@ -430,7 +430,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
     </div>
   );
 
-  const RightColumnSelectedList = () => (
+  const renderRightColumnSelectedList = () => (
       <div className="border rounded-md flex flex-col h-full overflow-hidden bg-white">
         <div className="p-3 bg-blue-50/50 font-bold text-sm border-b text-blue-700 flex justify-between items-center">
             <span>追加候補リスト</span>
@@ -591,12 +591,12 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             <div className="flex items-center gap-4">
               <div className="grid gap-2 flex-1">
                 <label className="text-xs">完了数</label>
-                <Input type="number" value={editCompleted} onChange={(e) => setEditCompleted(Number(e.target.value))} />
+                <Input type="number" value={editCompleted} onChange={(e) => setEditCompleted(Number(e.target.value))} onFocus={(e) => e.target.select()} />
               </div>
               <span className="mt-6 text-xl">/</span>
               <div className="grid gap-2 flex-1">
                 <label className="text-xs">総数</label>
-                <Input type="number" value={editTotal} onChange={(e) => setEditTotal(Number(e.target.value))} />
+                <Input type="number" value={editTotal} onChange={(e) => setEditTotal(Number(e.target.value))} onFocus={(e) => e.target.select()} />
               </div>
             </div>
           </div>
@@ -626,22 +626,22 @@ export default function ProgressList({ studentId }: { studentId: number }) {
             <div className="flex-1 overflow-hidden p-6 pt-4 bg-gray-50/50">
                 <TabsContent value="preset" className="h-full m-0 data-[state=active]:flex flex-col">
                     <div className="grid grid-cols-2 gap-4 h-full">
-                        <LeftColumnPresetList />
-                        <RightColumnSelectedList />
+                        {renderLeftColumnPresetList()}
+                        {renderRightColumnSelectedList()}
                     </div>
                 </TabsContent>
                 
                 <TabsContent value="individual" className="h-full m-0 data-[state=active]:flex flex-col">
                     <div className="grid grid-cols-2 gap-4 h-full">
-                        <LeftColumnMasterList />
-                        <RightColumnSelectedList />
+                        {renderLeftColumnMasterList()}
+                        {renderRightColumnSelectedList()}
                     </div>
                 </TabsContent>
 
                 <TabsContent value="custom" className="h-full m-0 data-[state=active]:flex flex-col">
                     <div className="grid grid-cols-2 gap-4 h-full">
-                        <LeftColumnCustomForm />
-                        <RightColumnSelectedList />
+                        {renderLeftColumnCustomForm()}
+                        {renderRightColumnSelectedList()}
                     </div>
                 </TabsContent>
             </div>

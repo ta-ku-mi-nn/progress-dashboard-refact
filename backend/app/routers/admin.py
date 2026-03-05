@@ -504,8 +504,18 @@ def update_student(
     return {"status": "updated"}
 
 @router.delete("/students/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
+def delete_student(
+    student_id: int, 
+    db: Session = Depends(get_db),
+    # 🌟 これを必ず追加して、AdminとDeveloper以外は削除できないようにする！
+    current_user: models.User = Depends(deps.get_current_admin_user)
+):
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    
+    # adminは別校舎の生徒を削除できないようにする保護（任意）
+    if student and current_user.role == 'admin' and student.school != current_user.school:
+        raise HTTPException(status_code=403, detail="Cannot delete students from other schools")
+
     if student:
         db.delete(student)
         db.commit()
