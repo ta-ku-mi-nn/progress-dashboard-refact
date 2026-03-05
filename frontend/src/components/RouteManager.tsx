@@ -47,16 +47,26 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
     fetchData();
   }, []);
 
-  const handleViewPdf = (file: RouteFile) => {
-    // ⭕️ Axios(api.get)を使わずに、ブラウザに直接APIのURLを開かせる！
-    // APIのベースURL（例: https://backend.onrender.com/api/v1）を取得
-    const baseURL = api.defaults.baseURL || '';
-    
-    // ダウンロード用のURLを組み立てる
-    const downloadURL = `${baseURL}/routes/download/${file.id}`;
-
-    // 新しいタブでそのURLを開く（ブラウザが勝手にPDFを表示して、ファイル名も認識してくれます）
-    window.open(downloadURL, '_blank');
+  const handleViewPdf = async (file: RouteFile) => {
+    try {
+      // responseType: 'blob' でバイナリを取得
+      const response = await api.get(`/routes/download/${file.id}`, {
+        responseType: 'blob',
+      });
+      
+      // Blob URLを作成
+      const fileURL = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      
+      // 新しいタブで開く
+      window.open(fileURL, '_blank');
+      
+      // 注意: createObjectURLで作成したURLはGCされないため、厳密にはrevokeが必要ですが
+      // 別タブで開く場合、即座にrevokeすると読み込み前に消える可能性があるため、ここでは明示的なrevokeを省略するか
+      // 一定時間後にrevokeするなどの工夫がいりますが、簡易実装としてはこれで動作します。
+    } catch (e) {
+      alert("ファイルの表示に失敗しました");
+      console.error(e);
+    }
   };
 
   // ダウンロード処理
