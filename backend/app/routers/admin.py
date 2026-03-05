@@ -15,7 +15,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Dependency to check if user is admin
 def get_current_admin(current_user: models.User = Depends(deps.get_current_user)):
-    if current_user.role != 'admin':
+    if current_user.role != ['admin', 'developer']:
         raise HTTPException(status_code=403, detail="Not authorized")
     return current_user
 
@@ -189,22 +189,6 @@ def read_users(
     if current_user.role == 'admin':
         query = query.filter(models.User.school == current_user.school)
     return query.offset(skip).limit(limit).all()
-
-@router.post("/students", response_model=schemas.Student)
-def create_student(
-    student: schemas.StudentCreate,
-    db: Session = Depends(get_db),
-    admin: models.User = Depends(get_current_admin)
-):
-    # Check if student already exists? Unique constraint on (school, name) handles it,
-    # but we might want to check nicely.
-    # crud_external has get_student_id_by_name usable here?
-    # db_student = crud_external.get_student_id_by_name(db, student.school, student.name)
-    # if db_student: raise HTTPException...
-    # For now, let DB constraint handle it or catch IntegrityError.
-    return crud_student.create_student(db, student)
-
-# Add other admin endpoints (delete user, etc.) as needed
 
 @router.get("/mock_exams")
 def get_all_mock_exams(
