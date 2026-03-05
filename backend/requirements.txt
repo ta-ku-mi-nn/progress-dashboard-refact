@@ -12,5 +12,5 @@ reportlab
 jinja2
 xhtml2pdf
 passlib
-bcrypt==4.2.1
+bcrypt==3.2.2
 apscheduler==3.10.4
