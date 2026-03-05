@@ -119,7 +119,7 @@ const BugReport: React.FC = () => {
   };
 
   // ステータスバッジ
-  const StatusBadge = ({ status }: { status: string }) => {
+  const renderStatusBadge = ({ status }: { status: string }) => {
     let color = "bg-gray-100 text-gray-800";
     if (status === "対応中") color = "bg-blue-100 text-blue-800";
     if (status === "完了" || status === "解決済み") color = "bg-green-100 text-green-800";
@@ -127,7 +127,7 @@ const BugReport: React.FC = () => {
   };
 
   // リストアイテム描画コンポーネント
-  const ReportList = ({ items, type }: { items: ReportItem[], type: "bug" | "feature" }) => (
+  const renderReportList = ({ items, type }: { items: ReportItem[], type: "bug" | "feature" }) => (
       <div className="space-y-4 pb-4">
           {items.map(item => {
               const isExpanded = expandedIds.includes(item.id);
@@ -138,7 +138,7 @@ const BugReport: React.FC = () => {
                               <div className="flex flex-col gap-1 w-full">
                                   <div className="flex items-center justify-between w-full">
                                       <span className="text-xs text-muted-foreground">{item.report_date}</span>
-                                      <StatusBadge status={item.status} />
+                                      {renderStatusBadge({status:item.status})}
                                   </div>
                                   <div className="font-bold text-sm">{item.title}</div>
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -288,12 +288,12 @@ const BugReport: React.FC = () => {
                     <CardContent className="flex-1 p-0 overflow-hidden bg-gray-50/30">
                         <TabsContent value="bug" className="h-full m-0">
                             <ScrollArea className="h-full p-4">
-                                <ReportList items={bugReports} type="bug" />
+                                {renderReportList({ items: bugReports, type: "bug" })}
                             </ScrollArea>
                         </TabsContent>
                         <TabsContent value="feature" className="h-full m-0">
                             <ScrollArea className="h-full p-4">
-                                <ReportList items={featureRequests} type="feature" />
+                                {renderReportList({ items: featureRequests, type: "feature" })}
                             </ScrollArea>
                         </TabsContent>
                     </CardContent>
