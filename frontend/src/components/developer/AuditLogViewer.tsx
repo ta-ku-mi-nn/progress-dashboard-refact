@@ -6,6 +6,7 @@ import api from '../../lib/api';
 interface AuditLog {
   id: number;
   user_id: number | null;
+  user_name?: string | null; // 🌟これを追加
   action: string;
   branch_id: number | null;
   details: string | null;
@@ -159,7 +160,7 @@ const AuditLogViewer: React.FC = () => {
               <tr>
                 <th className="px-4 py-3 whitespace-nowrap"><Clock className="w-4 h-4 inline mr-1"/>日時</th>
                 <th className="px-4 py-3 whitespace-nowrap"><Activity className="w-4 h-4 inline mr-1"/>アクション</th>
-                <th className="px-4 py-3 whitespace-nowrap"><User className="w-4 h-4 inline mr-1"/>ユーザーID</th>
+                <th className="px-4 py-3 whitespace-nowrap"><User className="w-4 h-4 inline mr-1"/>実行者</th>
                 <th className="px-4 py-3 whitespace-nowrap"><MapPin className="w-4 h-4 inline mr-1"/>校舎ID</th>
                 {/* ★変更: 詳細情報の幅を広げる */}
                 <th className="px-4 py-3 min-w-[300px]">詳細情報</th>
@@ -178,7 +179,9 @@ const AuditLogViewer: React.FC = () => {
                   <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap font-mono text-xs">{formatDate(log.timestamp)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{getActionBadge(log.action)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap font-medium">{log.user_id || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap font-medium text-indigo-700">
+                      {log.user_name || log.user_id || 'システム'}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">{log.branch_id || 'ALL'}</td>
                     {/* ★変更: formatDetails関数を通して描画 */}
                     <td className="px-4 py-3">
