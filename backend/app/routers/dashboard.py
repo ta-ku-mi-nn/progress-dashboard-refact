@@ -11,6 +11,7 @@ import json
 
 from app.db.database import get_db
 from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User, Student, AuditLog
+from app.routers.auth import get_current_user
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -289,7 +290,7 @@ def get_progress_list(student_id: int, session: Session = Depends(get_db)) -> Li
     return [{"id": i.id, "subject": i.subject, "book_name": i.book_name, "completed_units": i.completed_units, "total_units": i.total_units} for i in items]
 
 @router.patch("/progress/{row_id}")
-def update_progress(row_id: int, update_data: ProgressUpdate, session: Session = Depends(get_db)):
+def update_progress(row_id: int, update_data: ProgressUpdate, session: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     progress_item = session.query(Progress).filter(Progress.id == row_id).first()
     if not progress_item: 
         raise HTTPException(status_code=404, detail="Progress item not found")
@@ -316,7 +317,7 @@ def update_progress(row_id: int, update_data: ProgressUpdate, session: Session =
     
     # 監査ログレコードの作成
     audit_log = AuditLog(
-        user_id=None, # ※もし認証(Depends)からユーザーIDが取れる場合はここに入れます
+        user_id=current_user.id,
         action="UPDATE_PROGRESS", # フロントの `includes('PROGRESS')` に引っかかるように！
         branch_id=None,
         details=json.dumps(details_dict, ensure_ascii=False)
