@@ -45,25 +45,26 @@ def log_action(db: Session, user_id: int, action: str, branch_id: int = None, de
 # ==========================================
 # 3. 監査ログを取得するAPI (ここで権限の分岐！)
 # ==========================================
-@router.get("/logs", response_model=List[AuditLogResponse])
-def get_audit_logs(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # ① user(一般講師) はアクセス禁止
-    if current_user.role not in ["admin", "developer"]:
-        raise HTTPException(status_code=403, detail="アクセス権限がありません")
-
-    query = db.query(AuditLog)
-
-    # ② Admin(教室長) なら、自分の校舎(branch_id)のログだけに絞り込む！
-    if current_user.role == "admin":
-        # ※Userモデルに branch_id がある前提です
-        query = query.filter(AuditLog.branch_id == current_user.branch_id)
+@router.get("/logs")
+def get_audit_logs(session: Session = Depends(get_db)):
+    # 🌟変更: Userテーブルをくっつけて名前を取得
+    logs = session.query(
+        AuditLog, 
+        User.name.label("user_name")
+    ).outerjoin(
+        User, AuditLog.user_id == User.id
+    ).order_by(AuditLog.timestamp.desc()).all()
     
-    # ③ Developer(開発者) は上のif文をスルーするので、全校舎のデータが取得される
-    
-    # 最新のものから順に100件取得
-    logs = query.order_by(AuditLog.timestamp.desc()).limit(100).all()
-    
-    return logs
+    result = []
+    for log, user_name in logs:
+        result.append({
+            "id": log.id,
+            "user_id": log.user_id,
+            "user_name": user_name, # 🌟ここに追加！
+            "action": log.action,
+            "branch_id": log.branch_id,
+            "details": log.details,
+            "timestamp": log.timestamp
+        })
+        
+    return result
