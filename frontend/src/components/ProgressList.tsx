@@ -50,7 +50,7 @@ interface BookCandidate {
   isCustom: boolean;
 }
 
-export default function ProgressList({ studentId }: { studentId: number }) {
+export default function ProgressList({ studentId, onUpdate }: { studentId: number, onUpdate?: () => void}) {
   // --- State ---
   const [fullList, setFullList] = useState<ProgressItem[]>([]);
   const [filteredList, setFilteredList] = useState<ProgressItem[]>([]);
@@ -143,6 +143,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
       });
       setEditingItem(null);
       fetchData();
+      onUpdate?.();
     } catch (e) { alert("更新失敗"); }
   };
 
@@ -153,6 +154,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
       try {
           await api.delete(`/dashboard/progress/${item.id}`);
           fetchData(); // リスト更新
+          onUpdate?.();
       } catch(e) {
           alert("削除に失敗しました");
       }
@@ -178,6 +180,7 @@ export default function ProgressList({ studentId }: { studentId: number }) {
       setIsAddModalOpen(false);
       setSelectedBooks([]);
       fetchData();
+      onUpdate?.();
     } catch (e) { alert("登録失敗"); }
   };
 
