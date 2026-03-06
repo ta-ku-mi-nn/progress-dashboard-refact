@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface ChartProps {
   studentId: number;
+  refreshTrigger?: number;
 }
 
 interface ChartItem {
@@ -15,7 +16,7 @@ interface ChartItem {
   type: string;
 }
 
-export default function ProgressChart({ studentId }: ChartProps) {
+export default function ProgressChart({ studentId, refreshTrigger = 0 }: ChartProps) {
   const [subjects, setSubjects] = useState<string[]>(["全体"]);
   const [selectedSubject, setSelectedSubject] = useState("全体");
   // const [chartData, setChartData] = useState<ChartItem[]>([]); // エラー回避のため一旦anyにしておく場合もありますが、元のままでOKならそのままで
@@ -55,7 +56,7 @@ export default function ProgressChart({ studentId }: ChartProps) {
       }
     };
     if (studentId) fetchData();
-  }, [studentId, selectedSubject]);
+  }, [studentId, selectedSubject, refreshTrigger]);
 
   // Plotly用のデータ生成
   // データが空でも描画できるように安全策をとる
