@@ -151,44 +151,45 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>ファイル名</TableHead>
-                        {/* ★修正: 幅を拡大 w-24 -> w-32 */}
-                        <TableHead className="w-32">科目</TableHead>
+                        {/* ★変更: ファイル名の列幅を広めに取り、アップロード日を削除 */}
+                        <TableHead className="min-w-[200px]">ファイル名</TableHead>
+                        <TableHead className="w-28">科目</TableHead>
                         <TableHead className="w-24">レベル</TableHead>
-                        {/* ★修正: 幅を拡大 w-20 -> w-28 */}
                         <TableHead className="w-28">年度</TableHead>
-                        <TableHead className="w-32">アップロード日</TableHead>
-                        <TableHead className="w-24 text-center">操作</TableHead>
+                        <TableHead className="w-28 text-center">操作</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {filteredFiles.map((file) => (
-                        <TableRow key={file.id}>
-                            <TableCell className="font-medium text-sm">
+                        <TableRow key={file.id} className="hover:bg-gray-50 transition-colors">
+                            {/* ★変更: ファイル名を太字・少し大きめ・濃い色にして視認性バツグンに！ */}
+                            <TableCell className="font-bold text-base text-gray-800">
                                 <div className="flex items-center">
-                                    <FileText className="w-4 h-4 mr-2 text-red-500" />
-                                    {file.filename}
+                                    {/* shrink-0 を入れることで、ファイル名が長くてもアイコンが潰れません */}
+                                    <FileText className="w-5 h-5 mr-2 text-red-500 shrink-0" />
+                                    {/* 長すぎるファイル名対策（2行で省略） */}
+                                    <span className="line-clamp-2 break-all">{file.filename}</span>
                                 </div>
                             </TableCell>
-                            <TableCell className="text-xs">
+                            <TableCell className="text-sm">
                                 {file.subject && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full whitespace-nowrap">{file.subject}</span>}
                             </TableCell>
-                            <TableCell className="text-xs whitespace-nowrap">{file.level}</TableCell>
-                            <TableCell className="text-xs whitespace-nowrap">{file.academic_year}年度</TableCell>
-                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                {new Date(file.uploaded_at).toLocaleDateString()}
-                            </TableCell>
+                            <TableCell className="text-sm whitespace-nowrap text-gray-600">{file.level}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap text-gray-600">{file.academic_year}年度</TableCell>
+                            {/* ★変更: アップロード日のセルを丸ごと削除しました */}
                             <TableCell className="text-center">
-                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleViewPdf(file)}>
+                                {/* ★変更: ボタンを少しスタイリッシュに調整 */}
+                                <Button size="sm" variant="outline" className="h-8 text-xs border-blue-200 hover:bg-blue-50 hover:text-blue-700" onClick={() => handleViewPdf(file)}>
                                     <ExternalLink className="w-3 h-3 mr-1" />
-                                    PDF表示
+                                    表示
                                 </Button>
                             </TableCell>
                         </TableRow>
                     ))}
                     {filteredFiles.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                            {/* ★変更: カラムが1つ減ったので colSpan を 6 から 5 に修正 */}
+                            <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
                                 {loading ? "読み込み中..." : "該当するファイルがありません"}
                             </TableCell>
                         </TableRow>
