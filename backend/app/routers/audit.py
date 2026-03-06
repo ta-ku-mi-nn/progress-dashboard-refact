@@ -50,7 +50,7 @@ def get_audit_logs(session: Session = Depends(get_db)):
     # 🌟変更: Userテーブルをくっつけて名前を取得
     logs = session.query(
         AuditLog, 
-        User.name.label("user_name")
+        User.username.label("user_name")
     ).outerjoin(
         User, AuditLog.user_id == User.id
     ).order_by(AuditLog.timestamp.desc()).all()
