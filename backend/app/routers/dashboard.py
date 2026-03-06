@@ -7,9 +7,10 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 import logging
+import json
 
 from app.db.database import get_db
-from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User, Student
+from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User, Student, AuditLog
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -95,6 +96,8 @@ def get_master_books(session: Session = Depends(get_db)):
 @router.post("/progress/batch")
 def add_progress_batch(data: ProgressCreate, session: Session = Depends(get_db)):
     added_items = []
+    added_book_names = [] # 🌟ログ用に名前を集めるリスト
+
     for book_id in data.book_ids:
         master_book = session.query(MasterTextbook).filter(MasterTextbook.id == book_id).first()
         if not master_book: continue
@@ -107,6 +110,7 @@ def add_progress_batch(data: ProgressCreate, session: Session = Depends(get_db))
         )
         session.add(new_progress)
         added_items.append(new_progress)
+        added_book_names.append(master_book.book_name) # 名前を記録
 
     for custom in data.custom_books:
         exists = session.query(Progress).filter(Progress.student_id == data.student_id, Progress.book_name == custom.book_name).first()
@@ -118,7 +122,28 @@ def add_progress_batch(data: ProgressCreate, session: Session = Depends(get_db))
         )
         session.add(new_progress)
         added_items.append(new_progress)
+        added_book_names.append(custom.book_name) # 名前を記録
     
+    # 🌟🌟ここから監査ログの記録処理🌟🌟
+    if added_items:
+        student = session.query(Student).filter(Student.id == data.student_id).first()
+        student_name = student.name if student else f"ID:{data.student_id}"
+
+        details_dict = {
+            "student_name": student_name,
+            "book_name": " / ".join(added_book_names), # 追加した本をスラッシュ区切りで連結
+            "completed": f"新規一括追加（計 {len(added_items)} 冊）"
+        }
+        
+        audit_log = AuditLog(
+            user_id=None, 
+            action="ADD_PROGRESS_BATCH", # PROGRESSを含めることでフロントのフィルターに引っかかる
+            branch_id=None,
+            details=json.dumps(details_dict, ensure_ascii=False)
+        )
+        session.add(audit_log)
+    # 🌟🌟ここまで🌟🌟
+
     session.commit()
     return {"message": f"{len(added_items)} items added"}
 
@@ -266,10 +291,40 @@ def get_progress_list(student_id: int, session: Session = Depends(get_db)) -> Li
 @router.patch("/progress/{row_id}")
 def update_progress(row_id: int, update_data: ProgressUpdate, session: Session = Depends(get_db)):
     progress_item = session.query(Progress).filter(Progress.id == row_id).first()
-    if not progress_item: raise HTTPException(status_code=404, detail="Progress item not found")
+    if not progress_item: 
+        raise HTTPException(status_code=404, detail="Progress item not found")
+    
+    # ログ用に古い値を保持しておく
+    old_completed = progress_item.completed_units or 0
+    
+    # 進捗の更新
     progress_item.completed_units = update_data.completed_units
     progress_item.total_units = update_data.total_units 
     session.add(progress_item)
+    
+    # 🌟🌟ここから監査ログの記録処理🌟🌟
+    # 誰の進捗か分かりやすくするために生徒の名前を取得
+    student = session.query(Student).filter(Student.id == progress_item.student_id).first()
+    student_name = student.name if student else f"ID:{progress_item.student_id}"
+
+    # フロントエンドが綺麗にバッジ化できるようにJSON形式で詳細を作る
+    details_dict = {
+        "student_name": student_name,
+        "book_name": progress_item.book_name,
+        "completed": f"{old_completed} → {update_data.completed_units} / {update_data.total_units}"
+    }
+    
+    # 監査ログレコードの作成
+    audit_log = AuditLog(
+        user_id=None, # ※もし認証(Depends)からユーザーIDが取れる場合はここに入れます
+        action="UPDATE_PROGRESS", # フロントの `includes('PROGRESS')` に引っかかるように！
+        branch_id=None,
+        details=json.dumps(details_dict, ensure_ascii=False)
+    )
+    session.add(audit_log)
+    # 🌟🌟ここまで🌟🌟
+
+    # 一緒に保存！
     session.commit()
     session.refresh(progress_item)
     return progress_item
@@ -277,7 +332,29 @@ def update_progress(row_id: int, update_data: ProgressUpdate, session: Session =
 @router.delete("/progress/{row_id}")
 def delete_progress(row_id: int, session: Session = Depends(get_db)):
     progress_item = session.query(Progress).filter(Progress.id == row_id).first()
-    if not progress_item: raise HTTPException(status_code=404, detail="Progress item not found")
+    if not progress_item: 
+        raise HTTPException(status_code=404, detail="Progress item not found")
+    
+    # 🌟🌟ここから監査ログの記録処理（削除される前に情報を抜き取る）🌟🌟
+    student = session.query(Student).filter(Student.id == progress_item.student_id).first()
+    student_name = student.name if student else f"ID:{progress_item.student_id}"
+
+    details_dict = {
+        "student_name": student_name,
+        "book_name": progress_item.book_name,
+        "completed": f"削除時の進捗: {progress_item.completed_units or 0} / {progress_item.total_units}"
+    }
+    
+    audit_log = AuditLog(
+        user_id=None,
+        action="DELETE_PROGRESS", # PROGRESSを含めることでフィルター対象に
+        branch_id=None,
+        details=json.dumps(details_dict, ensure_ascii=False)
+    )
+    session.add(audit_log)
+    # 🌟🌟ここまで🌟🌟
+
+    # ログを作った後に、本体を削除してコミット！
     session.delete(progress_item)
     session.commit()
     return {"message": "Deleted successfully"}
