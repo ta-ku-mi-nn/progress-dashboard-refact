@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // 英検編集用State
   const [isEikenModalOpen, setIsEikenModalOpen] = useState(false);
@@ -175,7 +176,7 @@ export default function Dashboard() {
             
             {/* 1. グラフコンポーネント */}
             <div id="chart-container" className="w-full flex-1 min-h-[300px] bg-white p-2 rounded border">
-                <ProgressChart studentId={selectedStudentId} />
+                <ProgressChart studentId={selectedStudentId} refreshTrigger={refreshTrigger} />
             </div>
 
             {/* 2. KPIカード群 */}
@@ -241,7 +242,10 @@ export default function Dashboard() {
         {/* === 右列: 参考書リスト === */}
         <div className="w-full h-full overflow-hidden rounded-lg border bg-white shadow-sm print:h-auto print:overflow-visible">
             <div className="h-full overflow-y-auto p-1">
-                <ProgressList studentId={selectedStudentId} />
+                <ProgressList 
+                    studentId={selectedStudentId} 
+                    onUpdate={() => setRefreshTrigger(prev => prev + 1)} 
+                />
             </div>
         </div>
 
