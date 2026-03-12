@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel
 from datetime import date
 
@@ -226,3 +226,17 @@ class BulkPresetUpdate(BaseModel):
     preset_name: Optional[str] = None
     subject: Optional[str] = None
     book_names: Optional[List[str]] = None
+
+class ReportStateBase(BaseModel):
+    # 中身の構造はフロントエンドに任せ、バックエンドは柔軟な辞書型として受け取ります
+    report_data: Dict[str, Any]
+
+class ReportStateUpdate(ReportStateBase):
+    pass
+
+class ReportStateResponse(ReportStateBase):
+    id: int
+    student_id: int
+
+    class Config:
+        from_attributes = True  # ※Pydantic v1 をお使いの場合は orm_mode = True にしてください
