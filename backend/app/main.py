@@ -42,7 +42,7 @@ app.include_router(developer.router, prefix=f"{settings.API_V1_STR}/developer", 
 app.include_router(system_status.router, prefix=f"{settings.API_V1_STR}/system_status", tags={"system_status"})
 app.include_router(audit.router, prefix=f"{settings.API_V1_STR}/audit", tags={"audit"})
 app.include_router(csv_import.router, prefix=f"{settings.API_V1_STR}/csv_import", tags=["csv_import"])
-app.include_router(student_report, prefix=f"{settings.API_V1_STR}/student_report", tags={"student_report"})
+app.include_router(student_report.router, prefix=f"{settings.API_V1_STR}/student_report", tags={"student_report"})
 from app.routers import fix_db
 app.include_router(fix_db.router, prefix=settings.API_V1_STR, tags=["fix"])
 
