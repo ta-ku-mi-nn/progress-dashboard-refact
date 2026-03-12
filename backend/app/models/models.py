@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, Date, UniqueConstraint, Text, DateTime, LargeBinary
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, Date, UniqueConstraint, Text, DateTime, LargeBinary, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -239,3 +239,15 @@ class AuditLog(Base):
     branch_id = Column(Integer, index=True)            # 「どの校舎の」データか（Adminの絞り込み用！）
     details = Column(String)                           # 「詳細」 (例: "user_id 5 の権限を admin に変更")
     timestamp = Column(DateTime, default=datetime.utcnow) # 「いつ」操作したか
+
+class StudentReportState(Base):
+    __tablename__ = "student_report_states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), unique=True, index=True)
+    
+    # フロントエンドの JSON データをそのまま保存
+    report_data = Column(JSON, default=dict) 
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
