@@ -46,10 +46,10 @@
            表紙（カバーページ）デザイン
            ========================================= */
         .cover-page {
-            height: 85vh;
+            height: 800px; /* xhtml2pdfが理解しやすい絶対値に変更 */
             width: 100%;
             text-align: center;
-            padding-top: 20vh; /* 中央寄せの代わり */
+            padding-top: 200px;
             page-break-after: always;
         }
 
@@ -301,18 +301,15 @@
         .grid-table {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 12px; /* セル間の隙間 */
-            margin-top: -12px;
-            margin-left: -12px;
-            margin-right: -12px;
-            width: calc(100% + 24px); /* border-spacing分広げる */
+            border-spacing: 12px;
+            /* calc() とマイナスマージンはxhtml2pdfが落ちるので削除 */
         }
 
         .grid-table td {
-            width: 33.33%;
+            width: 33%; /* 33.33%ではなく少し余裕を持たせる */
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            /* xhtml2pdfはtdのborder-radiusが効かないことがあるため削除 */
             padding: 15px;
             vertical-align: top;
         }
