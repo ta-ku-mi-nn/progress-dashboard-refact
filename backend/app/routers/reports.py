@@ -24,6 +24,8 @@ class ReportRequest(BaseModel):
 class IntegratedReportRequest(BaseModel):
     sections: List[str]  # ["dashboard", "calendar", "mock_exams", "past_exams"]
     chart_images: Dict[str, Optional[str]] = {} # {"dashboard": "base64...", "past_exams": "base64..."}
+    teacher_comment: Optional[str] = None
+    next_action: Optional[str] = None
 
 # --- Endpoints ---
 
@@ -121,7 +123,9 @@ def generate_past_exam_report(
         "student_name": student.username,
         "date_str": datetime.now().strftime("%Y年%m月%d日"),
         "items": formatted_items,
-        "chart_image": request.chart_image
+        "chart_image": request.chart_image,
+        "teacher_comment": req.teacher_comment,
+        "next_action": req.next_action
     }
 
     pdf_buffer = create_pdf_from_template("past_exam_report.html", context)

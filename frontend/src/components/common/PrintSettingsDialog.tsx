@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { Printer, Loader2 } from 'lucide-react';
+import { Textarea } from '../ui/textarea';
+import { Printer, Loader2, MessageSquare } from 'lucide-react';
+import { Label } from '../ui/label';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas'; // ★追加
@@ -15,6 +17,9 @@ interface PrintSettingsDialogProps {
 export default function PrintSettingsDialog({ open, onOpenChange, studentId }: PrintSettingsDialogProps) {
     const [selected, setSelected] = useState<string[]>(["dashboard", "calendar", "mock_exams", "past_exams"]);
     const [loading, setLoading] = useState(false);
+
+    const [teacherComment, setTeacherComment] = useState("");
+    const [nextAction, setNextAction] = useState("");
 
     const handlePrint = async () => {
         if (!studentId) {
@@ -48,7 +53,9 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
 
             const payload = {
                 sections: selected,
-                chart_images: chartImages // 画像データを送信
+                chart_images: chartImages, // 画像データを送信
+                teacher_comment: teacherComment,
+                next_action: nextAction
             };
 
             const response = await api.post(
@@ -78,7 +85,7 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Printer className="w-5 h-5 text-blue-600" /> 
@@ -108,6 +115,36 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
                             <input type="checkbox" className="h-4 w-4 text-blue-600 rounded" checked={selected.includes("past_exams")} onChange={() => toggle("past_exams")} />
                             <span className="font-medium text-sm">過去問演習記録</span>
                         </label>
+                    </div>
+                </div>
+
+                {/* --- ★新規追加: コメント入力セクション --- */}
+                <div className="space-y-4 border-t pt-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <MessageSquare className="w-4 h-4" />
+                        先生からのメッセージ（PDFに印字されます）
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="teacher-comment" className="text-xs text-gray-500">総合コメント・総評</Label>
+                        <Textarea 
+                            id="teacher-comment"
+                            placeholder="今月の学習の様子や、よく頑張った点などを入力してください..."
+                            className="resize-none h-24"
+                            value={teacherComment}
+                            onChange={(e) => setTeacherComment(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="next-action" className="text-xs text-gray-500">来月の目標・Next Action</Label>
+                        <Textarea 
+                            id="next-action"
+                            placeholder="来月重点的に取り組むべき課題や目標を入力してください..."
+                            className="resize-none h-16"
+                            value={nextAction}
+                            onChange={(e) => setNextAction(e.target.value)}
+                        />
                     </div>
                 </div>
 
