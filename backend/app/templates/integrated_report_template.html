@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <style>
         /* =========================================
-           ベース・タイポグラフィ設定
+           ベース・タイポグラフィ設定（余白を拡張）
            ========================================= */
         @font-face {
             font-family: "JPFont";
@@ -13,7 +13,7 @@
         
         @page {
             size: A4;
-            margin: 0; /* 印刷時の余白はCSSでコントロール */
+            margin: 0; 
         }
 
         * {
@@ -24,10 +24,10 @@
         
         body { 
             font-family: "JPFont", "Helvetica Neue", Arial, sans-serif; 
-            color: #1e293b; /* 真っ黒ではなく、洗練されたスレートグレー */
+            color: #1e293b; 
             background-color: #ffffff;
             line-height: 1.6;
-            padding: 40px 50px;
+            padding: 50px 60px; /* ★余白を広げてエレガントに */
         }
         
         .page-break { 
@@ -122,8 +122,8 @@
            ========================================= */
         .page-header {
             border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 15px;
-            margin-bottom: 35px;
+            padding-bottom: 20px;
+            margin-bottom: 40px; /* 余白拡大 */
             display: table;
             width: 100%;
         }
@@ -161,15 +161,15 @@
            メッセージセクション（手紙風）
            ========================================= */
         .message-section {
-            margin-bottom: 40px;
+            margin-bottom: 50px; /* 余白拡大 */
             page-break-inside: avoid;
         }
 
         .message-card {
             background-color: #f8fafc;
             border-radius: 12px;
-            padding: 25px 30px;
-            margin-bottom: 20px;
+            padding: 30px 35px; /* 余白拡大 */
+            margin-bottom: 25px;
             border-left: 6px solid #3b82f6;
         }
 
@@ -181,7 +181,7 @@
         .message-title {
             font-size: 13pt;
             font-weight: bold;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
         }
@@ -203,8 +203,8 @@
             font-size: 16pt;
             font-weight: 800;
             color: #0f172a;
-            margin: 40px 0 20px 0;
-            padding-bottom: 10px;
+            margin: 50px 0 30px 0; /* 大きな余白 */
+            padding-bottom: 12px;
             border-bottom: 2px solid #0f172a;
             letter-spacing: 1px;
         }
@@ -213,7 +213,7 @@
             font-size: 13pt;
             font-weight: bold;
             color: #334155;
-            margin: 25px 0 15px 0;
+            margin: 40px 0 20px 0; /* 大きな余白 */
             display: inline-block;
         }
         
@@ -224,53 +224,144 @@
         }
 
         /* =========================================
-           KPI・サマリーカード（モダンな指標表示）
+           ★NEW: ダッシュボード トップレイアウト (左グラフ / 右KPI)
+           PDF出力で崩れない display: table を採用
            ========================================= */
-        .kpi-container {
+        .dashboard-top {
+            display: table;
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 15px 0;
-            margin: 0 -15px 30px -15px;
+            table-layout: fixed;
+            margin-bottom: 40px;
         }
 
-        .kpi-container td {
-            width: 33.33%;
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 20px;
+        .dashboard-col-left {
+            display: table-cell;
+            width: 58%; /* グラフを少し小さく */
+            vertical-align: top;
+            padding-right: 35px; /* 右カラムとの余白 */
+        }
+
+        .dashboard-col-right {
+            display: table-cell;
+            width: 42%;
+            vertical-align: top;
+        }
+
+        /* グラフコンテナ */
+        .chart-container-compact { 
+            background: #ffffff;
+            border-radius: 16px;
             border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            text-align: center;
+        }
+
+        .chart-title {
+            font-size: 11pt;
+            color: #64748b;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-img-compact {
+            max-width: 100%;
+            height: auto;
+            max-height: 300px;
+        }
+
+        /* 縦積みKPIカード */
+        .kpi-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 20px 25px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px; /* カード間の余白 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .kpi-card:last-child {
+            margin-bottom: 0;
         }
 
         .kpi-label {
-            font-size: 9pt;
+            font-size: 9.5pt;
             font-weight: bold;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .kpi-value {
-            font-size: 26pt;
+            font-size: 24pt;
             font-weight: 900;
             color: #0f172a;
             line-height: 1.1;
         }
 
         .kpi-value span {
-            font-size: 12pt;
+            font-size: 11pt;
             font-weight: normal;
             color: #64748b;
             margin-left: 4px;
         }
 
+        .kpi-value.accent {
+            font-size: 18pt; /* 英検用など文字が多い場合 */
+            color: #b45309;
+        }
+
         /* =========================================
-           データテーブル（モダンでクリーンな罫線）
+           ★NEW: 教材別進捗 3列カードレイアウト
+           ========================================= */
+        .textbook-grid {
+            width: 100%;
+            overflow: hidden; /* floatのクリア用 */
+            padding-top: 10px;
+        }
+
+        .textbook-card {
+            float: left;
+            width: 31%; /* 3列配置 */
+            margin-right: 3.5%;
+            margin-bottom: 25px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            page-break-inside: avoid;
+        }
+
+        /* 3の倍数番目は右マージンを無くす */
+        .textbook-card:nth-child(3n) {
+            margin-right: 0;
+        }
+
+        .textbook-title {
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 12px 0;
+            line-height: 1.4;
+            height: 2.8em; /* 2行分で高さを揃える */
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        /* =========================================
+           データテーブル（その他のセクション用）
            ========================================= */
         table.modern-table { 
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             font-size: 10.5pt;
         }
         
@@ -279,7 +370,7 @@
             color: #475569;
             font-weight: bold;
             text-align: left;
-            padding: 12px 15px;
+            padding: 15px;
             border-bottom: 2px solid #cbd5e1;
             text-transform: uppercase;
             font-size: 9pt;
@@ -287,7 +378,7 @@
         }
         
         table.modern-table td { 
-            padding: 14px 15px;
+            padding: 16px 15px;
             color: #334155;
             border-bottom: 1px solid #e2e8f0;
             vertical-align: middle;
@@ -301,40 +392,22 @@
             text-align: center;
             color: #94a3b8;
             font-style: italic;
-            padding: 30px !important;
+            padding: 40px !important;
             background-color: #f8fafc;
+            border-radius: 12px;
+            border: 1px dashed #cbd5e1 !important;
         }
 
         /* =========================================
-           プログレスバー
+           プログレスバー（細くスマートに）
            ========================================= */
-        .progress-wrapper {
-            width: 100%;
-            display: table;
-        }
-        
-        .progress-bar-cell {
-            display: table-cell;
-            vertical-align: middle;
-            width: 80%;
-            padding-right: 15px;
-        }
-
-        .progress-pct-cell {
-            display: table-cell;
-            vertical-align: middle;
-            width: 20%;
-            text-align: right;
-            font-weight: bold;
-            color: #0f172a;
-        }
-
         .progress-bg {
             width: 100%;
-            height: 10px;
+            height: 6px; /* スタイリッシュに細く */
             background-color: #e2e8f0;
             border-radius: 999px;
             overflow: hidden;
+            margin-bottom: 5px;
         }
         
         .progress-fill {
@@ -343,20 +416,26 @@
             border-radius: 999px;
         }
 
+        .progress-value-text {
+            text-align: right;
+            font-size: 9pt;
+            font-weight: bold;
+            color: #64748b;
+        }
+
         /* =========================================
-           科目バッジ（パステル調）
+           科目バッジ
            ========================================= */
         .badge {
             display: inline-block;
             padding: 4px 12px;
-            border-radius: 999px;
+            border-radius: 6px;
             font-size: 8.5pt;
             font-weight: bold;
             text-align: center;
             letter-spacing: 0.5px;
         }
         
-        /* Jinja2で動的にクラスを当てる用の定義 */
         .badge-english { background-color: #ffe4e6; color: #e11d48; }
         .badge-math { background-color: #e0f2fe; color: #0284c7; }
         .badge-japanese { background-color: #dcfce7; color: #16a34a; }
@@ -365,40 +444,28 @@
         .badge-default { background-color: #f1f5f9; color: #475569; }
 
         /* =========================================
-           グラフ領域
+           その他のグラフコンテナ (カレンダー等)
            ========================================= */
-        .chart-container { 
+        .chart-container-full { 
             text-align: center;
-            margin: 25px 0;
-            padding: 20px;
+            margin: 30px 0;
+            padding: 30px;
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 16px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        
-        .chart-title {
-            font-size: 11pt;
-            color: #64748b;
-            margin-bottom: 15px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .chart-img { 
+
+        .chart-img-full { 
             max-width: 100%;
             height: auto;
-            max-height: 350px;
+            max-height: 400px;
         }
 
-        /* =========================================
-           その他ユーティリティ
-           ========================================= */
         .text-bold { font-weight: bold; color: #0f172a; }
         .text-accent { color: #2563eb; font-weight: bold; }
         .report-footer {
-            margin-top: 50px;
+            margin-top: 60px;
             text-align: center;
             font-size: 8.5pt;
             color: #94a3b8;
@@ -469,61 +536,66 @@
     {% if "dashboard" in sections %}
     <div class="section-title">学習ダッシュボード</div>
     
-    <table class="kpi-container">
-        <tr>
-            <td>
+    <div class="dashboard-top">
+        
+        <div class="dashboard-col-left">
+            {% if images.dashboard %}
+            <div class="chart-container-compact">
+                <div class="chart-title">Study Progress Analytics</div>
+                <img src="{{ images.dashboard }}" class="chart-img-compact" />
+            </div>
+            {% else %}
+            <div class="chart-container-compact" style="padding: 50px;">
+                <p style="color: #94a3b8;">グラフデータがありません</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="dashboard-col-right">
+            <div class="kpi-card" style="border-left: 4px solid #3b82f6;">
                 <div class="kpi-label">総学習時間 (推定)</div>
                 <div class="kpi-value">{{ dashboard.total_study_time }}<span>時間</span></div>
-            </td>
-            <td>
+            </div>
+
+            <div class="kpi-card" style="border-left: 4px solid #10b981;">
                 <div class="kpi-label">全体カリキュラム進捗率</div>
                 <div class="kpi-value">{{ dashboard.total_progress_pct }}<span>%</span></div>
-            </td>
-            <td>
-                <div class="kpi-label">最新 英検ステータス</div>
-                <div class="kpi-value" style="font-size: 18pt; margin-top: 8px;">{{ eiken_str }}</div>
-            </td>
-        </tr>
-    </table>
+            </div>
 
-    {% if images.dashboard %}
-    <div class="chart-container">
-        <div class="chart-title">Study Progress Analytics</div>
-        <img src="{{ images.dashboard }}" class="chart-img" />
+            <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
+                <div class="kpi-label">最新 英検ステータス</div>
+                <div class="kpi-value accent">{{ eiken_str }}</div>
+            </div>
+        </div>
     </div>
+
+    <div class="subsection-title" style="margin-top: 20px;">教材別 進捗詳細</div>
+    
+    {% if dashboard.progress_list %}
+    <div class="textbook-grid">
+        {% for item in dashboard.progress_list %}
+        <div class="textbook-card">
+            <div>
+                <span class="badge {{ subject_colors.get(item.subject, 'badge-default') }}">{{ item.subject }}</span>
+            </div>
+            
+            <div class="textbook-title" title="{{ item.book_name }}">
+                {{ item.book_name }}
+            </div>
+            
+            <div class="progress-bg">
+                <div class="progress-fill" style="width: {{ item.pct }}%;"></div>
+            </div>
+            <div class="progress-value-text">{{ item.pct }}%</div>
+        </div>
+        {% endfor %}
+        <div style="clear: both;"></div> </div>
+    {% else %}
+    <table style="width: 100%;">
+        <tr><td class="no-data">登録されている教材データがありません</td></tr>
+    </table>
     {% endif %}
 
-    <div class="subsection-title">教材別 進捗詳細</div>
-    <table class="modern-table">
-        <thead>
-            <tr>
-                <th style="width: 15%;">科目</th>
-                <th style="width: 45%;">使用教材・参考書名</th>
-                <th style="width: 40%;">進捗状況</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in dashboard.progress_list %}
-            <tr>
-                <td><span class="badge {{ subject_colors.get(item.subject, 'badge-default') }}">{{ item.subject }}</span></td>
-                <td class="text-bold">{{ item.book_name }}</td>
-                <td>
-                    <div class="progress-wrapper">
-                        <div class="progress-bar-cell">
-                            <div class="progress-bg">
-                                <div class="progress-fill" style="width: {{ item.pct }}%;"></div>
-                            </div>
-                        </div>
-                        <div class="progress-pct-cell">{{ item.pct }}%</div>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-            {% if not dashboard.progress_list %}
-            <tr><td colspan="3" class="no-data">登録されている教材データがありません</td></tr>
-            {% endif %}
-        </tbody>
-    </table>
     {% endif %}
 
     {% if "calendar" in sections %}
@@ -531,9 +603,9 @@
     <div class="section-title">入試日程カレンダー</div>
     
     {% if images.calendar %}
-    <div class="chart-container">
+    <div class="chart-container-full">
         <div class="chart-title">Exam Schedule</div>
-        <img src="{{ images.calendar }}" class="chart-img" />
+        <img src="{{ images.calendar }}" class="chart-img-full" />
     </div>
     {% endif %}
 
@@ -568,9 +640,9 @@
     <div class="section-title">模試成績推移</div>
     
     {% if images.mock_exams %}
-    <div class="chart-container">
+    <div class="chart-container-full">
         <div class="chart-title">Mock Exam Trends</div>
-        <img src="{{ images.mock_exams }}" class="chart-img" />
+        <img src="{{ images.mock_exams }}" class="chart-img-full" />
     </div>
     {% endif %}
 
@@ -605,9 +677,9 @@
     <div class="section-title">過去問演習記録</div>
     
     {% if images.past_exams %}
-    <div class="chart-container">
+    <div class="chart-container-full">
         <div class="chart-title">Past Exam Accuracy</div>
-        <img src="{{ images.past_exams }}" class="chart-img" />
+        <img src="{{ images.past_exams }}" class="chart-img-full" />
     </div>
     {% endif %}
 
