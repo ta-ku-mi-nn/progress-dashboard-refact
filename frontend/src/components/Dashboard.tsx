@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2 } from 'lucide-react';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2, ChevronDown, Search } from 'lucide-react';
 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
@@ -19,6 +19,7 @@ import PrintSettingsDialog from './common/PrintSettingsDialog';
 interface Student {
   id: number;
   name: string;
+  grade?: string;
 }
 
 interface DashboardData {
@@ -56,6 +57,26 @@ export default function Dashboard() {
     date: "-"
   });
 
+  const GRADE_ORDER = ["中1", "中2", "中3", "高1", "高2", "高3", "既卒", "退塾済"];
+
+  const [isStudentSelectOpen, setIsStudentSelectOpen] = useState(false);
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const selectContainerRef = useRef<HTMLDivElement>(null);
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectContainerRef.current && !selectContainerRef.current.contains(event.target as Node)) {
+        setIsStudentSelectOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // 1. 生徒一覧取得 & 初期選択
   useEffect(() => {
     const init = async () => {
@@ -67,6 +88,14 @@ export default function Dashboard() {
           return;
         }
         const res = await api.get('/students');
+
+        let fetchedStudents = res.data.filter((s: Student) => s.grade !== "退塾済");
+        fetchedStudents.sort((a: Student, b: Student) => {
+          const indexA = GRADE_ORDER.indexOf(a.grade || "");
+          const indexB = GRADE_ORDER.indexOf(b.grade || "");
+          return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+        });
+
         setStudents(res.data);
         if (res.data.length > 0) setSelectedStudentId(res.data[0].id);
       } catch (e) {
@@ -150,14 +179,65 @@ export default function Dashboard() {
       <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
         <h2 className="text-2xl font-bold tracking-tight">学習ダッシュボード</h2>
         <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* ★修正: 検索機能付きのカスタムドロップダウン */}
           {students.length > 0 && (
-            <div className="w-full md:w-64">
-              <Select value={String(selectedStudentId)} onValueChange={(val) => setSelectedStudentId(Number(val))}>
-                <SelectTrigger><SelectValue placeholder="生徒を選択" /></SelectTrigger>
-                <SelectContent>
-                  {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="relative w-full md:w-64" ref={selectContainerRef}>
+              {/* フィールド部分 */}
+              <div 
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-gray-50"
+                onClick={() => {
+                  setIsStudentSelectOpen(!isStudentSelectOpen);
+                  if (!isStudentSelectOpen) setStudentSearchTerm(""); // 開くときに検索文字をリセット
+                }}
+              >
+                <span className="truncate">
+                  {selectedStudent 
+                    ? `${selectedStudent.name} ${selectedStudent.grade ? `(${selectedStudent.grade})` : ""}` 
+                    : "生徒を選択..."}
+                </span>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </div>
+
+              {/* 開いたときのリスト部分 */}
+              {isStudentSelectOpen && (
+                <div className="absolute z-50 mt-1 max-h-80 w-full overflow-hidden rounded-md border bg-white shadow-md flex flex-col">
+                  {/* 検索インプット（ドロップダウン内部） */}
+                  <div className="p-2 border-b bg-gray-50/50">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input 
+                        autoFocus
+                        placeholder="生徒名で絞り込み..." 
+                        value={studentSearchTerm}
+                        onChange={(e) => setStudentSearchTerm(e.target.value)}
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                  </div>
+                  {/* リスト本体 */}
+                  <div className="overflow-y-auto p-1 max-h-60">
+                    {filteredStudents.length > 0 ? (
+                      filteredStudents.map((s) => (
+                        <div 
+                          key={s.id}
+                          className={`flex w-full cursor-pointer select-none items-center rounded-sm py-2 px-2 text-sm outline-none hover:bg-gray-100 ${selectedStudentId === s.id ? 'bg-blue-50 text-blue-900 font-medium' : ''}`}
+                          onClick={() => {
+                            setSelectedStudentId(s.id);
+                            setIsStudentSelectOpen(false);
+                            setStudentSearchTerm(""); // 選択したら検索文字をリセット
+                          }}
+                        >
+                          {s.name} <span className="ml-2 text-gray-500 text-xs">{s.grade}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-6 text-center text-sm text-gray-500">
+                        該当する生徒がいません
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           

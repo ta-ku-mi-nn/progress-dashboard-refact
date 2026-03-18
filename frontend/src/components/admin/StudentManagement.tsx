@@ -109,7 +109,15 @@ export default function StudentManagement() {
     const filteredStudents = students.filter(s => 
         (s.name && s.name.includes(searchTerm)) || 
         (s.school && s.school.includes(searchTerm))
-    );
+    ).sort((a, b) => {
+        // 学年の順序を GRADE_OPTIONS に基づいて取得
+        const indexA = GRADE_OPTIONS.indexOf(a.grade);
+        const indexB = GRADE_OPTIONS.indexOf(b.grade);
+        // 設定されていない、または不正な学年の場合は最後に回す
+        const orderA = indexA === -1 ? 99 : indexA;
+        const orderB = indexB === -1 ? 99 : indexB;
+        return orderA - orderB;
+    });
 
     // 役割ごとに講師をフィルタリング
     const mainInstructors = instructors.filter(i => i.role === 'admin');

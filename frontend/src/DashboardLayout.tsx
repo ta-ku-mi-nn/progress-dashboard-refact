@@ -28,7 +28,7 @@ export default function DashboardLayout() {
         { name: 'ダッシュボード', path: '/', icon: Home },
         { name: '過去問/模試/入試日程', path: '/past-exam', icon: BookOpen },
         { name: 'ルート表', path: '/root-table', icon: Map }, 
-        { name: '統計', path: '/statistics', icon: BarChart2 },
+        // { name: '統計', path: '/statistics', icon: BarChart2 },
         { name: 'バグ報告/要望', path: '/bug-report', icon: MessagesSquare },
         { name: '更新履歴', path: '/changelog', icon: ScrollText },
     ];
