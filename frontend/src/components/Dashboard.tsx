@@ -96,8 +96,8 @@ export default function Dashboard() {
           return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
         });
 
-        setStudents(res.data);
-        if (res.data.length > 0) setSelectedStudentId(res.data[0].id);
+        setStudents(fetchedStudents);
+        if (fetchedStudents.length > 0) setSelectedStudentId(fetchedStudents[0].id);
       } catch (e) {
         console.error(e);
       } finally {
