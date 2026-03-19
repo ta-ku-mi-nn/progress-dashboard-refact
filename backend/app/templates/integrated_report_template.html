@@ -1,589 +1,303 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8"/>
+    <title>Academic Curator - Learning Progress Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <style>
         /* =========================================
-           ベース設定（PDFエンジンバグ回避）
+           PDF生成（xhtml2pdf）用 日本語フォント設定
            ========================================= */
         @font-face {
             font-family: "JPFont";
             src: url("{{ font_path }}");
         }
-        
-        @page {
-            size: A4;
-            margin: 0; /* エンジンによっては無視されるので0に */
-        }
 
+        /* CSS Reset & A4 Setup */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+        body {
+            background-color: #ffffff; /* PDFでは背景を白に固定 */
+            font-family: "Plus Jakarta Sans", "Noto Sans JP", "JPFont", sans-serif;
+            color: #191c1e;
+        }
+        .page {
+            width: 100%;
+            padding: 15mm 20mm; /* PDFでの余白 */
+        }
+        .page-break { page-break-after: always; }
+
+        /* Legacy Table Layout Engine */
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+        }
+        td, th {
+            vertical-align: top;
+        }
+
+        /* Typography & Colors */
+        .text-navy { color: #031635; }
+        .text-amber { color: #855300; }
+        .text-gray { color: #44474e; }
         
-        body { 
-            font-family: "JPFont", "Helvetica Neue", Arial, sans-serif; 
-            color: #1e293b; 
+        /* Component Styles */
+        .card {
             background-color: #ffffff;
-            line-height: 1.6;
-            /* bodyのpaddingは無視されることが多いので0にする */
-            margin: 0;
-            padding: 0;
+            border: 1px solid #e0e3e5;
+            border-radius: 6px;
+            padding: 16px;
         }
-
-        /* ★強制的に余白を作るためのラッパー */
-        .pdf-wrapper {
-            padding: 15mm 20mm; /* ここで上下左右の余白を強制確保 */
-            width: 100%;
-        }
-        
-        .page-break { 
-            page-break-before: always; 
-        }
-
-        /* =========================================
-           表紙（カバーページ）デザイン
-           ========================================= */
-        .cover-page {
-            height: 800px; /* xhtml2pdfが理解しやすい絶対値に変更 */
-            width: 100%;
-            text-align: center;
-            padding-top: 200px;
-            page-break-after: always;
-        }
-
-        .cover-logo-area {
-            margin-bottom: 40px;
-            color: #94a3b8;
-            letter-spacing: 2px;
-            font-size: 14pt;
-        }
-
-        .cover-title {
-            font-size: 32pt;
-            font-weight: 900;
-            color: #0f172a;
-            margin-bottom: 10px;
-            letter-spacing: 2px;
-        }
-
-        .cover-subtitle {
-            font-size: 14pt;
-            color: #64748b;
-            margin-bottom: 60px;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-        }
-
-        .cover-student-box {
-            margin: 0 auto 50px auto;
-            padding: 20px 0;
-            border-bottom: 3px solid #cbd5e1;
-            display: inline-block;
-            min-width: 300px;
-        }
-
-        .cover-student-name {
-            font-size: 26pt;
-            font-weight: bold;
-            color: #1e293b;
-            letter-spacing: 2px;
-        }
-
-        .cover-student-honorific {
-            font-size: 14pt;
-            color: #64748b;
-            margin-left: 10px;
-        }
-
-        .cover-target-box {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            padding: 25px 50px;
-            border-radius: 16px;
-            display: inline-block;
-            border: 1px solid #fde68a;
-        }
-
-        .cover-target-label {
-            font-size: 11pt;
-            color: #b45309;
-            font-weight: bold;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-        }
-
-        .cover-target-univ {
-            font-size: 18pt;
-            font-weight: 900;
-            color: #92400e;
-        }
-
-        /* =========================================
-           通常ページヘッダー (テーブルレイアウト)
-           ========================================= */
-        .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-bottom: 2px solid #e2e8f0;
-            margin-bottom: 30px;
-        }
-        
-        .header-table td {
-            padding-bottom: 15px;
-            vertical-align: bottom;
-        }
-
-        .header-doc-title {
-            font-size: 16pt;
-            font-weight: 800;
-            color: #0f172a;
-        }
-
-        .header-meta-info {
-            font-size: 10pt;
-            color: #64748b;
-            text-align: right;
-        }
-
-        .header-meta-info strong {
-            color: #0f172a;
-            font-size: 11pt;
-            margin-left: 5px;
-        }
-
-        /* =========================================
-           メッセージセクション
-           ========================================= */
-        .message-section {
-            margin-bottom: 40px; 
-            page-break-inside: avoid;
-        }
-
-        .message-card {
-            background-color: #f8fafc;
-            border-radius: 12px;
-            padding: 20px 25px; 
-            margin-bottom: 15px;
-            border-left: 6px solid #3b82f6;
-        }
-
-        .message-card.action {
-            background-color: #fdfaf4;
-            border-left: 6px solid #f59e0b;
-        }
-
-        .message-title {
-            font-size: 12pt;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .message-title.primary { color: #1d4ed8; }
-        .message-title.accent { color: #b45309; }
-
-        .message-body {
-            font-size: 10.5pt;
-            color: #334155;
-            line-height: 1.8;
-            white-space: pre-wrap;
-        }
-
-        /* =========================================
-           セクション見出し
-           ========================================= */
-        .section-title {
-            font-size: 15pt;
-            font-weight: 800;
-            color: #0f172a;
-            margin: 35px 0 20px 0; 
-            padding-bottom: 8px;
-            border-bottom: 2px solid #0f172a;
-        }
-
-        .subsection-title {
-            font-size: 12pt;
-            font-weight: bold;
-            color: #334155;
-            margin: 25px 0 15px 0; 
-        }
-        
-        .subsection-title::before {
-            content: "◆";
-            color: #3b82f6;
-            margin-right: 8px;
-        }
-
-        /* =========================================
-           ★最終兵器: ダッシュボード トップレイアウト (完全テーブル化)
-           ========================================= */
-        .dashboard-layout-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            margin-bottom: 30px;
-        }
-
-        .dashboard-layout-table td {
-            vertical-align: top;
-        }
-
-        /* 左カラム(グラフ) */
-        .td-left-col {
-            width: 55%;
-            padding-right: 25px; /* ここで列間の隙間を作る */
-        }
-
-        /* 右カラム(KPI) */
-        .td-right-col {
-            width: 45%;
-        }
-
-        .chart-container-compact { 
-            background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .chart-title {
-            font-size: 10pt;
-            color: #64748b;
-            margin-bottom: 12px;
-            font-weight: bold;
-        }
-
-        .chart-img-compact {
-            max-width: 100%;
-            height: auto;
-            max-height: 280px;
-        }
-
-        /* 縦積みKPIカード */
-        .kpi-card {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 16px 20px;
-            border: 1px solid #e2e8f0;
-            margin-bottom: 12px; 
-        }
-
-        .kpi-label {
-            font-size: 9pt;
-            font-weight: bold;
-            color: #64748b;
-            margin-bottom: 5px;
-        }
-
-        .kpi-value {
-            font-size: 20pt;
-            font-weight: 900;
-            color: #0f172a;
-            line-height: 1.1;
-        }
-
-        .kpi-value span {
-            font-size: 10pt;
-            font-weight: normal;
-            color: #64748b;
-            margin-left: 4px;
-        }
-
-        .kpi-value.accent {
-            font-size: 15pt; 
-            color: #b45309;
-        }
-
-        /* =========================================
-           ★最終兵器: 教材別進捗 3列カード (完全テーブル化)
-           ========================================= */
-        .grid-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 12px;
-            /* calc() とマイナスマージンはxhtml2pdfが落ちるので削除 */
-        }
-
-        .grid-table td {
-            width: 33%; /* 33.33%ではなく少し余裕を持たせる */
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            /* xhtml2pdfはtdのborder-radiusが効かないことがあるため削除 */
-            padding: 15px;
-            vertical-align: top;
-        }
-
-        /* データがない空セルのスタイル */
-        .grid-table td.empty-cell {
-            border: none;
-            background: transparent;
-        }
-
-        .textbook-title {
-            font-size: 9pt;
-            font-weight: bold;
-            color: #0f172a;
-            margin: 10px 0;
-            line-height: 1.4;
-            height: 2.8em; 
-            overflow: hidden;
-        }
-
-        /* =========================================
-           データテーブル
-           ========================================= */
-        table.modern-table { 
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            font-size: 10pt;
-        }
-        
-        table.modern-table th { 
-            background-color: #f1f5f9;
-            color: #475569;
-            font-weight: bold;
-            text-align: left;
-            padding: 12px;
-            border-bottom: 2px solid #cbd5e1;
-            font-size: 8.5pt;
-        }
-        
-        table.modern-table td { 
-            padding: 12px;
-            color: #334155;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: middle;
-        }
-
-        .no-data {
-            text-align: center;
-            color: #94a3b8;
-            font-style: italic;
-            padding: 30px !important;
-            background-color: #f8fafc;
-            border-radius: 8px;
-            border: 1px dashed #cbd5e1 !important;
-        }
-
-        /* =========================================
-           プログレスバー
-           ========================================= */
-        .progress-bg {
-            width: 100%;
-            height: 6px; 
-            background-color: #e2e8f0;
-            border-radius: 999px;
-            margin-bottom: 4px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6 0%, #2dd4bf 100%);
-            border-radius: 999px;
-        }
-
-        .progress-value-text {
-            text-align: right;
-            font-size: 8.5pt;
-            font-weight: bold;
-            color: #64748b;
-        }
-
-        /* =========================================
-           科目バッジ
-           ========================================= */
         .badge {
             display: inline-block;
             padding: 3px 10px;
-            border-radius: 6px;
-            font-size: 8pt;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .progress-track {
+            background-color: #e6e8ea;
+            height: 6px;
+            border-radius: 3px;
+            width: 100%;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .progress-fill {
+            height: 6px;
+            background: linear-gradient(90deg, #031635 0%, #3b82f6 100%);
+        }
+
+        /* Specific Table Margins */
+        .section-margin {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            margin-bottom: 12px; 
+            font-size: 15px; 
+            font-weight: 800; 
+            color: #031635;
+            border-left: 4px solid #031635;
+            padding-left: 8px;
+        }
+
+        /* Data Tables */
+        .data-table {
+            width: 100%; 
+            border: 1px solid #c5c6cf; 
+            border-radius: 6px; 
+        }
+        .data-table th {
+            background-color: #1a2b4b; 
+            color: #ffffff;
+            padding: 12px; 
+            text-align: left; 
+            font-size: 11px;
             font-weight: bold;
         }
-        
-        .badge-english { background-color: #ffe4e6; color: #e11d48; }
-        .badge-math { background-color: #e0f2fe; color: #0284c7; }
-        .badge-japanese { background-color: #dcfce7; color: #16a34a; }
-        .badge-science { background-color: #fef3c7; color: #d97706; }
-        .badge-social { background-color: #f3e8ff; color: #9333ea; }
-        .badge-default { background-color: #f1f5f9; color: #475569; }
-
-        /* =========================================
-           その他のグラフコンテナ
-           ========================================= */
-        .chart-container-full { 
-            text-align: center;
-            margin: 25px 0;
-            padding: 25px;
-            background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
+        .data-table td {
+            padding: 12px; 
+            font-size: 12px;
+            border-bottom: 1px solid #eceef0;
+            background-color: #ffffff;
         }
-
-        .chart-img-full { 
-            max-width: 100%;
-            height: auto;
-            max-height: 380px;
-        }
-
-        .text-bold { font-weight: bold; color: #0f172a; }
-        .text-accent { color: #2563eb; font-weight: bold; }
-        .report-footer {
-            margin-top: 50px;
-            text-align: center;
-            font-size: 8pt;
-            color: #94a3b8;
+        .data-table tr:nth-child(even) td {
+            background-color: #f7f9fb;
         }
     </style>
 </head>
 <body>
 
-    <div class="pdf-wrapper">
+    {% set badge_bg = {
+        '英語': '#ffddb1', '数学': '#d8e2ff', '国語': '#dcfce7',
+        '物理': '#e0e3e5', '化学': '#fef3c7', '生物': '#fef3c7',
+        '日本史': '#f3e8ff', '世界史': '#f3e8ff', '地理': '#f3e8ff'
+    } %}
+    {% set badge_fg = {
+        '英語': '#231400', '数学': '#031635', '国語': '#064e3b',
+        '物理': '#191c1e', '化学': '#78350f', '生物': '#78350f',
+        '日本史': '#581c87', '世界史': '#581c87', '地理': '#581c87'
+    } %}
 
-        {% set subject_colors = {
-            '英語': 'badge-english', 'English': 'badge-english',
-            '数学': 'badge-math', 'Math': 'badge-math', '算数': 'badge-math',
-            '国語': 'badge-japanese', '現代文': 'badge-japanese', '古文': 'badge-japanese', '漢文': 'badge-japanese',
-            '物理': 'badge-science', '化学': 'badge-science', '生物': 'badge-science', '理科': 'badge-science',
-            '日本史': 'badge-social', '世界史': 'badge-social', '地理': 'badge-social', '社会': 'badge-social', '政経': 'badge-social'
-        } %}
+    <div class="page page-break">
+        <table style="height: 250mm; width: 100%;">
+            <tr>
+                <td style="vertical-align: middle; text-align: center;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="padding-bottom: 60px;">
+                                <div style="font-size: 14px; letter-spacing: 0.2em; color: #44474e; margin-bottom: 12px; font-weight: 600;">
+                                    {{ date_str }}
+                                </div>
+                                <h1 style="font-size: 42px; color: #031635; font-weight: 800; line-height: 1.3; letter-spacing: 2px;">
+                                    学習進捗 統合レポート
+                                </h1>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px; background-color: #f2f4f6; border-radius: 8px; border: 1px solid #e0e3e5;">
+                                <table style="width: 100%;">
+                                    <tr>
+                                        <td style="text-align: left; padding-bottom: 20px;">
+                                            <div style="font-size: 12px; color: #44474e; font-weight: bold; letter-spacing: 1px;">STUDENT NAME</div>
+                                            <div style="font-size: 28px; font-weight: 700; color: #031635; margin-top: 4px;">{{ student_name }} 様</div>
+                                        </td>
+                                    </tr>
+                                    {% if target_university %}
+                                    <tr>
+                                        <td style="text-align: left;">
+                                            <div style="font-size: 12px; color: #44474e; font-weight: bold; letter-spacing: 1px;">TARGET UNIVERSITY</div>
+                                            <div style="font-size: 18px; font-weight: 600; color: #855300; margin-top: 4px;">第一志望：{{ target_university }}</div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="vertical-align: bottom; text-align: center; padding-bottom: 20px;">
+                    <div style="font-size: 20px; font-weight: 800; color: #031635; letter-spacing: 0.1em;">Progress Dashboard System</div>
+                    <div style="font-size: 10px; color: #44474e; margin-top: 8px;">Generated Automatically. All rights reserved.</div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-        <div class="cover-page">
-            <div class="cover-logo-area">STUDENT PROGRESS REPORT</div>
-            <div class="cover-title">{{ date_str }} 学習進捗レポート</div>
-            <div class="cover-subtitle">Monthly Analytics & Feedback</div>
-            
-            <div class="cover-student-box">
-                <span class="cover-student-name">{{ student_name }}</span>
-                <span class="cover-student-honorific">様</span>
-            </div>
-
-            {% if target_university %}
-            <br>
-            <div class="cover-target-box">
-                <div class="cover-target-label">TARGET UNIVERSITY</div>
-                <div class="cover-target-univ">{{ target_university }} 合格</div>
-            </div>
-            {% endif %}
-        </div>
-
-        <table class="header-table">
+    <div class="page">
+        <table class="section-margin" style="border-bottom: 2px solid #031635; padding-bottom: 12px;">
             <tr>
                 <td>
-                    <div class="header-doc-title">学習進捗 統合レポート</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #031635;">Progress Analytics</div>
                 </td>
                 <td style="text-align: right;">
-                    <div class="header-meta-info">
-                        生徒名: <strong>{{ student_name }}</strong> &nbsp;|&nbsp; 作成日: <strong>{{ date_str }}</strong>
-                    </div>
+                    <div style="font-size: 12px; font-weight: 600; color: #44474e;">作成日: {{ date_str }}</div>
                 </td>
             </tr>
         </table>
 
         {% if teacher_comment or next_action %}
-        <div class="message-section">
-            {% if teacher_comment %}
-            <div class="message-card">
-                <div class="message-title primary">🖋️ 担当講師からの総評</div>
-                <div class="message-body">{{ teacher_comment }}</div>
-            </div>
-            {% endif %}
-
-            {% if next_action %}
-            <div class="message-card action">
-                <div class="message-title accent">🎯 来月の目標・Next Action</div>
-                <div class="message-body">{{ next_action }}</div>
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {% if "dashboard" in sections %}
-        <div class="section-title">学習ダッシュボード</div>
-        
-        <table class="dashboard-layout-table">
+        <table class="section-margin">
             <tr>
-                <td class="td-left-col">
-                    {% if images.dashboard %}
-                    <div class="chart-container-compact">
-                        <div class="chart-title">Study Progress Analytics</div>
-                        <img src="{{ images.dashboard }}" class="chart-img-compact" />
+                <td style="background-color: #fff7ed; border: 1px solid #f59e0b; padding: 20px; border-radius: 8px;">
+                    {% if teacher_comment %}
+                    <div style="margin-bottom: {% if next_action %}15px{% else %}0{% endif %};">
+                        <div style="font-size: 13px; font-weight: 700; color: #855300; margin-bottom: 6px;">📝 先生からのメッセージ</div>
+                        <div style="font-size: 13px; line-height: 1.7; color: #191c1e; white-space: pre-wrap;">{{ teacher_comment }}</div>
                     </div>
-                    {% else %}
-                    <div class="chart-container-compact" style="padding: 40px;">
-                        <p style="color: #94a3b8;">グラフデータがありません</p>
+                    {% endif %}
+                    
+                    {% if next_action %}
+                    <div>
+                        <div style="font-size: 13px; font-weight: 700; color: #064e3b; margin-bottom: 6px;">🎯 来月の目標・Next Action</div>
+                        <div style="font-size: 13px; line-height: 1.7; color: #191c1e; white-space: pre-wrap;">{{ next_action }}</div>
                     </div>
                     {% endif %}
                 </td>
+            </tr>
+        </table>
+        {% endif %}
 
-                <td class="td-right-col">
-                    <div class="kpi-card" style="border-left: 4px solid #3b82f6;">
-                        <div class="kpi-label">総学習時間 (推定)</div>
-                        <div class="kpi-value">{{ dashboard.total_study_time }}<span>時間</span></div>
+        {% if "dashboard" in sections %}
+        
+        <table class="section-margin" style="width: 100%;">
+            <tr>
+                <td style="width: 33.33%; padding-right: 8px;">
+                    <div class="card" style="border-top: 4px solid #031635; background-color: #f7f9fb;">
+                        <div style="font-size: 11px; font-weight: 700; color: #44474e; margin-bottom: 8px;">総学習時間 (推定)</div>
+                        <div style="font-size: 24px; font-weight: 800; color: #031635;">{{ dashboard.total_study_time }}<span style="font-size: 12px; font-weight: 600; margin-left: 2px;">時間</span></div>
                     </div>
-
-                    <div class="kpi-card" style="border-left: 4px solid #10b981;">
-                        <div class="kpi-label">全体カリキュラム進捗率</div>
-                        <div class="kpi-value">{{ dashboard.total_progress_pct }}<span>%</span></div>
+                </td>
+                <td style="width: 33.33%; padding: 0 4px;">
+                    <div class="card" style="border-top: 4px solid #f59e0b; background-color: #f7f9fb;">
+                        <div style="font-size: 11px; font-weight: 700; color: #44474e; margin-bottom: 8px;">カリキュラム進捗率</div>
+                        <div style="font-size: 24px; font-weight: 800; color: #031635;">{{ dashboard.total_progress_pct }}<span style="font-size: 12px; font-weight: 600; margin-left: 2px;">%</span></div>
                     </div>
-
-                    <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
-                        <div class="kpi-label">最新 英検ステータス</div>
-                        <div class="kpi-value accent">{{ eiken_str }}</div>
+                </td>
+                <td style="width: 33.33%; padding-left: 8px;">
+                    <div class="card" style="border-top: 4px solid #031635; background-color: #f7f9fb;">
+                        <div style="font-size: 11px; font-weight: 700; color: #44474e; margin-bottom: 8px;">最新 英検ステータス</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #031635; padding-top: 4px;">{{ eiken_str }}</div>
                     </div>
                 </td>
             </tr>
         </table>
 
-        <div class="subsection-title">教材別 進捗詳細</div>
+        {% if images.dashboard %}
+        <table class="section-margin" style="width: 100%;">
+            <tr>
+                <td class="card" style="text-align: center; background-color: #ffffff;">
+                    <div style="font-size: 11px; font-weight: bold; color: #44474e; margin-bottom: 15px;">【 学習進捗推移 】</div>
+                    <img src="{{ images.dashboard }}" style="max-width: 100%; max-height: 250px;" />
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+
+        <div class="section-title">教材別 進捗状況</div>
         
         {% if dashboard.progress_list %}
-        <table class="grid-table">
+        <table class="section-margin" style="width: 100%;">
             {% for row in dashboard.progress_list | batch(3, None) %}
             <tr>
                 {% for item in row %}
-                    {% if item %}
-                    <td>
-                        <div>
-                            <span class="badge {{ subject_colors.get(item.subject, 'badge-default') }}">{{ item.subject }}</span>
+                    {% if loop.index == 1 %}{% set pad = "padding-right: 8px;" %}
+                    {% elif loop.index == 2 %}{% set pad = "padding: 0 4px;" %}
+                    {% else %}{% set pad = "padding-left: 8px;" %}{% endif %}
+
+                    <td style="width: 33.33%; padding-bottom: 12px; {{ pad }}">
+                        {% if item %}
+                        {% set bg_color = badge_bg.get(item.subject, '#e0e3e5') %}
+                        {% set fg_color = badge_fg.get(item.subject, '#191c1e') %}
+                        <div class="card" style="background-color: #ffffff;">
+                            <div class="badge" style="background-color: {{ bg_color }}; color: {{ fg_color }};">{{ item.subject }}</div>
+                            <div style="font-size: 12px; font-weight: 700; margin-bottom: 10px; height: 2.8em; overflow: hidden; line-height: 1.4;">{{ item.book_name }}</div>
+                            <table style="width: 100%; margin-bottom: 4px;">
+                                <tr>
+                                    <td style="font-size: 9px; font-weight: 600; color: #44474e;">Progress</td>
+                                    <td style="font-size: 11px; font-weight: 700; color: #031635; text-align: right;">{{ item.pct }}%</td>
+                                </tr>
+                            </table>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: {{ item.pct }}%;"></div>
+                            </div>
                         </div>
-                        <div class="textbook-title" title="{{ item.book_name }}">
-                            {{ item.book_name }}
-                        </div>
-                        <div class="progress-bg">
-                            <div class="progress-fill" style="width: {{ item.pct }}%;"></div>
-                        </div>
-                        <div class="progress-value-text">{{ item.pct }}%</div>
+                        {% endif %}
                     </td>
-                    {% else %}
-                    <td class="empty-cell"></td>
-                    {% endif %}
                 {% endfor %}
             </tr>
             {% endfor %}
         </table>
         {% else %}
-        <table style="width: 100%;">
-            <tr><td class="no-data">登録されている教材データがありません</td></tr>
-        </table>
+        <div style="text-align: center; padding: 20px; color: #44474e; font-size: 12px; border: 1px dashed #c5c6cf; margin-bottom: 30px;">
+            登録されている教材データがありません
+        </div>
         {% endif %}
-
         {% endif %}
 
         {% if "calendar" in sections %}
         <div class="page-break"></div>
-        <div class="section-title">入試日程カレンダー</div>
+        <div class="section-title" style="margin-top: 20px;">出願大学・試験日程一覧</div>
         
         {% if images.calendar %}
-        <div class="chart-container-full">
-            <div class="chart-title">Exam Schedule</div>
-            <img src="{{ images.calendar }}" class="chart-img-full" />
-        </div>
+        <table class="section-margin" style="width: 100%;">
+            <tr>
+                <td class="card" style="text-align: center;">
+                    <img src="{{ images.calendar }}" style="max-width: 100%; max-height: 250px;" />
+                </td>
+            </tr>
+        </table>
         {% endif %}
 
-        <div class="subsection-title">出願大学・試験日程一覧</div>
-        <table class="modern-table">
+        <table class="data-table section-margin">
             <thead>
                 <tr>
                     <th style="width: 35%;">志望大学名</th>
@@ -595,14 +309,14 @@
             <tbody>
                 {% for item in calendar %}
                 <tr>
-                    <td class="text-bold">{{ item.univ }}</td>
+                    <td style="font-weight: 700;">{{ item.univ }}</td>
                     <td>{{ item.faculty }}</td>
-                    <td class="text-accent">{{ item.exam_date }}</td>
+                    <td style="color: #855300; font-weight: bold;">{{ item.exam_date }}</td>
                     <td>{{ item.announce_date }}</td>
                 </tr>
                 {% endfor %}
                 {% if not calendar %}
-                <tr><td colspan="4" class="no-data">登録されている日程データがありません</td></tr>
+                <tr><td colspan="4" style="text-align: center; color: #44474e;">日程データがありません</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -610,36 +324,38 @@
 
         {% if "mock_exams" in sections %}
         <div class="page-break"></div>
-        <div class="section-title">模試成績推移</div>
+        <div class="section-title" style="margin-top: 20px;">受験模試・判定結果</div>
         
         {% if images.mock_exams %}
-        <div class="chart-container-full">
-            <div class="chart-title">Mock Exam Trends</div>
-            <img src="{{ images.mock_exams }}" class="chart-img-full" />
-        </div>
+        <table class="section-margin" style="width: 100%;">
+            <tr>
+                <td class="card" style="text-align: center;">
+                    <img src="{{ images.mock_exams }}" style="max-width: 100%; max-height: 250px;" />
+                </td>
+            </tr>
+        </table>
         {% endif %}
 
-        <div class="subsection-title">受験模試・判定結果履歴</div>
-        <table class="modern-table">
+        <table class="data-table section-margin">
             <thead>
                 <tr>
                     <th style="width: 40%;">受験模試名</th>
                     <th style="width: 15%;">受験型</th>
-                    <th style="width: 15%;">総合判定</th>
-                    <th style="width: 30%;">スコア詳細</th>
+                    <th style="width: 15%; text-align: center;">判定</th>
+                    <th style="width: 30%; text-align: right;">スコア詳細</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in mock_exams %}
                 <tr>
-                    <td class="text-bold">{{ item.name }}</td>
-                    <td><span class="badge badge-default">{{ item.type }}</span></td>
-                    <td><span class="badge" style="background-color:#fef08a; color:#854d0e;">{{ item.grade }} 判定</span></td>
-                    <td style="font-size: 9.5pt;">{{ item.score_summary }}</td>
+                    <td style="font-weight: 700;">{{ item.name }}</td>
+                    <td><span class="badge" style="background-color: #e0e3e5; color: #191c1e; margin:0;">{{ item.type }}</span></td>
+                    <td style="text-align: center;"><span style="color: #855300; font-weight: 800; font-size: 14px;">{{ item.grade }}</span></td>
+                    <td style="text-align: right;">{{ item.score_summary }}</td>
                 </tr>
                 {% endfor %}
                 {% if not mock_exams %}
-                <tr><td colspan="4" class="no-data">登録されている模試データがありません</td></tr>
+                <tr><td colspan="4" style="text-align: center; color: #44474e;">模試データがありません</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -647,46 +363,51 @@
 
         {% if "past_exams" in sections %}
         <div class="page-break"></div>
-        <div class="section-title">過去問演習記録</div>
+        <div class="section-title" style="margin-top: 20px;">大学別 過去問実施状況</div>
         
         {% if images.past_exams %}
-        <div class="chart-container-full">
-            <div class="chart-title">Past Exam Accuracy</div>
-            <img src="{{ images.past_exams }}" class="chart-img-full" />
-        </div>
+        <table class="section-margin" style="width: 100%;">
+            <tr>
+                <td class="card" style="text-align: center;">
+                    <img src="{{ images.past_exams }}" style="max-width: 100%; max-height: 250px;" />
+                </td>
+            </tr>
+        </table>
         {% endif %}
 
-        <div class="subsection-title">大学別 過去問実施状況</div>
-        <table class="modern-table">
+        <table class="data-table section-margin">
             <thead>
                 <tr>
                     <th style="width: 15%;">実施日</th>
                     <th style="width: 25%;">大学名</th>
-                    <th style="width: 15%;">学部・年度</th>
-                    <th style="width: 20%;">対象科目</th>
-                    <th style="width: 25%;">正答状況 (正答数/問題数)</th>
+                    <th style="width: 15%;">学部/年度</th>
+                    <th style="width: 15%;">対象科目</th>
+                    <th style="width: 30%; text-align: right;">正答数 / 問題数</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in past_exams %}
                 <tr>
-                    <td style="font-size: 9.5pt;">{{ item.date }}</td>
-                    <td class="text-bold">{{ item.university }}</td>
-                    <td>{{ item.faculty }}<br><span style="font-size:8.5pt; color:#64748b;">{{ item.year }}年度</span></td>
-                    <td><span class="badge {{ subject_colors.get(item.subject, 'badge-default') }}">{{ item.subject }}</span></td>
-                    <td class="text-accent" style="font-size: 11pt;">{{ item.correct_answers }} <span style="font-size: 9pt; color:#94a3b8; font-weight:normal;">/ {{ item.total_questions }}</span></td>
+                    <td>{{ item.date }}</td>
+                    <td style="font-weight: 700;">{{ item.university }}</td>
+                    <td>{{ item.faculty }}<br/><span style="font-size:10px; color:#44474e;">{{ item.year }}年度</span></td>
+                    <td>
+                        {% set bg_color = badge_bg.get(item.subject, '#e0e3e5') %}
+                        {% set fg_color = badge_fg.get(item.subject, '#191c1e') %}
+                        <span class="badge" style="background-color: {{ bg_color }}; color: {{ fg_color }}; margin:0;">{{ item.subject }}</span>
+                    </td>
+                    <td style="text-align: right; color: #031635; font-weight: bold; font-size: 14px;">
+                        {{ item.correct_answers }} <span style="font-size:10px; color:#44474e; font-weight:normal;">/ {{ item.total_questions }}</span>
+                    </td>
                 </tr>
                 {% endfor %}
                 {% if not past_exams %}
-                <tr><td colspan="5" class="no-data">登録されている過去問データがありません</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #44474e;">過去問データがありません</td></tr>
                 {% endif %}
             </tbody>
         </table>
         {% endif %}
 
-        <div class="report-footer">
-            Generated by Progress Dashboard System
-        </div>
-
-    </div> </body>
+    </div>
+</body>
 </html>
