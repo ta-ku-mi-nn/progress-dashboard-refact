@@ -104,7 +104,7 @@ export default function ReportPrintView() {
                 
                 {/* Header */}
                 <header className="bg-gray-50 flex justify-between items-center w-full px-10 py-6 border-b border-gray-200 relative z-10">
-                    <div className="text-2xl font-bold tracking-tight text-blue-900">秀才館 学習塾</div>
+                    <div className="text-2xl font-bold tracking-tight text-blue-900">LearningDB</div>
                     <div className="text-right">
                         <p className="text-gray-500 font-medium text-sm">作成日: <span className="text-gray-900">{today}</span></p>
                     </div>

@@ -61,6 +61,8 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<Login />} />
               
+              <Route path="/print-report/:studentId" element={<ReportPrintView />} />
+              
               {/* 保護されたルート (ログイン必須) */}
               <Route path="/" element={
                 <ProtectedRoute>
@@ -76,8 +78,6 @@ const App: React.FC = () => {
                 <Route path="statistics" element={<Statistics />} />
                 <Route path="bug-report" element={<BugReport />} />
                 <Route path="changelog" element={<Changelog />} />
-
-                <Route path="/print-report/:studentId" element={<ReportPrintView />} />
                 
                 {/* 管理者専用ページ */}
                 <Route path="admin" element={
