@@ -38,10 +38,10 @@ export default function Admin() {
             title: "参考書プリセット管理", icon: Library, description: "一括登録用プリセットの作成", 
             colorClass: "bg-indigo-100 text-indigo-600", component: <PresetManagement /> 
         },
-        { 
-            title: "リリースノート更新", icon: FileText, description: "更新履歴の追加・編集", 
-            colorClass: "bg-pink-100 text-pink-600", component: <ChangelogManagement /> 
-        },
+        // { 
+        //     title: "リリースノート更新", icon: FileText, description: "更新履歴の追加・編集", 
+        //     colorClass: "bg-pink-100 text-pink-600", component: <ChangelogManagement /> 
+        // },
         { 
             title: "模試結果一覧", icon: BarChart2, description: "全生徒の模試結果データを閲覧", 
             colorClass: "bg-cyan-100 text-cyan-600", component: <MockExamList /> 
