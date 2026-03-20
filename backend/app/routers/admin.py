@@ -520,3 +520,4 @@ def delete_student(
         db.delete(student)
         db.commit()
     return {"status": "deleted"}
+
