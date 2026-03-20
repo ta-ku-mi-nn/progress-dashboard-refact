@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   ShieldAlert, Database, KeyRound, 
   Users, HardDrive, AlertTriangle, CheckCircle2,
-  UserCog, UserPlus, Megaphone, FileSearch, FileSpreadsheet
+  UserCog, UserPlus, Megaphone, FileSearch, FileSpreadsheet, FileText
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -20,6 +20,7 @@ import DeveloperAccountManagement from '../components/developer/DeveloperAccount
 import SystemSettingsManagement from '../components/developer/SystemSettingsManagement';
 import AuditLogViewer from '../components/developer/AuditLogViewer';
 import CsvImportManagement from '../components/developer/CsvImportManagement';
+import ChangelogManagement from '../components/admin/ChangelogManagement';
 
 interface SystemInfo {
   db_size_mb: number;
@@ -106,20 +107,27 @@ export default function DeveloperDashboard() {
       colorClass: "bg-amber-100 text-amber-600",
       component: <SystemSettingsManagement /> 
     },
-    { 
-      title: "監査ログ閲覧", 
-      icon: FileSearch, 
-      description: "システム内の操作・変更履歴の追跡", 
-      colorClass: "bg-slate-200 text-slate-700",
-      component: <AuditLogViewer /> 
-    },
+    // { 
+    //   title: "監査ログ閲覧", 
+    //   icon: FileSearch, 
+    //   description: "システム内の操作・変更履歴の追跡", 
+    //   colorClass: "bg-slate-200 text-slate-700",
+    //   component: <AuditLogViewer /> 
+    // },
     { 
       title: "CSV一括インポート", 
       icon: FileSpreadsheet, 
       description: "生徒データや模試成績の一括登録", 
       colorClass: "bg-emerald-100 text-emerald-600",
       component: <CsvImportManagement /> 
-    }
+    },
+    { 
+      title: "リリースノート更新",
+      icon: FileText, 
+      description: "更新履歴の追加・編集", 
+      colorClass: "bg-pink-100 text-pink-600", 
+      component: <ChangelogManagement /> 
+    },
   ];
 
   return (
