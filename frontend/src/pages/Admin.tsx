@@ -14,6 +14,7 @@ import MockExamList from '../components/admin/MockExamList';
 import BackupManagement from '../components/admin/BackupManagement';
 import AuditLogViewer from '../components/developer/AuditLogViewer';
 import StudyTimeVerification from '../components/admin/StudyTimeverification';
+import InactiveUserPopup from '../components/admin/InactiveUserPopup';
 
 export default function Admin() {
     // ★追加: 各機能にポップなテーマカラー(colorClass)を追加！
@@ -58,6 +59,7 @@ export default function Admin() {
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+            <InactiveUserPopup/>
             {/* ★変更: ヘッダー部分を開発者メニュー風のモダンなスタイルに */}
             <div>
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">

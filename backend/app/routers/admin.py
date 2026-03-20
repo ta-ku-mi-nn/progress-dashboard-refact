@@ -521,3 +521,48 @@ def delete_student(
         db.commit()
     return {"status": "deleted"}
 
+@router.get("/admin/inactive-users")
+def get_inactive_users(session: Session = Depends(get_db)):
+    """
+    1ヶ月間進捗更新をしていない講師（User）を検知するAPI
+    """
+    # 30日前の日付を計算
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    
+    # 対象となるユーザー（講師）を取得 ※管理者は除くなどの条件があれば調整してください
+    # 例: users = session.query(User).filter(User.role == "instructor").all()
+    users = session.query(User).all() 
+    
+    inactive_users = []
+    
+    for u in users:
+        # このユーザーが最後に「PROGRESS」系の操作をしたログを探す
+        last_log = session.query(AuditLog).filter(
+            AuditLog.user_id == u.id,
+            AuditLog.action.like("%PROGRESS%")
+        ).order_by(desc(AuditLog.id)).first() # created_atがあればそれで降順に
+        
+        # ログが存在し、かつそれが30日以上前の場合
+        if last_log:
+            # ※AuditLogにcreated_atカラムがある前提です。無い場合は実装に合わせて変更してください
+            last_update_date = getattr(last_log, 'created_at', None) 
+            
+            if last_update_date and last_update_date < thirty_days_ago:
+                days_inactive = (datetime.now() - last_update_date).days
+                inactive_users.append({
+                    "user_id": u.id,
+                    "name": getattr(u, 'username', getattr(u, 'name', '不明')),
+                    "last_update": last_update_date.strftime("%Y-%m-%d"),
+                    "days_inactive": days_inactive
+                })
+        else:
+            # そもそも一度も更新していないユーザー（入社直後などを除くロジックが必要かも）
+            # 今回はとりあえずリストに入れます
+            inactive_users.append({
+                "user_id": u.id,
+                "name": getattr(u, 'username', getattr(u, 'name', '不明')),
+                "last_update": "記録なし",
+                "days_inactive": "30+"
+            })
+            
+    return inactive_users
