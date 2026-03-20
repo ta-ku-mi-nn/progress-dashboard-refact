@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert } from 'lucide-react';
 
 // コンポーネントのインポート
 import UserManagement from '../components/admin/UserManagement';
@@ -13,6 +13,7 @@ import ChangelogManagement from '../components/admin/ChangelogManagement';
 import MockExamList from '../components/admin/MockExamList';
 import BackupManagement from '../components/admin/BackupManagement';
 import AuditLogViewer from '../components/developer/AuditLogViewer';
+import StudyTimeVerification from '../components/admin/StudyTimeverification';
 
 export default function Admin() {
     // ★追加: 各機能にポップなテーマカラー(colorClass)を追加！
@@ -48,6 +49,10 @@ export default function Admin() {
         { 
             title: "監査ログ", icon: FileSearch, description: "進捗更新履歴の確認", 
             colorClass: "bg-slate-200 text-slate-700", component: <AuditLogViewer />
+        },
+        { 
+            title: "予定・実績チェック", icon: ClockAlert, description: "学習時間・予定の違和感を検知", 
+            colorClass: "bg-red-100 text-red-600", component: <StudyTimeVerification /> 
         },
     ];
 

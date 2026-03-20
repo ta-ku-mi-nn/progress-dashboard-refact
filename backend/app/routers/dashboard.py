@@ -359,3 +359,71 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     session.delete(progress_item)
     session.commit()
     return {"message": "Deleted successfully"}
+
+@router.get("/admin/study-time-summary")
+def get_study_time_summary(session: Session = Depends(get_db)):
+    """
+    管理者画面用: 全生徒の学習予定時間と実績時間の乖離をチェックするAPI
+    """
+    # 1. 退塾済以外の全生徒を取得
+    students = session.query(Student).filter(Student.grade != "退塾済").all()
+    
+    # 全ての進捗データとマスターデータを一括で取得（N+1問題回避のため）
+    student_ids = [s.id for s in students]
+    all_progress = session.query(Progress).filter(Progress.student_id.in_(student_ids)).all()
+    
+    all_masters = session.query(MasterTextbook).all()
+    master_map = { (m.subject, m.book_name): m for m in all_masters }
+
+    summary_list = []
+
+    for student in students:
+        # この生徒の進捗データだけを抽出
+        my_progress = [p for p in all_progress if p.student_id == student.id]
+        
+        total_planned = 0.0
+        total_actual = 0.0
+        student_dev = getattr(student, "deviation_value", None)
+
+        for item in my_progress:
+            duration = item.duration
+            book_level = item.level
+            
+            # マスターデータからの補完
+            if (duration is None or duration <= 0) and item.subject and item.book_name:
+                master_book = master_map.get((item.subject, item.book_name))
+                if master_book:
+                    duration = master_book.duration
+                    if not book_level:
+                        book_level = master_book.level
+            
+            duration = float(duration or 0.0)
+            
+            # 偏差値による傾斜計算（ダッシュボードと同じロジック）
+            adjusted_duration = get_adjusted_duration(duration, book_level, student_dev)
+
+            # 進捗率の計算
+            ratio = 0.0
+            if (item.total_units or 0) > 0:
+                ratio = min(1.0, (item.completed_units or 0) / item.total_units)
+
+            if adjusted_duration > 0:
+                total_planned += adjusted_duration
+                total_actual += ratio * adjusted_duration
+
+        # 差分の計算（実績 - 予定）
+        diff = total_actual - total_planned
+
+        summary_list.append({
+            "student_id": student.id,
+            "name": student.name,
+            "grade": student.grade or "未設定",
+            "planned_time": round(total_planned, 1),
+            "actual_time": round(total_actual, 1),
+            "diff": round(diff, 1)
+        })
+
+    # 差分の絶対値が大きい順（つまり違和感が大きい順）に並び替えて返す
+    summary_list.sort(key=lambda x: abs(x["diff"]), reverse=True)
+    
+    return summary_list

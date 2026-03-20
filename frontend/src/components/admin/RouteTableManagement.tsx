@@ -51,9 +51,8 @@ export default function RouteTableManagement() {
     }, []);
 
     // 科目リスト生成 (デフォルト + 登録済みから抽出)
-    const defaultSubjects = ["英語", "数学", "国語", "理科", "社会"];
     const existingSubjects = files.map(f => f.subject).filter(Boolean);
-    const uniqueSubjects = Array.from(new Set([...defaultSubjects, ...existingSubjects]));
+    const uniqueSubjects = Array.from(new Set([...existingSubjects]));
 
     // 編集モード開始
     const startEdit = (file: RouteTableItem) => {
