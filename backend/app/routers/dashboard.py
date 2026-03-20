@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import json
 
@@ -427,3 +427,56 @@ def get_study_time_summary(session: Session = Depends(get_db)):
     summary_list.sort(key=lambda x: abs(x["diff"]), reverse=True)
     
     return summary_list
+
+@router.get("/admin/inactive-users")
+def get_inactive_users(session: Session = Depends(get_db)):
+    """
+    管理者用: 1ヶ月間(30日)進捗を更新していない講師(User)を抽出するAPI
+    """
+    # 30日前の日時を計算
+    threshold_date = datetime.now() - timedelta(days=30)
+    
+    # ユーザー一覧を取得（※もしUserモデルに role などの権限カラムがあり、
+    # 管理者をアラートから除外したい場合は filter(User.role != 'admin') などを足してください）
+    users = session.query(User).all()
+    
+    inactive_users = []
+    
+    for u in users:
+        # このユーザーが実行した最新の「進捗関連の操作」ログを取得
+        # action名が "UPDATE_PROGRESS", "ADD_PROGRESS_BATCH" などPROGRESSを含むものを検索
+        last_log = session.query(AuditLog).filter(
+            AuditLog.user_id == u.id,
+            AuditLog.action.like("%PROGRESS%")
+        ).order_by(desc(AuditLog.id)).first()  # ID降順で最新のログを取得
+        
+        user_name = getattr(u, 'username', getattr(u, 'name', f"ユーザー{u.id}"))
+        
+        if last_log:
+            # AuditLogモデルに作成日時のカラム（created_at等）があることを想定
+            last_date = getattr(last_log, 'created_at', None)
+            
+            if last_date and last_date < threshold_date:
+                days_inactive = (datetime.now() - last_date).days
+                inactive_users.append({
+                    "user_id": u.id,
+                    "name": user_name,
+                    "last_update": last_date.strftime("%Y-%m-%d"),
+                    "days_inactive": days_inactive
+                })
+        else:
+            # ログが1件もない（一度も進捗更新をしたことがない）場合
+            inactive_users.append({
+                "user_id": u.id,
+                "name": user_name,
+                "last_update": "記録なし",
+                "days_inactive": "30+"
+            })
+            
+    # 放置日数が多い順に並び替え（「記録なし(30+)」を一番上にする）
+    inactive_users.sort(
+        key=lambda x: 9999 if str(x["days_inactive"]) == "30+" else int(x["days_inactive"]), 
+        reverse=True
+    )
+    
+    return inactive_users
