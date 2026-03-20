@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import ExamManager from '../components/ExamManager';
 import api from '../lib/api';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+// ★ 追加: 新しく作った共通コンポーネントをインポート
+import StudentSelect from '../components/common/StudentSelect';
 
 interface Student {
   id: number;
@@ -20,6 +21,9 @@ const PastExam: React.FC = () => {
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // ★ 追加: 学年のソート順を定義（ダッシュボードと同じ）
+    const GRADE_ORDER = ["中1", "中2", "中3", "高1", "高2", "高3", "既卒", "退塾済"];
+
     // データ取得ロジック
     useEffect(() => {
         const init = async () => {
@@ -35,12 +39,20 @@ const PastExam: React.FC = () => {
 
                 // 2. 講師/管理者の場合 -> 生徒一覧を取得
                 const res = await api.get('/students'); 
-                const studentList = res.data;
-                setStudents(studentList);
+                
+                // ★ 修正: 「退塾済」を除外し、学年順（GRADE_ORDER）にソートする処理を追加
+                let fetchedStudents = res.data.filter((s: Student) => s.grade !== "退塾済");
+                fetchedStudents.sort((a: Student, b: Student) => {
+                    const indexA = GRADE_ORDER.indexOf(a.grade || "");
+                    const indexB = GRADE_ORDER.indexOf(b.grade || "");
+                    return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+                });
+
+                setStudents(fetchedStudents);
 
                 // 初期選択
-                if (studentList.length > 0) {
-                    setSelectedStudentId(studentList[0].id);
+                if (fetchedStudents.length > 0) {
+                    setSelectedStudentId(fetchedStudents[0].id);
                 }
             } catch (e) {
                 console.error("Failed to fetch students", e);
@@ -62,7 +74,7 @@ const PastExam: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center h-full p-8 text-muted-foreground">
                 <p className="text-lg font-semibold text-red-500 mb-2">表示できる生徒がいません</p>
-                <p className="text-sm">
+                <p className="text-sm text-center">
                     担当している生徒が登録されていない可能性があります。<br />
                     管理者にご確認ください。
                 </p>
@@ -71,35 +83,25 @@ const PastExam: React.FC = () => {
     }
 
     return (
-        // ★修正: h-full flex flex-col で画面全体の高さを確保し、縦並びにする
         <div className="h-full w-full flex flex-col p-4 md:p-8 pt-6 gap-4">
             
-            {/* ヘッダーエリア: 高さ固定 (flex-none) */}
+            {/* ヘッダーエリア */}
             <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold tracking-tight">過去問・模試・入試日程管理</h2>
                 
+                {/* ★ 修正: 共通コンポーネント（StudentSelect）に置き換え */}
                 {students.length > 0 && (
                     <div className="w-full md:w-64">
-                        <Select
-                            value={String(selectedStudentId)}
-                            onValueChange={(val) => setSelectedStudentId(Number(val))}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="生徒を選択" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {students.map((s) => (
-                                    <SelectItem key={s.id} value={String(s.id)}>
-                                        {s.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <StudentSelect 
+                            students={students}
+                            selectedStudentId={selectedStudentId}
+                            onSelect={(id) => setSelectedStudentId(id)}
+                        />
                     </div>
                 )}
             </div>
 
-            {/* メイン機能エリア: 残りの高さを全て使う (flex-1) かつ 最小高さ0 (min-h-0) でスクロール制御 */}
+            {/* メイン機能エリア */}
             <div className="flex-1 min-h-0">
                 <ExamManager key={selectedStudentId} studentId={selectedStudentId} />
             </div>
