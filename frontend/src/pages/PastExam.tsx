@@ -50,8 +50,14 @@ const PastExam: React.FC = () => {
 
                 setStudents(fetchedStudents);
 
-                // 初期選択
-                if (fetchedStudents.length > 0) {
+                // ★ 修正: ローカルストレージから前回選択した生徒のIDを取得
+                const cachedId = localStorage.getItem('lastSelectedStudentId');
+                
+                if (cachedId && fetchedStudents.some((s:Student) => s.id === Number(cachedId))) {
+                    // 記憶があった ＆ その生徒が今のリストに存在する場合
+                    setSelectedStudentId(Number(cachedId));
+                } else if (fetchedStudents.length > 0) {
+                    // 記憶がない場合は一番上の生徒を選択
                     setSelectedStudentId(fetchedStudents[0].id);
                 }
             } catch (e) {
@@ -95,7 +101,11 @@ const PastExam: React.FC = () => {
                         <StudentSelect 
                             students={students}
                             selectedStudentId={selectedStudentId}
-                            onSelect={(id) => setSelectedStudentId(id)}
+                            onSelect={(id) => {
+                                setSelectedStudentId(id);
+                                // ★ 追加: 選んだ瞬間にブラウザに記憶させる
+                                localStorage.setItem('lastSelectedStudentId', String(id));
+                            }}
                         />
                     </div>
                 )}

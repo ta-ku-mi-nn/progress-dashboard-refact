@@ -81,7 +81,16 @@ export default function Dashboard() {
         });
 
         setStudents(fetchedStudents);
-        if (fetchedStudents.length > 0) setSelectedStudentId(fetchedStudents[0].id);
+        // ★ 修正: ローカルストレージから前回選択した生徒のIDを取得
+        const cachedId = localStorage.getItem('lastSelectedStudentId');
+        
+        if (cachedId && fetchedStudents.some((s:Student) => s.id === Number(cachedId))) {
+            // 記憶があった ＆ その生徒が今のリストに存在する場合
+            setSelectedStudentId(Number(cachedId));
+        } else if (fetchedStudents.length > 0) {
+            // 記憶がない場合は一番上の生徒を選択
+            setSelectedStudentId(fetchedStudents[0].id);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -165,9 +174,13 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 w-full md:w-auto">
           {students.length > 0 && (
             <StudentSelect 
-               students={students}
-               selectedStudentId={selectedStudentId}
-               onSelect={(id) => setSelectedStudentId(id)}
+                students={students}
+                selectedStudentId={selectedStudentId}
+                onSelect={(id) => {
+                    setSelectedStudentId(id);
+                    // ★ 追加: 選んだ瞬間にブラウザに記憶させる
+                    localStorage.setItem('lastSelectedStudentId', String(id));
+                }}
             />
           )}
           
