@@ -8,8 +8,8 @@
            PDF生成（xhtml2pdf）用 日本語フォント設定
            ========================================= */
         @font-face {
-            font-family: "JPFont";
-            src: url("{{ font_path }}");
+            font-family: 'jpfont';
+            src: url('{{ font_path }}');
         }
 
         /* CSS Reset & A4 Setup */
@@ -20,7 +20,7 @@
         }
         body {
             background-color: #ffffff; /* PDFでは背景を白に固定 */
-            font-family: "JPFont", sans-serif;
+            font-family: "jpfont", sans-serif;
             color: #191c1e;
         }
         .page {
