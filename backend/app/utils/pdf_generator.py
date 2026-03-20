@@ -61,7 +61,7 @@ def create_pdf_from_template(template_name: str, context: dict) -> BytesIO:
     font_path = ensure_japanese_font()
     if font_path:
         # ★修正2: xhtml2pdfが確実に読み込めるように file:/// 形式のURIに変換
-        context["font_path"] = Path(font_path).as_uri()
+        context["font_path"] = font_path
     else:
         context["font_path"] = ""
 
