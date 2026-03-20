@@ -17,6 +17,7 @@ import { SystemProvider, useSystem } from './contexts/SystemContext';
 import SystemBanner from './components/SystemBanner';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
+import ReportPrintView from './pages/ReportPrintView';
 
 // メンテナンスモードのガードコンポーネント
 const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -75,6 +76,8 @@ const App: React.FC = () => {
                 <Route path="statistics" element={<Statistics />} />
                 <Route path="bug-report" element={<BugReport />} />
                 <Route path="changelog" element={<Changelog />} />
+
+                <Route path="/print-report/:studentId" element={<ReportPrintView />} />
                 
                 {/* 管理者専用ページ */}
                 <Route path="admin" element={

@@ -21,61 +21,39 @@ export default function PrintSettingsDialog({ open, onOpenChange, studentId }: P
     const [teacherComment, setTeacherComment] = useState("");
     const [nextAction, setNextAction] = useState("");
 
-    const handlePrint = async () => {
+const handlePrint = async () => {
         if (!studentId) {
             toast.error("対象の生徒が特定できません。");
             return;
         }
 
-        setLoading(true);
         try {
-            const chartImages: Record<string, string> = {};
-
-            // ★グラフの画像化処理
-            if (selected.includes("dashboard")) {
-                // ダッシュボードにあるグラフコンテナを取得
-                const chartElement = document.getElementById('chart-container');
-                if (chartElement) {
-                    try {
-                        // html2canvasでキャプチャ
-                        const canvas = await html2canvas(chartElement, {
-                            scale: 2, // 高解像度
-                            useCORS: true, // 外部画像対策
-                            backgroundColor: '#ffffff', // 背景白
-                            logging: false
-                        });
-                        chartImages['dashboard'] = canvas.toDataURL('image/png');
-                    } catch (err) {
-                        console.warn("Chart capture failed:", err);
-                    }
-                }
+            // URLパラメータ（クエリストリング）を構築
+            const params = new URLSearchParams();
+            
+            // 1. コメントやNext Actionが入力されていればURLに含める
+            if (teacherComment) {
+                params.append('comment', teacherComment);
+            }
+            if (nextAction) {
+                params.append('action', nextAction);
             }
 
-            const payload = {
-                sections: selected,
-                chart_images: chartImages, // 画像データを送信
-                teacher_comment: teacherComment,
-                next_action: nextAction
-            };
+            // 2. 選択されたセクション（ダッシュボード、模試など）を含める
+            if (selected && selected.length > 0) {
+                params.append('sections', selected.join(','));
+            }
 
-            const response = await api.post(
-                `/reports/integrated/${studentId}`, 
-                payload, 
-                { responseType: 'blob' }
-            );
-
-            const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            window.open(pdfUrl, '_blank');
+            // 3. 新しく作成したReactの印刷用ルートを別タブで開く
+            const printUrl = `/print-report/${studentId}?${params.toString()}`;
+            window.open(printUrl, '_blank');
             
+            // ダイアログを閉じる
             onOpenChange(false);
-            toast.success("PDFレポートを生成しました");
 
         } catch (e) {
             console.error(e);
-            toast.error("PDF生成に失敗しました");
-        } finally {
-            setLoading(false);
+            toast.error("レポート画面の表示に失敗しました");
         }
     };
 

@@ -345,3 +345,110 @@ def generate_integrated_report(
         print("PDF Generation Error:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+# backend/app/routers/reports.py の一番下に追加
+
+@router.get("/data/{student_id}")
+def get_report_data_json(
+    student_id: int, 
+    session: Session = Depends(get_db)
+):
+    """
+    フロントエンドでのPDFレンダリング用に、生徒の全レポートデータをJSONで返すAPI
+    """
+    try:
+        # 1. 生徒情報の取得
+        student = session.query(Student).filter(Student.id == student_id).first()
+        if not student:
+            student_fallback = session.query(User).filter(User.id == student_id).first()
+            if student_fallback:
+                student = student_fallback
+            else:
+                raise HTTPException(status_code=404, detail="Student not found")
+
+        student_name = getattr(student, "name", getattr(student, "username", "不明"))
+        
+        # ※もしStudentモデルに第一志望のフィールドがあれば取得する（なければ None）
+        target_university = getattr(student, "target_university", None)
+
+        # 2. ダッシュボード（進捗・学習時間）の取得
+        progress_items = session.query(Progress).filter(Progress.student_id == student_id).all()
+        formatted_items = []
+        total_study_time = 0.0
+        total_progress_pct = 0.0
+        
+        if progress_items:
+            valid_items = [p for p in progress_items if (p.total_units or 0) > 0]
+            if valid_items:
+                ratios = [min(1.0, (p.completed_units or 0) / p.total_units) for p in valid_items]
+                total_progress_pct = (sum(ratios) / len(ratios)) * 100
+            
+            for item in progress_items:
+                pct = 0
+                total = item.total_units or 0
+                completed = item.completed_units or 0
+                if total > 0:
+                    pct = round((completed / total) * 100)
+                    if (item.duration or 0) > 0:
+                         ratio = min(1.0, completed / total)
+                         total_study_time += ratio * item.duration
+                
+                formatted_items.append({
+                    "subject": item.subject or "-",
+                    "book_name": item.book_name,
+                    "pct": pct
+                })
+
+        # 3. 英検ステータスの取得
+        latest_eiken = session.query(EikenResult).filter(EikenResult.student_id == student_id).order_by(desc(EikenResult.exam_date)).first()
+        eiken_str = "未登録"
+        if latest_eiken:
+            eiken_str = latest_eiken.grade
+            if latest_eiken.cse_score:
+                eiken_str += f" / CSE {latest_eiken.cse_score}"
+
+        # 4. 過去問演習記録の取得
+        past_results = session.query(PastExamResult).filter(PastExamResult.student_id == student_id).order_by(desc(PastExamResult.date)).all()
+        formatted_past = []
+        for r in past_results:
+            formatted_past.append({
+                "date": r.date,
+                "university": r.university_name,
+                "faculty": r.faculty_name,
+                "year": r.year,
+                "subject": r.subject,
+                "correct_answers": r.correct_answers or 0,
+                "total_questions": r.total_questions or 0
+            })
+
+        # 5. 模試成績の取得
+        mock_results = session.query(MockExamResult).filter(MockExamResult.student_id == student_id).all()
+        formatted_mock = []
+        for r in mock_results:
+            formatted_mock.append({
+                "name": r.mock_exam_name,
+                "type": r.result_type,
+                "grade": r.grade,
+                "score_summary": f"{r.mock_exam_format}" if hasattr(r, 'mock_exam_format') else "-"
+            })
+
+        # 6. JSONとしてレスポンスを返す
+        return {
+            "student": {
+                "name": student_name,
+                "target_university": target_university
+            },
+            "dashboard": {
+                "total_study_time": round(total_study_time, 1),
+                "total_progress_pct": round(total_progress_pct, 1),
+                "progress_list": formatted_items 
+            },
+            "eiken_str": eiken_str,
+            "past_exams": formatted_past,
+            "mock_exams": formatted_mock
+        }
+
+    except Exception as e:
+        print("Report Data Fetch Error:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
