@@ -83,6 +83,20 @@ export default function ReportPrintView() {
     return (
         <div className="bg-gray-100 min-h-screen font-sans text-gray-800 p-8 print:p-0 print:bg-white">
             
+            <style type="text/css">
+                {`
+                    @media print {
+                        @page {
+                            margin: 0; /* これで上下のURLと日付が消えます */
+                        }
+                        body {
+                            /* 紙の端っこギリギリに印刷されないように、物理的な余白を少しだけ確保 */
+                            padding: 10mm; 
+                        }
+                    }
+                `}
+            </style>
+            
             {/* 画面確認用の戻るボタン＆手動印刷ボタン（印刷時は非表示） */}
             <div className="max-w-[210mm] mx-auto mb-4 flex justify-between items-center print:hidden">
                 <button 
