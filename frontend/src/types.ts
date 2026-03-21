@@ -24,8 +24,6 @@ export interface ProgressItem {
   total_units: number;
 }
 
-// --- 既存のコードの下に追記 ---
-
 export interface Tag {
   id: number;
   name: string;
@@ -36,8 +34,9 @@ export interface TeachingMaterial {
   title: string;
   file_path: string;
   internal_memo?: string;
-  subject?: Tag;
-  detail_tag?: Tag;
+  // ↓ここを複数形（配列）に変更しました
+  subjects?: Tag[];     
+  detail_tags?: Tag[];  
   created_at?: string;
   updated_at?: string;
 }
