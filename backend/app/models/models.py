@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, Date, UniqueConstraint, Text, DateTime, LargeBinary, JSON
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, Date, UniqueConstraint, Text, DateTime, LargeBinary, JSON, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -252,44 +252,48 @@ class StudentReportState(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-# --- 教材管理用モデル ---
+# --- 教材管理用モデル（多対多対応版） ---
+
+# 中間テーブル（教材と科目タグ）
+material_subject_association = Table(
+    'material_subject_association', Base.metadata,
+    Column('material_id', Integer, ForeignKey('teaching_materials.id', ondelete="CASCADE")),
+    Column('subject_id', Integer, ForeignKey('subject_tags.id', ondelete="CASCADE"))
+)
+
+# 中間テーブル（教材と詳細タグ）
+material_detail_association = Table(
+    'material_detail_association', Base.metadata,
+    Column('material_id', Integer, ForeignKey('teaching_materials.id', ondelete="CASCADE")),
+    Column('detail_id', Integer, ForeignKey('detail_tags.id', ondelete="CASCADE"))
+)
 
 class SubjectTag(Base):
-    """科目タグ（英語、数学など）"""
     __tablename__ = "subject_tags"
-
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
-    
-    # リレーション
-    materials = relationship("TeachingMaterial", back_populates="subject")
+    # リレーション変更
+    materials = relationship("TeachingMaterial", secondary=material_subject_association, back_populates="subjects")
 
 class DetailTag(Base):
-    """詳細タグ（長文、単語など）"""
     __tablename__ = "detail_tags"
-
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
-    
-    # リレーション
-    materials = relationship("TeachingMaterial", back_populates="detail_tag")
+    # リレーション変更
+    materials = relationship("TeachingMaterial", secondary=material_detail_association, back_populates="detail_tags")
 
 class TeachingMaterial(Base):
-    """教材データ"""
     __tablename__ = "teaching_materials"
-
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
-    file_path = Column(String, nullable=False)  # サーバー上のPDF保存パス
-    internal_memo = Column(Text, nullable=True) # 内部メモ・指導ポイント
+    file_path = Column(String, nullable=False)
+    internal_memo = Column(Text, nullable=True)
     
-    # 外部キー
-    subject_id = Column(Integer, ForeignKey("subject_tags.id", ondelete="SET NULL"), nullable=True)
-    detail_tag_id = Column(Integer, ForeignKey("detail_tags.id", ondelete="SET NULL"), nullable=True)
+    # ※ここに前回あった subject_id と detail_tag_id のカラムは削除されています
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # リレーション
-    subject = relationship("SubjectTag", back_populates="materials")
-    detail_tag = relationship("DetailTag", back_populates="materials")
+    # リレーション変更（複数形になっています）
+    subjects = relationship("SubjectTag", secondary=material_subject_association, back_populates="materials")
+    detail_tags = relationship("DetailTag", secondary=material_detail_association, back_populates="materials")

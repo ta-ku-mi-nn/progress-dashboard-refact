@@ -279,15 +279,17 @@ class TeachingMaterialUpdate(BaseModel):
     detail_tag_id: Optional[int] = None
     # ※PDFファイルの差し替えは、通常FormDataで受け取るため、ここでは定義しません
 
-class TeachingMaterialResponse(TeachingMaterialBase):
+class TeachingMaterialResponse(BaseModel):
     id: int
-    file_path: str # 必要に応じてフロントでダウンロードリンクを生成するために返す
+    title: str
+    file_path: str
+    internal_memo: Optional[str] = None
     created_at: Optional[Any] = None
     updated_at: Optional[Any] = None
     
-    # 検索結果一覧で「タグの名前」をそのまま表示できるよう、リレーション情報も含めておきます
-    subject: Optional[SubjectTagResponse] = None
-    detail_tag: Optional[DetailTagResponse] = None
+    # ★ここを単体からリスト(List)に変更しました
+    subjects: List[SubjectTagResponse] = []
+    detail_tags: List[DetailTagResponse] = []
 
     class Config:
         from_attributes = True
