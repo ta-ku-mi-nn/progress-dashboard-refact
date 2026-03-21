@@ -207,9 +207,9 @@ const BugReport: React.FC = () => {
   return (
     <div className="h-full w-full p-4 md:p-8 pt-6 flex flex-col gap-4 overflow-hidden">
       <div className="flex-none">
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+        <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <MessageSquare className="w-6 h-6" /> フィードバック
-        </h1>
+        </h2>
       </div>
 
       <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">

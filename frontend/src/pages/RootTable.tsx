@@ -10,12 +10,11 @@ const RootTable: React.FC = () => {
     return (
         <div className="h-full w-full flex flex-col p-4 md:p-8 pt-6 gap-4">
             {/* ヘッダーエリア */}
-            <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <Map className="w-8 h-8 text-blue-600" />
-                <h1 className="text-2xl font-bold tracking-tight">学習ルート表</h1>
-                {/* 生徒選択プルダウンを削除 */}
+            <div className="flex-none">
+                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Map className="w-6 h-6" /> ルート表
+                </h2>
             </div>
-
             {/* メイン機能エリア */}
             <div className="flex-1 min-h-0">
                 {/* studentIdは必須ならダミーか自身のIDを渡す */}
