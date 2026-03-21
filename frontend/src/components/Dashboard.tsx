@@ -170,8 +170,11 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6 h-full p-1">
       {/* ヘッダーエリア */}
       <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-        <House className="w-8 h-8 text-blue-600" />
-        <h1 className="text-2xl font-bold tracking-tight">学習ダッシュボード</h1>
+        <div className="flex-none">
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <House className="w-6 h-6" /> 学習ダッシュボード
+          </h2>
+        </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
           {students.length > 0 && (
             <StudentSelect 
