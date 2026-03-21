@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert, Files } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert, Files, Settings } from 'lucide-react';
 
 // コンポーネントのインポート
 import UserManagement from '../components/admin/UserManagement';
@@ -66,11 +66,10 @@ export default function Admin() {
         <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
             <InactiveUserPopup/>
             {/* ★変更: ヘッダー部分を開発者メニュー風のモダンなスタイルに */}
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                    <Component className="w-8 h-8 text-blue-600" />
-                    管理者コンソール
-                </h1>
+            <div className="flex-none">
+                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Settings className="w-6 h-6" /> 管理者メニュー
+                </h2>
             </div>
             
             {/* ★変更: グリッドレイアウトとカードデザインをポップな中央揃えに */}

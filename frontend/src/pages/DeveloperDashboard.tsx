@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  ShieldAlert, Database, KeyRound, 
+  ShieldAlert, Database, KeyRound, Wrench,
   Users, HardDrive, AlertTriangle, CheckCircle2,
   UserCog, UserPlus, Megaphone, FileSearch, FileSpreadsheet, FileText, Settings
 } from 'lucide-react';
@@ -135,7 +135,7 @@ export default function DeveloperDashboard() {
       {/* ヘッダー部分 */}
       <div className="flex-none">
         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Settings className="w-6 h-6" /> 開発者メニュー
+          <Wrench className="w-6 h-6" /> 開発者メニュー
         </h2>
       </div>
 
