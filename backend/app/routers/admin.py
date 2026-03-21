@@ -540,10 +540,10 @@ def get_inactive_users(session: Session = Depends(get_db)):
     
     for u in users:
         # このユーザーが最後に「PROGRESS」系の操作をしたログを探す
-        last_log = session.query(AuditLog).filter(
-            AuditLog.user_id == u.id,
-            AuditLog.action.like("%PROGRESS%")
-        ).order_by(desc(AuditLog.id)).first() # created_atがあればそれで降順に
+        last_log = session.query(models.AuditLog).filter(
+            models.AuditLog.user_id == u.id,
+            models.AuditLog.action.like("%PROGRESS%")
+        ).order_by(desc(models.AuditLog.id)).first() # created_atがあればそれで降順に
         
         # ログが存在し、かつそれが30日以上前の場合
         if last_log:
