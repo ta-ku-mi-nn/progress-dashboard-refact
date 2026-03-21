@@ -96,20 +96,20 @@ export default function ReportPrintView() {
                     }
                 `}
             </style>
-            
+
             {/* 画面確認用の戻るボタン＆手動印刷ボタン（印刷時は非表示） */}
             <div className="max-w-[210mm] mx-auto mb-4 flex justify-between items-center print:hidden">
-                <button 
+                {/* <button 
                     onClick={() => navigate(-1)}
                     className="flex items-center text-sm text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-md shadow-sm"
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" /> 戻る
-                </button>
+                </button> */}
                 <button 
                     onClick={() => window.print()}
                     className="flex items-center text-sm text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md shadow-sm"
                 >
-                    <Printer className="w-4 h-4 mr-2" /> 印刷ダイアログを開く
+                    <Printer className="w-4 h-4 mr-2" /> 印刷ダイアログを開く-
                 </button>
             </div>
 

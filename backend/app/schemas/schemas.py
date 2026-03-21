@@ -240,3 +240,54 @@ class ReportStateResponse(ReportStateBase):
 
     class Config:
         from_attributes = True  # ※Pydantic v1 をお使いの場合は orm_mode = True にしてください
+
+# --- Tag Schemas ---
+class TagBase(BaseModel):
+    name: str
+
+class TagCreate(TagBase):
+    pass
+
+class TagResponse(TagBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class SubjectTagResponse(TagResponse):
+    pass
+
+class DetailTagResponse(TagResponse):
+    pass
+
+
+# --- Teaching Material Schemas ---
+class TeachingMaterialBase(BaseModel):
+    title: str
+    internal_memo: Optional[str] = None
+    subject_id: Optional[int] = None
+    detail_tag_id: Optional[int] = None
+
+class TeachingMaterialCreate(TeachingMaterialBase):
+    pass 
+    # file_path はAPI側で保存時に生成するため、フロントからのリクエストには含めません
+
+class TeachingMaterialUpdate(BaseModel):
+    title: Optional[str] = None
+    internal_memo: Optional[str] = None
+    subject_id: Optional[int] = None
+    detail_tag_id: Optional[int] = None
+    # ※PDFファイルの差し替えは、通常FormDataで受け取るため、ここでは定義しません
+
+class TeachingMaterialResponse(TeachingMaterialBase):
+    id: int
+    file_path: str # 必要に応じてフロントでダウンロードリンクを生成するために返す
+    created_at: Optional[Any] = None
+    updated_at: Optional[Any] = None
+    
+    # 検索結果一覧で「タグの名前」をそのまま表示できるよう、リレーション情報も含めておきます
+    subject: Optional[SubjectTagResponse] = None
+    detail_tag: Optional[DetailTagResponse] = None
+
+    class Config:
+        from_attributes = True

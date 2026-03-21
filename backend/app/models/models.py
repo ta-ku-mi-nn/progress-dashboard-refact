@@ -251,3 +251,45 @@ class StudentReportState(Base):
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+# --- 教材管理用モデル ---
+
+class SubjectTag(Base):
+    """科目タグ（英語、数学など）"""
+    __tablename__ = "subject_tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    
+    # リレーション
+    materials = relationship("TeachingMaterial", back_populates="subject")
+
+class DetailTag(Base):
+    """詳細タグ（長文、単語など）"""
+    __tablename__ = "detail_tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    
+    # リレーション
+    materials = relationship("TeachingMaterial", back_populates="detail_tag")
+
+class TeachingMaterial(Base):
+    """教材データ"""
+    __tablename__ = "teaching_materials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True, nullable=False)
+    file_path = Column(String, nullable=False)  # サーバー上のPDF保存パス
+    internal_memo = Column(Text, nullable=True) # 内部メモ・指導ポイント
+    
+    # 外部キー
+    subject_id = Column(Integer, ForeignKey("subject_tags.id", ondelete="SET NULL"), nullable=True)
+    detail_tag_id = Column(Integer, ForeignKey("detail_tags.id", ondelete="SET NULL"), nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # リレーション
+    subject = relationship("SubjectTag", back_populates="materials")
+    detail_tag = relationship("DetailTag", back_populates="materials")
