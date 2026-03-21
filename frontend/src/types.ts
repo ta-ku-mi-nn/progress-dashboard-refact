@@ -23,3 +23,21 @@ export interface ProgressItem {
   completed_units: number;
   total_units: number;
 }
+
+// --- 既存のコードの下に追記 ---
+
+export interface Tag {
+  id: number;
+  name: string;
+}
+
+export interface TeachingMaterial {
+  id: number;
+  title: string;
+  file_path: string;
+  internal_memo?: string;
+  subject?: Tag;
+  detail_tag?: Tag;
+  created_at?: string;
+  updated_at?: string;
+}
