@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import RouteManager from '../components/RouteManager';
+import { Map } from 'lucide-react';
 
 const RootTable: React.FC = () => {
     const { user } = useAuth();
@@ -10,7 +11,8 @@ const RootTable: React.FC = () => {
         <div className="h-full w-full flex flex-col p-4 md:p-8 pt-6 gap-4">
             {/* ヘッダーエリア */}
             <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 className="text-2xl font-bold tracking-tight">学習ルート表</h2>
+                <Map className="w-8 h-8 text-blue-600" />
+                <h1 className="text-2xl font-bold tracking-tight">学習ルート表</h1>
                 {/* 生徒選択プルダウンを削除 */}
             </div>
 

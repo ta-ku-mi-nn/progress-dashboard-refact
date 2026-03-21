@@ -49,7 +49,6 @@ const Changelog: React.FC = () => {
         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <ScrollText className="w-6 h-6" /> 更新履歴
         </h2>
-        <p className="text-muted-foreground">システムのアップデート情報です。</p>
       </div>
 
       <div className="flex-1 min-h-0">
