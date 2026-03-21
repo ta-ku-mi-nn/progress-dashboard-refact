@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc
+from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
 from passlib.context import CryptContext
@@ -8,6 +10,7 @@ from app.routers import deps
 from app.schemas import schemas
 from app.models import models
 from app.crud import crud_master, crud_user, crud_student
+from app.routers.audit import log_action
 import traceback
 
 router = APIRouter()
@@ -15,7 +18,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Dependency to check if user is admin
 def get_current_admin(current_user: models.User = Depends(deps.get_current_user)):
-    if current_user.role != ['admin', 'developer']:
+    if current_user.role not in ['admin', 'developer']:
         raise HTTPException(status_code=403, detail="Not authorized")
     return current_user
 
@@ -521,7 +524,7 @@ def delete_student(
         db.commit()
     return {"status": "deleted"}
 
-@router.get("/admin/inactive-users")
+@router.get("/inactive-users")
 def get_inactive_users(session: Session = Depends(get_db)):
     """
     1ヶ月間進捗更新をしていない講師（User）を検知するAPI
@@ -531,7 +534,7 @@ def get_inactive_users(session: Session = Depends(get_db)):
     
     # 対象となるユーザー（講師）を取得 ※管理者は除くなどの条件があれば調整してください
     # 例: users = session.query(User).filter(User.role == "instructor").all()
-    users = session.query(User).all() 
+    users = session.query(models.User).all() 
     
     inactive_users = []
     
@@ -544,8 +547,7 @@ def get_inactive_users(session: Session = Depends(get_db)):
         
         # ログが存在し、かつそれが30日以上前の場合
         if last_log:
-            # ※AuditLogにcreated_atカラムがある前提です。無い場合は実装に合わせて変更してください
-            last_update_date = getattr(last_log, 'created_at', None) 
+            last_update_date = getattr(last_log, 'timestamp', None) 
             
             if last_update_date and last_update_date < thirty_days_ago:
                 days_inactive = (datetime.now() - last_update_date).days
