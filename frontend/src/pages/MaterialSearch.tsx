@@ -4,7 +4,7 @@ import { Tag, TeachingMaterial } from '../types';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
-import { Search, Printer, FileText, Info } from 'lucide-react';
+import { Search, Printer, Files, Info } from 'lucide-react';
 
 export default function MaterialSearch() {
     const [allMaterials, setAllMaterials] = useState<TeachingMaterial[]>([]);
@@ -84,11 +84,10 @@ export default function MaterialSearch() {
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center gap-3 border-b pb-4">
-                <FileText className="w-8 h-8 text-blue-600" />
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">教材・プリント検索</h1>
-                </div>
+            <div className="flex-none">
+                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Files className="w-6 h-6" /> 教材検索・印刷
+                </h2>
             </div>
 
             {/* --- 検索フィルター部 --- */}

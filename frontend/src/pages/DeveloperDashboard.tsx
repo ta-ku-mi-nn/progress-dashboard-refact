@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   ShieldAlert, Database, KeyRound, 
   Users, HardDrive, AlertTriangle, CheckCircle2,
-  UserCog, UserPlus, Megaphone, FileSearch, FileSpreadsheet, FileText
+  UserCog, UserPlus, Megaphone, FileSearch, FileSpreadsheet, FileText, Settings
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -133,11 +133,10 @@ export default function DeveloperDashboard() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       {/* ヘッダー部分 */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <ShieldAlert className="w-8 h-8 text-indigo-600" />
-          Developer Command Center
-        </h1>
+      <div className="flex-none">
+        <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <Settings className="w-6 h-6" /> 開発者メニュー
+        </h2>
       </div>
 
       {/* システムステータス (メトリクス) */}
