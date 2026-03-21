@@ -30,8 +30,59 @@ export default function TextbookManagement() {
     const [filterName, setFilterName] = useState("");
 
     const fetchBooks = async () => {
-        try { const res = await api.get('/common/textbooks'); setTextbooks(res.data); } 
-        catch (e) { toast.error("データ取得失敗"); }
+        try { 
+            const res = await api.get('/common/textbooks'); 
+            
+            // 科目のカスタム順序
+            const subjectOrder: Record<string, number> = {
+                "英語": 1,
+                "数学(文系)": 2,
+                "数学(理系)": 3,
+                "現代文": 4,
+                "古文": 5,
+                "漢文": 6,
+                "物理": 7,
+                "化学": 8,
+                "生物": 9,
+                "日本史": 10,
+                "世界史": 11,
+                "政治経済": 12
+            };
+
+            // レベルのカスタム順序
+            const levelOrder: Record<string, number> = {
+                "基礎徹底": 1,
+                "日大": 2,
+                "MARCH": 3,
+                "早慶": 4
+            };
+
+            // 取得したデータをソートする
+            const sortedData = [...res.data].sort((a, b) => {
+                // 1. 科目で比較
+                const subjA = subjectOrder[a.subject] || 99;
+                const subjB = subjectOrder[b.subject] || 99;
+                if (subjA !== subjB) {
+                    return subjA - subjB;
+                }
+                
+                // 2. レベルで比較
+                const rankA = levelOrder[a.level] || 99;
+                const rankB = levelOrder[b.level] || 99;
+                if (rankA !== rankB) {
+                    return rankA - rankB;
+                }
+                
+                // 3. 50音順 (参考書名)
+                return a.book_name.localeCompare(b.book_name, 'ja');
+            });
+
+            // ソート済みのデータをセットする
+            setTextbooks(sortedData); 
+        } 
+        catch (e) { 
+            toast.error("データ取得失敗"); 
+        }
     };
     useEffect(() => { fetchBooks(); }, []);
 

@@ -40,8 +40,62 @@ export default function PresetManagement() {
                 api.get('/admin/presets'),
                 api.get('/common/textbooks')
             ]);
-            setPresets(resPresets.data);
-            setTextbooks(resBooks.data);
+            
+            // --- カスタム順序の定義 ---
+            const subjectOrder: Record<string, number> = {
+                "英語": 1,
+                "数学(文系)": 2,
+                "数学(理系)": 3,
+                "現代文": 4,
+                "古文": 5,
+                "漢文": 6,
+                "物理": 7,
+                "化学": 8,
+                "生物": 9,
+                "日本史": 10,
+                "世界史": 11,
+                "政治経済": 12
+            };
+
+            const levelOrder: Record<string, number> = {
+                "基礎徹底": 1,
+                "日大": 2,
+                "MARCH": 3,
+                "早慶": 4
+            };
+
+            // 1. プリセットのソート (科目 ＞ プリセット名の50音順)
+            const sortedPresets = [...resPresets.data].sort((a, b) => {
+                const subjA = subjectOrder[a.subject] || 99;
+                const subjB = subjectOrder[b.subject] || 99;
+                if (subjA !== subjB) {
+                    return subjA - subjB;
+                }
+                return a.preset_name.localeCompare(b.preset_name, 'ja');
+            });
+
+            // 2. 参考書のソート (科目 ＞ レベル ＞ 参考書名の50音順)
+            // ※これをやっておくことで、モーダル内の選択リストも綺麗に並びます！
+            const sortedBooks = [...resBooks.data].sort((a, b) => {
+                const subjA = subjectOrder[a.subject] || 99;
+                const subjB = subjectOrder[b.subject] || 99;
+                if (subjA !== subjB) {
+                    return subjA - subjB;
+                }
+                
+                const rankA = levelOrder[a.level] || 99;
+                const rankB = levelOrder[b.level] || 99;
+                if (rankA !== rankB) {
+                    return rankA - rankB;
+                }
+                
+                return a.book_name.localeCompare(b.book_name, 'ja');
+            });
+
+            // ソート済みのデータをそれぞれセット
+            setPresets(sortedPresets);
+            setTextbooks(sortedBooks);
+            
         } catch (e) {
             toast.error("データ取得に失敗しました");
         }
