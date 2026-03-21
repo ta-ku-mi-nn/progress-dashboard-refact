@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert, Files } from 'lucide-react';
 
 // コンポーネントのインポート
 import UserManagement from '../components/admin/UserManagement';
@@ -15,6 +15,7 @@ import BackupManagement from '../components/admin/BackupManagement';
 import AuditLogViewer from '../components/developer/AuditLogViewer';
 import StudyTimeVerification from '../components/admin/StudyTimeverification';
 import InactiveUserPopup from '../components/admin/InactiveUserPopup';
+import TeachingMaterialManagement from '../components/admin/TeachingMaterialManagement';
 
 export default function Admin() {
     // ★追加: 各機能にポップなテーマカラー(colorClass)を追加！
@@ -34,6 +35,10 @@ export default function Admin() {
         { 
             title: "ルート表管理", icon: Map, description: "学習ルート表（PDF/画像）の管理", 
             colorClass: "bg-purple-100 text-purple-600", component: <RouteTableManagement /> 
+        },
+        { 
+            title: "教材・プリント管理", icon: Files, description: "PDF教材のアップロードとタグ管理", 
+            colorClass: "bg-emerald-100 text-emerald-600", component: <TeachingMaterialManagement /> 
         },
         { 
             title: "参考書プリセット管理", icon: Library, description: "一括登録用プリセットの作成", 
