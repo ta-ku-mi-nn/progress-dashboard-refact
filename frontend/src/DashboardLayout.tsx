@@ -6,7 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 // Key アイコンを追加
-import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench } from 'lucide-react';
+import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, Files } from 'lucide-react';
 
 // Dialog コンポーネントをインポート
 import {
@@ -28,6 +28,7 @@ export default function DashboardLayout() {
         { name: 'ダッシュボード', path: '/', icon: Home },
         { name: '過去問/模試/入試日程', path: '/past-exam', icon: BookOpen },
         { name: 'ルート表', path: '/root-table', icon: Map }, 
+        { name: '教材検索・印刷', path: '/materials', icon: Files },
         // { name: '統計', path: '/statistics', icon: BarChart2 },
         { name: 'バグ報告/要望', path: '/bug-report', icon: MessagesSquare },
         { name: '更新履歴', path: '/changelog', icon: ScrollText },

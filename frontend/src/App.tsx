@@ -18,6 +18,7 @@ import SystemBanner from './components/SystemBanner';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
 import ReportPrintView from './pages/ReportPrintView';
+import MaterialSearch from './pages/MaterialSearch';
 
 // メンテナンスモードのガードコンポーネント
 const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -75,6 +76,7 @@ const App: React.FC = () => {
                 {/* 各機能ページ */}
                 <Route path="past-exam" element={<PastExam />} />
                 <Route path="root-table" element={<RootTable />} />
+                <Route path="materials" element={<MaterialSearch/>} />
                 <Route path="statistics" element={<Statistics />} />
                 <Route path="bug-report" element={<BugReport />} />
                 <Route path="changelog" element={<Changelog />} />
