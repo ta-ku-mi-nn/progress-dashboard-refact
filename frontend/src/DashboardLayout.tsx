@@ -6,7 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 // ChevronLeft, ChevronRight を追加（折りたたみボタン用）
-import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, Files, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Dialog コンポーネントをインポート
 import {
@@ -32,6 +32,7 @@ export default function DashboardLayout() {
         { name: '過去問/模試/入試日程', path: '/past-exam', icon: BookOpen },
         { name: 'ルート表', path: '/root-table', icon: Map }, 
         // { name: '統計', path: '/statistics', icon: BarChart2 },
+        { name: '教材検索/印刷', path: '/materials', icon: Files }, 
         { name: 'バグ報告/要望', path: '/bug-report', icon: MessagesSquare },
         { name: '更新履歴', path: '/changelog', icon: ScrollText },
     ];
