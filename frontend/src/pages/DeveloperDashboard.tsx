@@ -138,7 +138,6 @@ export default function DeveloperDashboard() {
           <ShieldAlert className="w-8 h-8 text-indigo-600" />
           Developer Command Center
         </h1>
-        <p className="text-gray-500 mt-2">システムの保守・管理・強制操作を行う専用ダッシュボードです。</p>
       </div>
 
       {/* システムステータス (メトリクス) */}

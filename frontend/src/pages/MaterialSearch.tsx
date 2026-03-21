@@ -88,7 +88,6 @@ export default function MaterialSearch() {
                 <FileText className="w-8 h-8 text-blue-600" />
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">教材・プリント検索</h1>
-                    <p className="text-gray-500 text-sm">授業で使う教材を素早く検索して印刷できます。</p>
                 </div>
             </div>
 

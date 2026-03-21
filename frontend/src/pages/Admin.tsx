@@ -71,7 +71,6 @@ export default function Admin() {
                     <Component className="w-8 h-8 text-blue-600" />
                     管理者コンソール
                 </h1>
-                <p className="text-gray-500 mt-2">塾の運営に必要な各種データやアカウントを一元管理します。</p>
             </div>
             
             {/* ★変更: グリッドレイアウトとカードデザインをポップな中央揃えに */}

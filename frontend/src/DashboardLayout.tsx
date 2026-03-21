@@ -6,7 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 // Key アイコンを追加
-import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, Files } from 'lucide-react';
+import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, Files, ShieldCheck } from 'lucide-react';
 
 // Dialog コンポーネントをインポート
 import {
@@ -76,7 +76,10 @@ export default function DashboardLayout() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>パスワードの変更</DialogTitle>
+                                <DialogTitle>
+                                    <ShieldCheck className="w-5 h-5 text-green-600" />
+                                    パスワードの変更
+                                </DialogTitle>
                             </DialogHeader>
                             <ChangePasswordForm onSuccess={() => setIsPasswordOpen(false)} />
                         </DialogContent>

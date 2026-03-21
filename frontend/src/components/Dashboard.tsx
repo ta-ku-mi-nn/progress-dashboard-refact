@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2, ChevronDown, Search } from 'lucide-react';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2, ChevronDown, Search, House } from 'lucide-react';
 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
@@ -170,7 +170,8 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6 h-full p-1">
       {/* ヘッダーエリア */}
       <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-        <h2 className="text-2xl font-bold tracking-tight">学習ダッシュボード</h2>
+        <House className="w-8 h-8 text-blue-600" />
+        <h1 className="text-2xl font-bold tracking-tight">学習ダッシュボード</h1>
         <div className="flex items-center gap-2 w-full md:w-auto">
           {students.length > 0 && (
             <StudentSelect 

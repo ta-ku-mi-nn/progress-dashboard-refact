@@ -4,6 +4,7 @@ import ExamManager from '../components/ExamManager';
 import api from '../lib/api';
 // ★ 追加: 新しく作った共通コンポーネントをインポート
 import StudentSelect from '../components/common/StudentSelect';
+import { BookOpen } from 'lucide-react';
 
 interface Student {
   id: number;
@@ -93,7 +94,8 @@ const PastExam: React.FC = () => {
             
             {/* ヘッダーエリア */}
             <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 className="text-2xl font-bold tracking-tight">過去問・模試・入試日程管理</h2>
+                <BookOpen className="w-8 h-8 text-blue-600" />
+                <h1 className="text-2xl font-bold tracking-tight">過去問・模試・入試日程管理</h1>
                 
                 {/* ★ 修正: 共通コンポーネント（StudentSelect）に置き換え */}
                 {students.length > 0 && (
