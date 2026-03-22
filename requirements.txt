@@ -8,7 +8,7 @@ plotly
 plotly-express
 werkzeug
 Jinja2
-psycopg2-binary
+# psycopg2-binary
 python-dotenv
 SQLAlchemy
 passlib
