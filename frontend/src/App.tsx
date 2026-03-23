@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -26,6 +27,8 @@ const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children })
   const { user } = useAuth(); // ← authLoading を削除しました！
   const location = useLocation();
 
+
+
   // システム設定のロード中のみ待機
   if (systemLoading) return null; 
 
@@ -49,6 +52,14 @@ const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children })
 
 // --- App コンポーネント本体 ---
 const App: React.FC = () => {
+  useEffect(() => {
+    // Viteの機能で、開発環境（npm run dev）の時だけ実行される
+    if (import.meta.env.DEV) {
+      if (!document.title.startsWith('[LOCAL]')) {
+        document.title = `[LOCAL] ${document.title}`;
+      }
+    }
+  }, []);
   return (
     <Router>
       <AuthProvider>
