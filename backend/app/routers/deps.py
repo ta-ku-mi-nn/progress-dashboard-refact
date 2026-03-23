@@ -17,16 +17,31 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        # デバッグ用プリント
+        print(f"DEBUG: 受信したトークン: {token[:10]}...")
+        
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        
         if username is None:
+            print("DEBUG: トークンの'sub'が空です")
             raise credentials_exception
+            
+        print(f"DEBUG: トークン内のユーザー名: {username}")
         token_data = TokenData(username=username)
-    except JWTError:
+        
+    except JWTError as e:
+        print(f"DEBUG: JWTデコード失敗: {e}") # 👈 ここで「Signature has expired」とか出るとビンゴ
         raise credentials_exception
+
+    # DBからユーザーを探す
     user = get_user_by_username(db, username=token_data.username)
+    
     if user is None:
+        print(f"DEBUG: DBにユーザー '{token_data.username}' が見つかりません")
         raise credentials_exception
+        
+    print(f"DEBUG: ログイン成功ユーザー: {user.username} (Role: {user.role})")
     return user
 
 def get_current_active_user(current_user = Depends(get_current_user)):
