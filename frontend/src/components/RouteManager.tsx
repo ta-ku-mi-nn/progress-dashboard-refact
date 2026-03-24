@@ -56,9 +56,30 @@ export default function RouteManager({ studentId }: RouteManagerProps) {
       
       // Blob URLを作成
       const fileURL = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      
-      // 新しいタブで開く
-      window.open(fileURL, '_blank');
+
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+          // 新しいタブにHTMLを書き込み、タイトルを設定した上でPDFを全画面表示で埋め込む
+          newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+                  <head>
+                      <title>${file.filename}</title>
+                      <style>
+                          body { margin: 0; padding: 0; overflow: hidden; background-color: #525659; }
+                          embed { width: 100vw; height: 100vh; border: none; }
+                      </style>
+                  </head>
+                  <body>
+                      <embed src="${fileURL}" type="application/pdf">
+                  </body>
+              </html>
+          `);
+          newWindow.document.close(); // 書き込みを完了させて表示を確定
+      } else {
+          // 万が一ポップアップブロック等でHTML書き込みが失敗した時の予備ルート
+          window.open(fileURL, '_blank');
+      }
       
       // 注意: createObjectURLで作成したURLはGCされないため、厳密にはrevokeが必要ですが
       // 別タブで開く場合、即座にrevokeすると読み込み前に消える可能性があるため、ここでは明示的なrevokeを省略するか

@@ -27,7 +27,7 @@ interface MockResult {
   mock_name: string;
   exam_date: string;
   subject: string;
-  score: number;
+  score: number | string;
   [key: string]: any; // インデックスシグネチャ (フィルタ用)
 }
 
@@ -104,7 +104,15 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ studentId }) => {
     { key: 'exam_date', label: '実施日' },
     { key: 'mock_name', label: '模試名' },
     { key: 'subject', label: '科目' },
-    { key: 'score', label: '得点' }
+    { 
+      key: 'score', 
+      label: '得点', 
+      render: (r) => (
+        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', minWidth: '100px' }}>
+          {r.score !== null && r.score !== undefined ? r.score : '-'}
+        </div>
+      )
+    }
   ];
 
   // 現在のアクティブなカラムを選択 (型アサーションでany[]として扱うことで共通化)

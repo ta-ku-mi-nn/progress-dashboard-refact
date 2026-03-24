@@ -122,6 +122,10 @@ export default function Dashboard() {
       g = g.replace(" None", "").replace(" 合格", "").replace(" 不合格", "").trim();
       s = s.replace("CSE ", "").trim();
 
+      if (g !== "未登録" && g !== "" && !g.endsWith("級")) {
+          g = `${g}級`;
+      }
+
       setDisplayEiken({
           grade: g || "未登録",
           score: s || "-",
@@ -139,7 +143,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedStudentId]);
+  }, [selectedStudentId, refreshTrigger]);
 
   // 3. 英検スコア更新
   const handleUpdateEiken = async () => {

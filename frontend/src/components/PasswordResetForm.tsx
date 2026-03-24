@@ -1,7 +1,7 @@
 // frontend/src/components/PasswordResetForm.tsx
 
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api'
 import { KeyRound, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function PasswordResetForm() {
@@ -10,9 +10,6 @@ export default function PasswordResetForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
-
-  // 環境変数に合わせてバックエンドのURLを設定（必要に応じて変更してください）
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://progress-dashboard-backend.onrender.com';
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,18 +30,10 @@ export default function PasswordResetForm() {
     setMessage('');
 
     try {
-      // 先ほどバックエンドに追加した更新APIを呼び出す
-      const token = localStorage.getItem('token'); // 保存されているログインチケットを取得
-      const response = await axios.post(
-        `${API_BASE_URL}/api/v1/auth/admin/reset-password`,
-        {
-          username: targetUsername,
-          new_password: newPassword
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` } // 自分が管理者であることを証明
-        }
-      );
+      const response = await api.post('/auth/admin/reset-password', {
+        username: targetUsername,
+        new_password: newPassword
+    });
 
       setStatus('success');
       setMessage(response.data.message || 'パスワードを正常に更新しました。');
