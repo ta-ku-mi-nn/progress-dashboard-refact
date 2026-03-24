@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel
 from datetime import date
 from app.db.database import get_db
 from app.models.models import UniversityAcceptance, PastExamResult, MockExamResult
+import datetime
 
 router = APIRouter()
 
@@ -33,10 +34,10 @@ class PastExamCreate(BaseModel):
     exam_system: Optional[str] = None
     year: int
     subject: str
-    time_required: Optional[int] = None
-    total_time_allowed: Optional[int] = None
-    correct_answers: Optional[int] = None
-    total_questions: Optional[int] = None
+    time_required: Optional[Union[int,str]] = None
+    total_time_allowed: Optional[Union[int,str]] = None
+    correct_answers: Optional[Union[int,str]] = None
+    total_questions: Optional[Union[int,str]] = None
 
 # ★修正: 全科目に対応したスキーマ
 class MockExamCreate(BaseModel):
@@ -49,27 +50,27 @@ class MockExamCreate(BaseModel):
     exam_date: Optional[date] = None
     
     # 記述式
-    subject_kokugo_desc: Optional[int] = None
-    subject_math_desc: Optional[int] = None
-    subject_english_desc: Optional[int] = None
-    subject_rika1_desc: Optional[int] = None
-    subject_rika2_desc: Optional[int] = None
-    subject_shakai1_desc: Optional[int] = None
-    subject_shakai2_desc: Optional[int] = None
+    subject_kokugo_desc: Optional[Union[int,str]] = None
+    subject_math_desc: Optional[Union[int,str]] = None
+    subject_english_desc: Optional[Union[int,str]] = None
+    subject_rika1_desc: Optional[Union[int,str]] = None
+    subject_rika2_desc: Optional[Union[int,str]] = None
+    subject_shakai1_desc: Optional[Union[int,str]] = None
+    subject_shakai2_desc: Optional[Union[int,str]] = None
     
     # マーク式
-    subject_kokugo_mark: Optional[int] = None
-    subject_math1a_mark: Optional[int] = None
-    subject_math2bc_mark: Optional[int] = None
-    subject_english_r_mark: Optional[int] = None
-    subject_english_l_mark: Optional[int] = None
-    subject_rika1_mark: Optional[int] = None
-    subject_rika2_mark: Optional[int] = None
-    subject_shakai1_mark: Optional[int] = None
-    subject_shakai2_mark: Optional[int] = None
-    subject_rika_kiso1_mark: Optional[int] = None
-    subject_rika_kiso2_mark: Optional[int] = None
-    subject_info_mark: Optional[int] = None
+    subject_kokugo_mark: Optional[Union[int,str]] = None
+    subject_math1a_mark: Optional[Union[int,str]] = None
+    subject_math2bc_mark: Optional[Union[int,str]] = None
+    subject_english_r_mark: Optional[Union[int,str]] = None
+    subject_english_l_mark: Optional[Union[int,str]] = None
+    subject_rika1_mark: Optional[Union[int,str]] = None
+    subject_rika2_mark: Optional[Union[int,str]] = None
+    subject_shakai1_mark: Optional[Union[int,str]] = None
+    subject_shakai2_mark: Optional[Union[int,str]] = None
+    subject_rika_kiso1_mark: Optional[Union[int,str]] = None
+    subject_rika_kiso2_mark: Optional[Union[int,str]] = None
+    subject_info_mark: Optional[Union[int,str]] = None
 
 # --- API Endpoints ---
 # (以下、変更なし。get_acceptances, create_acceptance, update, delete等の既存処理)
@@ -88,15 +89,6 @@ def create_acceptance(data: AcceptanceCreate, session: Session = Depends(get_db)
     session.refresh(new_item)
     return new_item
 
-@router.patch("/acceptance/{row_id}")
-def update_acceptance_result(row_id: int, data: AcceptanceUpdate, session: Session = Depends(get_db)):
-    item = session.query(UniversityAcceptance).filter(UniversityAcceptance.id == row_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-    item.result = data.result
-    session.commit()
-    return item
-
 @router.delete("/acceptance/{row_id}")
 def delete_acceptance(row_id: int, session: Session = Depends(get_db)):
     item = session.query(UniversityAcceptance).filter(UniversityAcceptance.id == row_id).first()
@@ -104,6 +96,26 @@ def delete_acceptance(row_id: int, session: Session = Depends(get_db)):
         session.delete(item)
         session.commit()
     return {"message": "deleted"}
+
+@router.patch("/acceptance/{row_id}")
+def update_acceptance_full(row_id: int, data: dict = Body(...), session: Session = Depends(get_db)):
+    item = session.query(UniversityAcceptance).filter(UniversityAcceptance.id == row_id).first()
+    if not item: raise HTTPException(status_code=404, detail="Item not found")
+    
+    for key, value in data.items():
+        if key in ["id", "student_id"]:
+                continue
+        if hasattr(item, key) and key != "id":
+            if value == "":
+                value = None
+            if value and key in ["application_deadline", "exam_date", "announcement_date", "procedure_deadline"]:
+                if isinstance(value, str):
+                    value = datetime.datetime.strptime(value, "%Y-%m-%d").date()
+            setattr(item, key, value)
+            
+    session.commit()
+    session.refresh(item)
+    return item
 
 @router.get("/pastexam/{student_id}")
 def get_past_exams(student_id: int, session: Session = Depends(get_db)):
@@ -127,6 +139,26 @@ def delete_past_exam(row_id: int, session: Session = Depends(get_db)):
         session.commit()
     return {"message": "deleted"}
 
+@router.patch("/pastexam/{row_id}")
+def update_past_exam(row_id: int, data: dict = Body(...), session: Session = Depends(get_db)):
+    item = session.query(PastExamResult).filter(PastExamResult.id == row_id).first()
+    if not item: raise HTTPException(status_code=404, detail="Item not found")
+    
+    for key, value in data.items():
+        if key in ["id", "student_id"]:
+            continue
+        if hasattr(item, key) and key != "id":
+            if value == "":
+                value = None
+            if value and key == "date":
+                 if isinstance(value, str):
+                    value = datetime.datetime.strptime(value, "%Y-%m-%d").date()
+            setattr(item, key, value)
+            
+    session.commit()
+    session.refresh(item)
+    return item
+
 @router.get("/mock/{student_id}")
 def get_mock_exams(student_id: int, session: Session = Depends(get_db)):
     return session.query(MockExamResult).filter(
@@ -148,3 +180,23 @@ def delete_mock_exam(row_id: int, session: Session = Depends(get_db)):
         session.delete(item)
         session.commit()
     return {"message": "deleted"}
+
+@router.patch("/mock/{row_id}")
+def update_mock_exam(row_id: int, data: dict = Body(...), session: Session = Depends(get_db)):
+    item = session.query(MockExamResult).filter(MockExamResult.id == row_id).first()
+    if not item: raise HTTPException(status_code=404, detail="Item not found")
+    
+    for key, value in data.items():
+        if key in ["id", "student_id"]:
+            continue
+        if hasattr(item, key) and key != "id":
+            if value == "":
+                value = None
+            if value and key == "exam_date":
+                if isinstance(value, str):
+                    value = datetime.datetime.strptime(value, "%Y-%m-%d").date()
+            setattr(item, key, value)
+            
+    session.commit()
+    session.refresh(item)
+    return item

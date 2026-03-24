@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Edit, Trash2, UserPlus, Save, X, UserCog, Building2 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function UserManagement() {
+    const { user } = useAuth();
     const [users, setUsers] = useState<any[]>([]);
     const [schools, setSchools] = useState<string[]>([]); // 校舎リスト用のState
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -202,7 +204,8 @@ export default function UserManagement() {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <Label>所属校舎</Label>
-                                {schools.length > 0 && (
+                                {/* 🚨 Developer権限の時だけ「新しい校舎を追加する」ボタンを表示 */}
+                                {user?.role === 'developer' && schools.length > 0 && (
                                     <Button 
                                         variant="link" 
                                         className="h-auto p-0 text-xs text-blue-600" 
@@ -216,21 +219,32 @@ export default function UserManagement() {
                                 )}
                             </div>
                             
-                            {isNewSchool || schools.length === 0 ? (
+                            {/* 🚨 Admin権限の場合は自分の校舎で固定して入力をロックする */}
+                            {user?.role === 'admin' ? (
                                 <Input 
-                                    value={createForm.school} 
-                                    onChange={e => setCreateForm({...createForm, school: e.target.value})} 
-                                    placeholder="新しい校舎名を入力"
+                                    value={user.school || ""} 
+                                    disabled 
+                                    className="bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    title="管理者は自校舎のみユーザーを作成できます"
                                 />
                             ) : (
-                                <Select value={createForm.school} onValueChange={v => setCreateForm({...createForm, school: v})}>
-                                    <SelectTrigger><SelectValue placeholder="校舎を選択してください" /></SelectTrigger>
-                                    <SelectContent>
-                                        {schools.map(school => (
-                                            <SelectItem key={school} value={school}>{school}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                /* Developer権限の場合は今まで通り自由に選択・入力できる */
+                                isNewSchool || schools.length === 0 ? (
+                                    <Input 
+                                        value={createForm.school} 
+                                        onChange={e => setCreateForm({...createForm, school: e.target.value})} 
+                                        placeholder="新しい校舎名を入力"
+                                    />
+                                ) : (
+                                    <Select value={createForm.school} onValueChange={v => setCreateForm({...createForm, school: v})}>
+                                        <SelectTrigger><SelectValue placeholder="校舎を選択してください" /></SelectTrigger>
+                                        <SelectContent>
+                                            {schools.map(school => (
+                                                <SelectItem key={school} value={school}>{school}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )
                             )}
                         </div>
                     </div>

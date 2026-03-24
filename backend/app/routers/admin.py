@@ -288,6 +288,11 @@ def create_user(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(deps.get_current_admin_user)
 ):
+
+    # 管理者ユーザーの校舎取得(ユーザーの校舎のみを表示。developerはどの校舎も表示可能)
+    if current_user.role == "admin":
+        user_in.school = current_user.school
+
     # ユーザー名重複チェック
     if db.query(models.User).filter(models.User.username == user_in.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -531,9 +536,15 @@ def get_inactive_users(session: Session = Depends(get_db)):
     """
     # 30日前の日付を計算
     thirty_days_ago = datetime.now() - timedelta(days=30)
+
+    # 開発者アカウントは非表示
+    query = session.query(models.User).filter(models.User.role != "developer")
+
+    # 同校舎のユーザーのみ取得
+    if current_user.role == "admin":
+        query = query.filter(models.User.school == current_user.school)
     
-    # 対象となるユーザー（講師）を取得 ※管理者は除くなどの条件があれば調整してください
-    # 例: users = session.query(User).filter(User.role == "instructor").all()
+    # 対象となるユーザー（講師）を取得 
     users = session.query(models.User).all() 
     
     inactive_users = []

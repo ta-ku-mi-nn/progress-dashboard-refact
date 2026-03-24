@@ -79,11 +79,10 @@ const DeveloperAccountManagement: React.FC = () => {
             type="password"
             name="password"
             required
-            minLength={8}
             value={formData.password}
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-slate-900 focus:border-slate-900"
-            placeholder="8文字以上で設定"
+            placeholder="パスワードを入力してください"
           />
         </div>
 

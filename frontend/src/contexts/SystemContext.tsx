@@ -33,8 +33,8 @@ export const SystemProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   useEffect(() => {
     fetchSettings();
-    // オプション: 定期的に設定を再取得する（例: 5分ごと）
-    const interval = setInterval(fetchSettings, 5 * 60 * 1000);
+    // 60秒（1分）ごとに短縮。これくらいならサーバーは余裕です！
+    const interval = setInterval(fetchSettings, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 

@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Info, X } from 'lucide-react';
+import { toast } from 'sonner';
+import api from '../../lib/api'; 
+
 
 // --- Canvasプレビュー用 UIコンポーネントのモック ---
 const Card = ({ children, className = '' }: any) => (
@@ -28,17 +31,17 @@ const Button = ({ children, onClick, disabled, variant = 'default', className = 
   );
 };
 
-// Canvasプレビュー用 APIモック
-const api = {
-    post: async (url: string, data: any, config: any) => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({ data: { message: "インポートが完了しました！\n新規追加: 12件\nデータ更新: 3件" } });
-            }, 1500);
-        });
-    }
-};
-// --------------------------------------------------
+// // Canvasプレビュー用 APIモック
+// const api = {
+//     post: async (url: string, data: any, config: any) => {
+//         return new Promise((resolve) => {
+//             setTimeout(() => {
+//                 resolve({ data: { message: "インポートが完了しました！\n新規追加: 12件\nデータ更新: 3件" } });
+//             }, 1500);
+//         });
+//     }
+// };
+// // --------------------------------------------------
 
 // インポート種別ごとのフォーマット案内
 const FORMAT_GUIDES = {
@@ -49,8 +52,8 @@ const FORMAT_GUIDES = {
     },
     student: {
         label: "生徒データ",
-        headers: "name, grade, branch_id, deviation_value",
-        example: "山田太郎, 高3, 1, 55.0"
+        headers: "name, grade, school, deviation_value",
+        example: "山田太郎, 高3, 鷺沼校, 55.0"
     },
     user: {
         label: "講師(ユーザー)データ",
@@ -133,15 +136,15 @@ export default function CsvImportManagement() {
         formData.append("file", file);
 
         try {
-            // モックAPIを叩く
-            const response = await api.post('/csv/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const response = await api.post('/csv_import/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            }) as any;
 
-            setSuccessMsg((response as any).data.message || "インポートが完了しました！");
-            setFile(null); // 成功したらファイルをクリア
+            // response.data が直接返る場合と axios の response オブジェクトの場合があるので調整
+            const msg = response.data?.message || "インポートが完了しました！";
+            setSuccessMsg(msg);
+            toast.success("インポート成功");
+            setFile(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
 
         } catch (error: any) {
