@@ -94,7 +94,7 @@ export default function DeveloperDashboard() {
       component: <RoleManagement /> 
     },
     { 
-      title: "開発者アカウント管理", 
+      title: "開発者アカウント", 
       icon: UserPlus, 
       description: "開発者アカウントの追加・停止", 
       colorClass: "bg-sky-100 text-sky-600",
