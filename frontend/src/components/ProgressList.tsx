@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'; 
 import { Plus, Trash2, BookOpen, Clock, Layers, ChevronDown, ChevronUp, Pencil, X } from 'lucide-react'; // アイコン追加
 import api from '../lib/api';
@@ -85,6 +86,9 @@ export default function ProgressList({ studentId, onUpdate }: { studentId: numbe
     book_name: "",
     duration: 0
   });
+
+  const [isCustomLevelManual, setIsCustomLevelManual] = useState(false);
+  const [isCustomSubjectManual, setIsCustomSubjectManual] = useState(false);
 
   // --- データ取得 ---
   const fetchData = async () => {
@@ -394,14 +398,62 @@ export default function ProgressList({ studentId, onUpdate }: { studentId: numbe
         <div className="p-4 space-y-4 flex-1 overflow-y-auto">
             <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-yellow-900">科目 <span className="text-red-500">*</span></label>
-                    <Input placeholder="例: 英語" className="bg-white h-9 text-xs"
-                        value={customForm.subject} onChange={e => setCustomForm({...customForm, subject: e.target.value})} />
+                    <div className="flex justify-between items-center">
+                        <label className="text-xs font-medium text-yellow-900">科目 <span className="text-red-500">*</span></label>
+                        <Button 
+                            variant="link" 
+                            className="h-auto p-0 text-[10px] text-yellow-700" 
+                            onClick={() => {
+                                setIsCustomSubjectManual(!isCustomSubjectManual);
+                                setCustomForm({...customForm, subject: ""});
+                            }}
+                        >
+                            {isCustomSubjectManual ? "リストから選択" : "手入力する"}
+                        </Button>
+                    </div>
+
+                    {!isCustomSubjectManual && masterSubjects.length > 0 ? (
+                        <Select value={customForm.subject} onValueChange={v => setCustomForm({...customForm, subject: v})}>
+                            <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="選択してください" /></SelectTrigger>
+                            <SelectContent className="max-h-60">
+                                {masterSubjects.map(subj => (
+                                    <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <Input placeholder="例: 英語" className="bg-white h-9 text-xs"
+                            value={customForm.subject} onChange={e => setCustomForm({...customForm, subject: e.target.value})} />
+                    )}
                 </div>
                 <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-yellow-900">レベル</label>
-                    <Input placeholder="例: 基礎" className="bg-white h-9 text-xs"
-                        value={customForm.level} onChange={e => setCustomForm({...customForm, level: e.target.value})} />
+                    <div className="flex justify-between items-center">
+                        <label className="text-xs font-medium text-yellow-900">レベル</label>
+                        <Button 
+                            variant="link" 
+                            className="h-auto p-0 text-[10px] text-yellow-700" 
+                            onClick={() => {
+                                setIsCustomLevelManual(!isCustomLevelManual);
+                                setCustomForm({...customForm, level: ""});
+                            }}
+                        >
+                            {isCustomLevelManual ? "リストから選択" : "手入力する"}
+                        </Button>
+                    </div>
+
+                    {!isCustomLevelManual && masterLevels.length > 0 ? (
+                        <Select value={customForm.level} onValueChange={v => setCustomForm({...customForm, level: v})}>
+                            <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="選択してください" /></SelectTrigger>
+                            <SelectContent className="max-h-60">
+                                {masterLevels.map(lvl => (
+                                    <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <Input placeholder="例: 基礎" className="bg-white h-9 text-xs"
+                            value={customForm.level} onChange={e => setCustomForm({...customForm, level: e.target.value})} />
+                    )}
                 </div>
             </div>
 

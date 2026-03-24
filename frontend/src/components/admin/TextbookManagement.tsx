@@ -90,6 +90,12 @@ export default function TextbookManagement() {
     const uniqueSubjects = Array.from(new Set(textbooks.map(t => t.subject).filter(Boolean)));
     if (uniqueSubjects.length === 0) uniqueSubjects.push("英語", "数学", "国語");
 
+    const uniqueLevels = Array.from(new Set(textbooks.map(t => t.level).filter(Boolean)));
+    if (uniqueLevels.length === 0) uniqueLevels.push("基礎徹底", "日大", "MARCH", "早慶");
+
+    const [isCustomSubject, setIsCustomSubject] = useState(false);
+    const [isCustomLevel, setIsCustomLevel] = useState(false);
+
     // 編集開始
     const startEdit = (book: any) => {
         setIsEditing(true);
@@ -168,28 +174,69 @@ export default function TextbookManagement() {
                     </div>
                     
                     <div className="space-y-1">
-                        <Label>科目 <span className="text-red-500">*</span></Label>
-                        <Select value={formData.subject} onValueChange={v => setFormData({ ...formData, subject: v })}>
-                            <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-                            <SelectContent className="max-h-60">
-                                {uniqueSubjects.map((subj: any) => (
-                                    <SelectItem key={subj} value={subj}>{subj}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex justify-between items-center">
+                            <Label>科目 <span className="text-red-500">*</span></Label>
+                            <Button 
+                                variant="link" 
+                                className="h-auto p-0 text-[10px] text-blue-600 mb-1" 
+                                onClick={() => {
+                                    setIsCustomSubject(!isCustomSubject);
+                                    setFormData({...formData, subject: ""});
+                                }}
+                            >
+                                {isCustomSubject ? "リストから選択" : "手入力する"}
+                            </Button>
+                        </div>
+                        
+                        {!isCustomSubject && uniqueSubjects.length > 0 ? (
+                            <Select value={formData.subject} onValueChange={v => setFormData({ ...formData, subject: v })}>
+                                <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    {uniqueSubjects.map((subj: any) => (
+                                        <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input 
+                                placeholder="例: 情報、小論文" 
+                                value={formData.subject} 
+                                onChange={e => setFormData({ ...formData, subject: e.target.value })} 
+                            />
+                        )}
                     </div>
                     
                     <div className="space-y-1">
-                        <Label>レベル</Label>
-                        <Select value={formData.level} onValueChange={v => setFormData({ ...formData, level: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="基礎徹底">基礎徹底</SelectItem>
-                                <SelectItem value="日大">日大</SelectItem>
-                                <SelectItem value="MARCH">MARCH</SelectItem>
-                                <SelectItem value="早慶">早慶</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex justify-between items-center">
+                            <Label>レベル</Label>
+                            <Button 
+                                variant="link" 
+                                className="h-auto p-0 text-[10px] text-blue-600 mb-1" 
+                                onClick={() => {
+                                    setIsCustomLevel(!isCustomLevel);
+                                    setFormData({...formData, level: ""});
+                                }}
+                            >
+                                {isCustomLevel ? "リストから選択" : "手入力する"}
+                            </Button>
+                        </div>
+
+                        {!isCustomLevel && uniqueLevels.length > 0 ? (
+                            <Select value={formData.level} onValueChange={v => setFormData({ ...formData, level: v })}>
+                                <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    {uniqueLevels.map((lvl: any) => (
+                                        <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input 
+                                placeholder="例: 東大、地方国公立" 
+                                value={formData.level} 
+                                onChange={e => setFormData({ ...formData, level: e.target.value })} 
+                            />
+                        )}
                     </div>
 
                     <div className="space-y-1">
@@ -235,10 +282,9 @@ export default function TextbookManagement() {
                         <SelectTrigger className="w-[110px] h-9 text-xs"><SelectValue placeholder="全レベル" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="ALL">全レベル</SelectItem>
-                            <SelectItem value="基礎徹底">基礎徹底</SelectItem>
-                            <SelectItem value="日大">日大</SelectItem>
-                            <SelectItem value="MARCH">MARCH</SelectItem>
-                            <SelectItem value="早慶">早慶</SelectItem>
+                            {uniqueLevels.map((lvl: any) => (
+                                <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <div className="flex-1 w-full relative">

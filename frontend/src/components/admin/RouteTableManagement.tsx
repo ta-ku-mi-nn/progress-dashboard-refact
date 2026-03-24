@@ -54,6 +54,12 @@ export default function RouteTableManagement() {
     const existingSubjects = files.map(f => f.subject).filter(Boolean);
     const uniqueSubjects = Array.from(new Set([...existingSubjects]));
 
+    const existingLevels = files.map(f => f.level).filter(Boolean);
+    const uniqueLevels = Array.from(new Set([...existingLevels]));
+
+    const [isCustomSubject, setIsCustomSubject] = useState(false);
+    const [isCustomLevel, setIsCustomLevel] = useState(false);
+
     // 編集モード開始
     const startEdit = (file: RouteTableItem) => {
         setIsEditing(true);
@@ -91,9 +97,12 @@ export default function RouteTableManagement() {
 
         try {
             if (isEditing && editId) {
-                // 更新処理 (仮)
-                toast.info("編集機能はバックエンド実装待ちです");
+                await api.patch(`/routes/${editId}`, data, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success("更新しました");
                 cancelEdit();
+                fetchFiles();
             } else {
                 // 新規アップロード
                 await api.post('/routes/upload', data, {
@@ -146,24 +155,69 @@ export default function RouteTableManagement() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div className="space-y-1">
-                        <Label>科目</Label>
-                        <Select value={formData.subject} onValueChange={v => setFormData({...formData, subject: v})}>
-                            <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
-                            <SelectContent className="max-h-60">
-                                {uniqueSubjects.map(subj => (
-                                    <SelectItem key={subj} value={subj}>{subj}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                            <div className="flex justify-between items-center">
+                                <Label>科目</Label>
+                                <Button 
+                                    variant="link" 
+                                    className="h-auto p-0 text-[10px] text-blue-600 mb-1" 
+                                    onClick={() => {
+                                        setIsCustomSubject(!isCustomSubject);
+                                        setFormData({...formData, subject: ""});
+                                    }}
+                                >
+                                    {isCustomSubject ? "リストから選択" : "手入力する"}
+                                </Button>
+                            </div>
+                            
+                            {!isCustomSubject && uniqueSubjects.length > 0 ? (
+                                <Select value={formData.subject} onValueChange={v => setFormData({...formData, subject: v})}>
+                                    <SelectTrigger><SelectValue placeholder="科目を選択" /></SelectTrigger>
+                                    <SelectContent className="max-h-60">
+                                        {uniqueSubjects.map(subj => (
+                                            <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input 
+                                    placeholder="例: 英語、数学" 
+                                    value={formData.subject} 
+                                    onChange={e => setFormData({...formData, subject: e.target.value})} 
+                                />
+                            )}
+                        </div>
                     
                     <div className="space-y-1">
-                        <Label>レベル</Label>
-                        <Input 
-                            value={formData.level} 
-                            onChange={e => setFormData({...formData, level: e.target.value})} 
-                            placeholder="例: 東大レベル" 
-                        />
+                        <div className="flex justify-between items-center">
+                            <Label>レベル</Label>
+                            <Button 
+                                variant="link" 
+                                className="h-auto p-0 text-[10px] text-blue-600 mb-1" 
+                                onClick={() => {
+                                    setIsCustomLevel(!isCustomLevel);
+                                    setFormData({...formData, level: ""});
+                                }}
+                            >
+                                {isCustomLevel ? "リストから選択" : "手入力する"}
+                            </Button>
+                        </div>
+
+                        {!isCustomLevel && uniqueLevels.length > 0 ? (
+                            <Select value={formData.level} onValueChange={v => setFormData({...formData, level: v})}>
+                                <SelectTrigger><SelectValue placeholder="レベルを選択" /></SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    {uniqueLevels.map(lvl => (
+                                        <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input 
+                                value={formData.level} 
+                                onChange={e => setFormData({...formData, level: e.target.value})} 
+                                placeholder="例: 東大レベル" 
+                            />
+                        )}
                     </div>
                     
                     <div className="space-y-1">

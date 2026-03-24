@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
@@ -139,3 +139,35 @@ def create_changelog(
     session.refresh(new_log)
     
     return new_log
+
+# ==================================
+# 更新履歴の編集 (PATCH)
+# ==================================
+@router.patch("/changelog/{log_id}")
+def update_changelog(log_id: int, data: dict = Body(...), session: Session = Depends(get_db)):
+    item = session.query(Changelog).filter(Changelog.id == log_id).first()
+    if not item: 
+        raise HTTPException(status_code=404, detail="Changelog not found")
+    
+    for key, value in data.items():
+        if key in ["id"]:
+            continue
+        if hasattr(item, key):
+            setattr(item, key, value)
+            
+    session.commit()
+    session.refresh(item)
+    return item
+
+# ==================================
+# 更新履歴の削除 (DELETE)
+# ==================================
+@router.delete("/changelog/{log_id}")
+def delete_changelog(log_id: int, session: Session = Depends(get_db)):
+    item = session.query(Changelog).filter(Changelog.id == log_id).first()
+    if not item: 
+        raise HTTPException(status_code=404, detail="Changelog not found")
+    
+    session.delete(item)
+    session.commit()
+    return {"message": "Deleted successfully"}

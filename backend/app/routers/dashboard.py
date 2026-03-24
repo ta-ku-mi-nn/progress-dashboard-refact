@@ -12,6 +12,7 @@ import json
 from app.db.database import get_db
 from app.models.models import Progress, EikenResult, MasterTextbook, BulkPreset, BulkPresetBook, User, Student, AuditLog
 from app.routers.auth import get_current_user
+from app.routers.deps import get_current_admin_user
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -361,12 +362,19 @@ def delete_progress(row_id: int, session: Session = Depends(get_db)):
     return {"message": "Deleted successfully"}
 
 @router.get("/admin/study-time-summary")
-def get_study_time_summary(session: Session = Depends(get_db)):
+def get_study_time_summary(
+    session: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+    ):
     """
     管理者画面用: 全生徒の学習予定時間と実績時間の乖離をチェックするAPI
     """
-    # 1. 退塾済以外の全生徒を取得
-    students = session.query(Student).filter(Student.grade != "退塾済").all()
+    # 1. 退塾済以外の全生徒を取得(管理者の所属している校舎のみ)
+    query = session.query(Student).filter(Student.grade != "退塾済")
+    if current_user.role == "admin":
+        query = query.filter(Student.school == current_user.school)
+        
+    students = query.all()
     
     # 全ての進捗データとマスターデータを一括で取得（N+1問題回避のため）
     student_ids = [s.id for s in students]
