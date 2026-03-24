@@ -33,7 +33,7 @@ export default function Admin() {
             colorClass: "bg-amber-100 text-amber-600", component: <TextbookManagement /> 
         },
         { 
-            title: "ルート表管理", icon: Map, description: "学習ルート表（PDF/画像）の管理", 
+            title: "ルート表管理", icon: Map, description: "学習ルート表（PDF）の管理", 
             colorClass: "bg-purple-100 text-purple-600", component: <RouteTableManagement /> 
         },
         { 
@@ -41,7 +41,7 @@ export default function Admin() {
             colorClass: "bg-emerald-100 text-emerald-600", component: <TeachingMaterialManagement /> 
         },
         { 
-            title: "参考書プリセット管理", icon: Library, description: "一括登録用プリセットの作成", 
+            title: "プリセット管理", icon: Library, description: "一括登録用プリセットの作成", 
             colorClass: "bg-indigo-100 text-indigo-600", component: <PresetManagement /> 
         },
         // { 
