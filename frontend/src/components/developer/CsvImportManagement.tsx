@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
-import api from '../../lib/api'; 
-
+import api from '../../lib/api';
 
 // --- Canvasプレビュー用 UIコンポーネントのモック ---
 const Card = ({ children, className = '' }: any) => (
@@ -74,12 +73,32 @@ export default function CsvImportManagement() {
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+    const [previewData, setPreviewData] = useState<string[][] | null>(null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const generatePreview = (selectedFile: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            if (text) {
+                // 改行で分割し、空行を除外して最初の4行（ヘッダー1行＋データ3行）を取得
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '').slice(0, 4);
+                // カンマで分割して2次元配列にする
+                const parsed = lines.map(line => line.split(',').map(cell => cell.trim()));
+                setPreviewData(parsed);
+            }
+        };
+        // ブラウザ上で文字化けを防ぐためShift-JIS/UTF-8両対応のUTF-8ベースで読み込み
+        reader.readAsText(selectedFile, 'UTF-8');
+    };
 
     // ファイル選択処理
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setFile(e.target.files[0]);
+            const selectedFile = e.target.files[0];
+            setFile(selectedFile);
+            generatePreview(selectedFile);
             resetMessages();
         }
     };
@@ -103,6 +122,7 @@ export default function CsvImportManagement() {
             const droppedFile = e.dataTransfer.files[0];
             if (droppedFile.type === "text/csv" || droppedFile.name.endsWith(".csv")) {
                 setFile(droppedFile);
+                generatePreview(droppedFile);
                 resetMessages();
             } else {
                 setErrorMsg("CSVファイルのみアップロード可能です。");
@@ -117,6 +137,7 @@ export default function CsvImportManagement() {
 
     const clearFile = () => {
         setFile(null);
+        setPreviewData(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         resetMessages();
     };
@@ -236,6 +257,35 @@ export default function CsvImportManagement() {
                             ref={fileInputRef}
                             onChange={handleFileChange}
                         />
+
+                        {previewData && previewData.length > 0 && (
+                                    <div className="w-full text-left mb-6 bg-white border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
+                                        <div className="bg-indigo-50/50 px-3 py-2 border-b border-indigo-100 text-xs font-bold text-indigo-800 flex justify-between items-center">
+                                            <span>データプレビュー (最初の3件)</span>
+                                            <span className="text-[10px] text-indigo-500 font-normal">※ブラウザ上での簡易表示です</span>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead className="bg-gray-50 border-b">
+                                                    <tr>
+                                                        {previewData[0].map((header, i) => (
+                                                            <th key={i} className="px-3 py-2 font-semibold text-gray-600 truncate max-w-[150px]">{header}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {previewData.slice(1).map((row, rowIndex) => (
+                                                        <tr key={rowIndex} className="hover:bg-gray-50 transition-colors">
+                                                            {row.map((cell, cellIndex) => (
+                                                                <td key={cellIndex} className="px-3 py-2 text-gray-600 truncate max-w-[150px]">{cell}</td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
 
                         {!file ? (
                             <>

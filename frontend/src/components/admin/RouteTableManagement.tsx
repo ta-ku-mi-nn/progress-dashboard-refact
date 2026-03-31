@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Upload, Trash2, Download, FileText, Edit, Save, X, Filter } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 interface RouteTableItem {
     id: number;
@@ -18,6 +19,7 @@ interface RouteTableItem {
 }
 
 export default function RouteTableManagement() {
+    const confirm = useConfirm();
     const [files, setFiles] = useState<RouteTableItem[]>([]);
     
     // 編集・アップロード用ステート
@@ -120,7 +122,16 @@ export default function RouteTableManagement() {
 
     // 削除処理
     const handleDelete = async (id: number) => {
-        if (!confirm("本当に削除しますか？")) return;
+        // 🚨 3. window.confirm を消して、自作の confirm に置き換え！
+        const isOk = await confirm({
+            title: "ルート表を削除しますか？",
+            message: "この操作は取り消せません。本当によろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true
+        });
+
+        if (!isOk) return;
+
         try {
             await api.delete(`/routes/${id}`);
             toast.success("削除しました");

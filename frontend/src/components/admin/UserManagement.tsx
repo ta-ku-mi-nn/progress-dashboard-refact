@@ -11,9 +11,11 @@ import { Edit, Trash2, UserPlus, Save, X, UserCog, Building2 } from 'lucide-reac
 import api from '../../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 export default function UserManagement() {
     const { user } = useAuth();
+    const confirm = useConfirm();
     const [users, setUsers] = useState<any[]>([]);
     const [schools, setSchools] = useState<string[]>([]); // 校舎リスト用のState
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -71,15 +73,30 @@ export default function UserManagement() {
         } catch (e) { toast.error("更新失敗"); }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("削除しますか？")) return;
-        try {
-            await api.delete(`/admin/users/${id}`);
-            fetchUsers();
-            toast.success("削除しました");
-        } catch (e) { toast.error("削除失敗"); }
-    };
+const handleDelete = async (id: number) => {
+        const isOk = await confirm({
+            title: "講師データを削除しますか？",
+            message: "この操作は取り消せません。本当によろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true 
+        });
+        
+        if (!isOk) return;
 
+        try {
+            // 🚨 修正1: students ではなく users (講師) のエンドポイントに修正！
+            await api.delete(`/admin/users/${id}`);
+            
+            // 🚨 修正2: fetchData を消して、以下の2つに差し替え！
+            fetchUsers();
+            fetchSchools();
+            
+            toast.success("削除しました");
+        } catch (e) { 
+            toast.error("削除失敗"); 
+        }
+    };
+    
     return (
         <Card className="h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between">
