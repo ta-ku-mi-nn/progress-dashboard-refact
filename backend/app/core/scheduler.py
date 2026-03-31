@@ -4,6 +4,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.db.database import SessionLocal
 from app.models.models import Student
+from app.services.attendance_sync import sync_google_sheets_to_db
 import logging
 
 # ログ設定
@@ -52,6 +53,15 @@ def start_scheduler():
         id="auto_update_grades_job",
         replace_existing=True
     )
+    scheduler.add_job(sync_google_sheets_to_db, 'interval', minutes=5)
     
     scheduler.start()
+
+    try:
+        logger.info("🔄 初回のスプレッドシート同期を実行します...")
+        sync_google_sheets_to_db()
+    except Exception as e:
+        logger.error(f"初回の同期に失敗しました: {e}")
+    
     logger.info("📅 学年自動更新スケジューラーを起動しました (次回実行: 毎年3月1日 00:00)")
+    logger.info("⏰ スケジューラーが起動しました（5分おきのスプシ同期をセット完了）")
