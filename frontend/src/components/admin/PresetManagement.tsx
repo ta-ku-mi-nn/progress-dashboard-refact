@@ -9,8 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Library, Plus, Trash2, Edit, ChevronDown, ChevronUp, X, Check, Search, Filter } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 export default function PresetManagement() {
+    const confirm = useConfirm();
+
     const [presets, setPresets] = useState<any[]>([]);
     const [textbooks, setTextbooks] = useState<any[]>([]);
     
@@ -180,7 +183,16 @@ export default function PresetManagement() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("本当に削除しますか？")) return;
+        // 🚨 3-1. 自作の confirm に置き換え
+        const isOk = await confirm({
+            title: "プリセットを削除しますか？",
+            message: "この操作は取り消せません。本当によろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true
+        });
+
+        if (!isOk) return;
+
         try {
             await api.delete(`/admin/presets/${id}`);
             toast.success("削除しました");
@@ -316,11 +328,24 @@ export default function PresetManagement() {
                                 <Label>科目</Label>
                                 <Select 
                                     value={formSubject} 
-                                    onValueChange={(v) => {
+                                    // 🚨 3-2. async をつけて、自作の confirm を待つように変更！
+                                    onValueChange={async (v) => {
                                         if (v !== formSubject) {
-                                            if (selectedBooks.length === 0 || confirm("科目を変更すると選択中のリストがクリアされますがよろしいですか？")) {
+                                            if (selectedBooks.length === 0) {
                                                 setFormSubject(v);
                                                 setSelectedBooks([]);
+                                            } else {
+                                                const isOk = await confirm({
+                                                    title: "科目を変更しますか？",
+                                                    message: "科目を変更すると、現在選択中の参考書リストがクリアされます。よろしいですか？",
+                                                    confirmText: "変更してクリア",
+                                                    isDestructive: true
+                                                });
+                                                
+                                                if (isOk) {
+                                                    setFormSubject(v);
+                                                    setSelectedBooks([]);
+                                                }
                                             }
                                         }
                                     }}

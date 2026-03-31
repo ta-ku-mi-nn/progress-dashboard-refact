@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert, Files, Settings } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Map, Library, FileText, BarChart2, Database, FileSearch, Component, ClockAlert, Files, Settings, Grid2X2 } from 'lucide-react';
 
 // コンポーネントのインポート
 import UserManagement from '../components/admin/UserManagement';
@@ -16,6 +16,8 @@ import AuditLogViewer from '../components/developer/AuditLogViewer';
 import StudyTimeVerification from '../components/admin/StudyTimeverification';
 import InactiveUserPopup from '../components/admin/InactiveUserPopup';
 import TeachingMaterialManagement from '../components/admin/TeachingMaterialManagement';
+import { title } from 'node:process';
+import AttendanceManagement from '../components/admin/AttendanceManagement';
 
 export default function Admin() {
     // ★追加: 各機能にポップなテーマカラー(colorClass)を追加！
@@ -60,6 +62,10 @@ export default function Admin() {
             title: "予定・実績チェック", icon: ClockAlert, description: "学習時間・予定の違和感を検知", 
             colorClass: "bg-red-100 text-red-600", component: <StudyTimeVerification /> 
         },
+        {
+            title: "振替・欠席確認", icon: Grid2X2, description: "振替残数・欠席数の確認",
+            colorClass: "bg-purple-100 text-purple-600", component: <AttendanceManagement />
+        }
     ];
 
     return (

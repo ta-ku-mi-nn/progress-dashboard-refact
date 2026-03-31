@@ -11,11 +11,13 @@ import { Edit, Trash2, Users, Search, UserPlus } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext'; // 追加
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const GRADE_OPTIONS = ["中1", "中2", "中3", "高1", "高2", "高3", "既卒", "退塾済"];
 
 export default function StudentManagement() {
     const { user } = useAuth(); // ログインユーザー情報を取得
+    const confirm = useConfirm();
     const [students, setStudents] = useState<any[]>([]);
     const [instructors, setInstructors] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -83,12 +85,25 @@ export default function StudentManagement() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("削除しますか？")) return;
+        // 🚨 3. ダサい confirm を消して、await でリッチな confirm を呼ぶ！
+        const isOk = await confirm({
+            title: "生徒データを削除しますか？",
+            message: "この操作は取り消せません。本当によろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true // ボタンが赤くなります
+        });
+        
+        // キャンセルされたらここでストップ
+        if (!isOk) return;
+
+        // OKの時だけここから下の処理が走る
         try {
             await api.delete(`/admin/students/${id}`);
             fetchData();
             toast.success("削除しました");
-        } catch (e) { toast.error("削除失敗"); }
+        } catch (e) { 
+            toast.error("削除失敗"); 
+        }
     };
 
     const toggleSubInstructor = (instructorId: number) => {
