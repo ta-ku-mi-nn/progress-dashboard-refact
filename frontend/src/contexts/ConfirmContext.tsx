@@ -1,6 +1,6 @@
 // contexts/ConfirmContext.tsx
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { ConfirmDialog } from '../components/common/confirmdialog';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 
 type ConfirmOptions = {
     title: string;
