@@ -75,6 +75,49 @@ export default function AttendanceManagement() {
         fetchData();
     }, []);
 
+    // ----------------------------------------------------
+    // 🚨 ここから追加：リアルタイム通知レーダー（30秒に1回チェック）
+    // ----------------------------------------------------
+    useEffect(() => {
+        const checkNotifications = async () => {
+            try {
+                // 1. 未読の通知がないか聞きに行く
+                const res = await api.get('/attendance/notifications/unread');
+                const unreadNotifs = res.data;
+
+                // 2. もし未読の通知があったら！
+                if (unreadNotifs && unreadNotifs.length > 0) {
+                    for (const notif of unreadNotifs) {
+                        // 画面右下にカッコよくポップアップ（トースト）を出す！
+                        toast.info(notif.title, {
+                            description: notif.message,
+                            duration: 8000, // 8秒間表示する
+                            icon: notif.title.includes('振替') ? <Clock className="w-5 h-5 text-indigo-500" /> : <UserMinus className="w-5 h-5 text-rose-500" />,
+                        });
+
+                        // 表示したらすぐにバックエンドへ「既読にしたよ！」と伝える
+                        await api.post(`/attendance/notifications/${notif.id}/read`);
+                    }
+                    
+                    // 🌟 ついでに、表のデータも自動で最新に更新（リフレッシュ）する！
+                    fetchData(true);
+                }
+            } catch (e) {
+                console.error("通知の取得に失敗しました", e);
+            }
+        };
+
+        // 画面を開いた瞬間に1回チェック
+        checkNotifications();
+
+        // その後、30秒ごと（30000ミリ秒）にずっとチェックし続ける
+        const interval = setInterval(checkNotifications, 30000);
+
+        // 画面を閉じた時はレーダーを止める
+        return () => clearInterval(interval);
+    }, []);
+    // ----------------------------------------------------
+    
     const handleComplete = async (rowNumber: number, name: string) => {
         const isOk = await confirm({
             title: "振替を完了にしますか？",

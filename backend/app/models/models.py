@@ -297,3 +297,41 @@ class TeachingMaterial(Base):
     # リレーション変更（複数形になっています）
     subjects = relationship("SubjectTag", secondary=material_subject_association, back_populates="materials")
     detail_tags = relationship("DetailTag", secondary=material_detail_association, back_populates="materials")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False) # 誰宛の通知か
+    title = Column(String, nullable=False) # 例: "新規の振替申請"
+    message = Column(String, nullable=False) # 例: "佐藤先生、鈴木さんの振替申請が届きました"
+    is_read = Column(Boolean, default=False) # 既読フラグ（ここがFalseならポップアップを出す）
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # リレーション（Userテーブルから notifications でアクセスできるようにするなら）
+    user = relationship("User", backref="notifications")
+
+class TransferRequest(Base):
+    __tablename__ = "transfer_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    row_number = Column(Integer, nullable=False) # GAS側の行番号（完了処理などに使う）
+    timestamp = Column(String)
+    name = Column(String, index=True)
+    instructor = Column(String, index=True)
+    original_date = Column(String)
+    candidate_dates = Column(String)
+    reason = Column(Text)
+    is_completed = Column(Boolean, default=False)
+
+class AbsenceReport(Base):
+    __tablename__ = "absence_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    row_number = Column(Integer, nullable=False)
+    timestamp = Column(String)
+    name = Column(String, index=True)
+    instructor = Column(String, index=True)
+    day_of_week = Column(String)
+    reason = Column(Text)
+    report_info = Column(Text)
