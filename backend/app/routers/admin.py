@@ -12,6 +12,7 @@ from app.models import models
 from app.crud import crud_master, crud_user, crud_student
 from app.routers.audit import log_action
 import traceback
+from app.routers.deps import get_current_user
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -530,7 +531,7 @@ def delete_student(
     return {"status": "deleted"}
 
 @router.get("/inactive-users")
-def get_inactive_users(session: Session = Depends(get_db)):
+def get_inactive_users(session: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     1ヶ月間進捗更新をしていない講師（User）を検知するAPI
     """

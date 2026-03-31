@@ -18,6 +18,7 @@ import { SystemProvider, useSystem } from './contexts/SystemContext';
 import SystemBanner from './components/SystemBanner';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 import ReportPrintView from './pages/ReportPrintView';
 import MaterialSearch from './pages/MaterialSearch';
 
@@ -26,8 +27,6 @@ const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children })
   const { settings, loading: systemLoading } = useSystem();
   const { user } = useAuth(); // ← authLoading を削除しました！
   const location = useLocation();
-
-
 
   // システム設定のロード中のみ待機
   if (systemLoading) return null; 
@@ -61,58 +60,60 @@ const App: React.FC = () => {
     }
   }, []);
   return (
-    <Router>
-      <AuthProvider>
-        <SystemProvider> {/* 追加: システム設定のコンテキスト */}
-          
-          {/* 追加: 画面最上部に常駐するお知らせバナー */}
-          <SystemBanner />
-          
-          {/* 追加: メンテナンス状態を監視するガード */}
-          <MaintenanceGuard>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              
-              <Route path="/print-report/:studentId" element={<ReportPrintView />} />
-              
-              {/* 保護されたルート (ログイン必須) */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }>
-                {/* ダッシュボードホーム */}
-                <Route index element={<Dashboard />} />
+    <ConfirmProvider>
+      <Router>
+        <AuthProvider>
+          <SystemProvider> {/* 追加: システム設定のコンテキスト */}
+            
+            {/* 追加: 画面最上部に常駐するお知らせバナー */}
+            <SystemBanner />
+            
+            {/* 追加: メンテナンス状態を監視するガード */}
+            <MaintenanceGuard>
+              <Routes>
+                <Route path="/login" element={<Login />} />
                 
-                {/* 各機能ページ */}
-                <Route path="past-exam" element={<PastExam />} />
-                <Route path="root-table" element={<RootTable />} />
-                <Route path="materials" element={<MaterialSearch/>} />
-                <Route path="statistics" element={<Statistics />} />
-                <Route path="bug-report" element={<BugReport />} />
-                <Route path="changelog" element={<Changelog />} />
+                <Route path="/print-report/:studentId" element={<ReportPrintView />} />
                 
-                {/* 管理者専用ページ */}
-                <Route path="admin" element={
-                  <ProtectedRoute roles={['admin', 'developer']}>
-                    <Admin />
+                {/* 保護されたルート (ログイン必須) */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  {/* ダッシュボードホーム */}
+                  <Route index element={<Dashboard />} />
+                  
+                  {/* 各機能ページ */}
+                  <Route path="past-exam" element={<PastExam />} />
+                  <Route path="root-table" element={<RootTable />} />
+                  <Route path="materials" element={<MaterialSearch/>} />
+                  <Route path="statistics" element={<Statistics />} />
+                  <Route path="bug-report" element={<BugReport />} />
+                  <Route path="changelog" element={<Changelog />} />
+                  
+                  {/* 管理者専用ページ */}
+                  <Route path="admin" element={
+                    <ProtectedRoute roles={['admin', 'developer']}>
+                      <Admin />
+                    </ProtectedRoute>
+                  } />
 
-                {/* 開発者用ページ */}
-                <Route path="developer" element={
-                  <ProtectedRoute roles={['developer']}>
-                    <DeveloperDashboard />
-                  </ProtectedRoute>
-                } />
-              </Route>
-            </Routes>
-          </MaintenanceGuard>
+                  {/* 開発者用ページ */}
+                  <Route path="developer" element={
+                    <ProtectedRoute roles={['developer']}>
+                      <DeveloperDashboard />
+                    </ProtectedRoute>
+                  } />
+                </Route>
+              </Routes>
+            </MaintenanceGuard>
 
-          <Toaster />
-        </SystemProvider>
-      </AuthProvider>
-    </Router>
+            <Toaster />
+          </SystemProvider>
+        </AuthProvider>
+      </Router>
+    </ConfirmProvider>
   );
 };
 

@@ -2,12 +2,13 @@
 import React, { useState } from 'react';
 import { UserPlus, RefreshCw, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import api from '../../lib/api';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { toast } from 'sonner';
 
 const DeveloperAccountManagement: React.FC = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -15,18 +16,27 @@ const DeveloperAccountManagement: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!window.confirm('最高権限を持つDeveloperアカウントを発行します。よろしいですか？')) return;
+    
+    // 🚨 4. リッチな確認ダイアログに変更！
+    const isOk = await confirm({
+      title: "開発者アカウントを作成しますか？",
+      message: "最高権限（developer）を持つアカウントを発行します。このアカウントはシステム全体に重大な影響を与える操作が可能です。本当によろしいですか？",
+      confirmText: "作成する",
+      isDestructive: true // 危険な操作なのでボタンを赤くする
+    });
+
+    if (!isOk) return;
 
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       const response = await api.post('/developer/accounts', formData);
-      setSuccess(response.data.message);
+      // 🚨 成功時も toast を使う！
+      toast.success(response.data.message || '開発者アカウントを作成しました。');
       setFormData({ username: '', password: '' }); // 成功したらクリア
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'アカウントの作成に失敗しました。');
+      // 🚨 失敗時も toast を使う！
+      toast.error(err.response?.data?.detail || 'アカウントの作成に失敗しました。');
       console.error(err);
     } finally {
       setLoading(false);
@@ -45,19 +55,6 @@ const DeveloperAccountManagement: React.FC = () => {
           他のユーザーの権限変更やシステム設定の変更が可能なため、アカウント情報の取り扱いには十分注意してください。
         </p>
       </div>
-
-      {success && (
-        <div className="p-4 bg-green-50 text-green-700 border border-green-200 rounded-md flex items-center gap-2 font-medium">
-          <CheckCircle2 className="w-5 h-5 shrink-0" />
-          {success}
-        </div>
-      )}
-
-      {error && (
-        <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-md font-medium">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 border p-6 rounded-lg bg-white shadow-sm">
         <div>

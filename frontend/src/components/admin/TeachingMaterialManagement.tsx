@@ -7,8 +7,12 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { toast } from 'sonner';
 
 export default function TeachingMaterialManagement() {
+    const confirm = useConfirm();
+    
     const [materials, setMaterials] = useState<TeachingMaterial[]>([]);
     const [subjects, setSubjects] = useState<Tag[]>([]);
     const [details, setDetails] = useState<Tag[]>([]);
@@ -104,14 +108,46 @@ export default function TeachingMaterialManagement() {
         }
     };
 
-    // 教材の削除処理
+// 教材の削除処理
     const handleDeleteMaterial = async (id: number) => {
-        if (!window.confirm("本当に削除しますか？")) return;
+        // 🚨 3-1. 自作の confirm に置き換え
+        const isOk = await confirm({
+            title: "教材を削除しますか？",
+            message: "この操作は取り消せません。本当によろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true
+        });
+        if (!isOk) return;
+
         try {
             await api.delete(`/materials/${id}`);
+            toast.success("教材を削除しました"); // alertからtoastへ
             fetchData();
         } catch (error) {
-            alert("削除に失敗しました");
+            toast.error("削除に失敗しました"); // alertからtoastへ
+        }
+    };
+
+    // タグの削除処理
+    const handleDeleteTag = async (type: 'subjects' | 'details', id: number) => {
+        // 🚨 3-2. 自作の confirm に置き換え
+        const isOk = await confirm({
+            title: "このタグを削除しますか？",
+            message: "※登録済みの教材からもこのタグが外れます。よろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true
+        });
+        if (!isOk) return;
+
+        try {
+            await api.delete(`/materials/tags/${type}/${id}`);
+            toast.success("タグを削除しました"); // alertからtoastへ
+            fetchData();
+            // もし選択中のタグだったら選択解除する
+            if (type === 'subjects') setSelectedSubjects(prev => prev.filter(tid => tid !== id));
+            if (type === 'details') setSelectedDetails(prev => prev.filter(tid => tid !== id));
+        } catch (error) {
+            toast.error("タグの削除に失敗しました"); // alertからtoastへ
         }
     };
 
@@ -124,20 +160,6 @@ export default function TeachingMaterialManagement() {
             fetchData();
         } catch (error) {
             alert("タグの追加に失敗しました");
-        }
-    };
-
-    // ★追加: タグの削除処理
-    const handleDeleteTag = async (type: 'subjects' | 'details', id: number) => {
-        if (!window.confirm("このタグを削除しますか？\n※登録済みの教材からもこのタグが外れます。")) return;
-        try {
-            await api.delete(`/materials/tags/${type}/${id}`);
-            fetchData();
-            // もし選択中のタグだったら選択解除する
-            if (type === 'subjects') setSelectedSubjects(prev => prev.filter(tid => tid !== id));
-            if (type === 'details') setSelectedDetails(prev => prev.filter(tid => tid !== id));
-        } catch (error) {
-            alert("タグの削除に失敗しました");
         }
     };
 

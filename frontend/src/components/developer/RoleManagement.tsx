@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, User, ShieldAlert, RefreshCw, AlertCircle } from 'lucide-react';
 import api from '../../lib/api';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { toast } from 'sonner';
 
 interface UserData {
   id: number;
@@ -11,6 +13,7 @@ interface UserData {
 }
 
 const RoleManagement: React.FC = () => {
+  const confirm = useConfirm();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -34,17 +37,28 @@ const RoleManagement: React.FC = () => {
   }, []);
 
   const handleRoleChange = async (userId: number, newRole: string) => {
-    if (!window.confirm(`権限を「${newRole}」に変更しますか？\n※誤った権限付与は重大なインシデントに繋がる可能性があります。`)) {
-      return;
+    // 🚨 3. リッチな確認ダイアログに変更！
+    const isOk = await confirm({
+      title: "権限を変更しますか？",
+      message: `権限を「${newRole}」に変更します。\n※誤った権限付与は重大なインシデントに繋がる可能性があります。`,
+      confirmText: "変更する",
+      // developerやadminへの昇格は危険な操作として扱う（赤いボタンにする）
+      isDestructive: newRole === 'developer' || newRole === 'admin'
+    });
+
+    if (!isOk) {
+        // キャンセルされた場合、selectの見た目を元に戻すために一覧を再描画
+        fetchUsers();
+        return;
     }
 
     setUpdatingId(userId);
     try {
       await api.put(`/developer/users/${userId}/role`, { role: newRole });
-      alert('権限を更新しました。');
+      toast.success(`権限を ${newRole} に更新しました。`); // alertからtoastへ
       fetchUsers(); // 成功したら一覧を再取得
     } catch (err: any) {
-      alert(err.response?.data?.detail || '権限の更新に失敗しました。');
+      toast.error(err.response?.data?.detail || '権限の更新に失敗しました。'); // alertからtoastへ
       console.error(err);
     } finally {
       setUpdatingId(null);

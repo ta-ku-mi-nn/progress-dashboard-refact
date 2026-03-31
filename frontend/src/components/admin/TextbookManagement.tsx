@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Plus, Trash2, Search, Filter, Edit, Save, X } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'sonner';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 export default function TextbookManagement() {
+    const confirm = useConfirm();
     const [textbooks, setTextbooks] = useState<any[]>([]);
     
     // 編集モード管理
@@ -135,13 +137,24 @@ export default function TextbookManagement() {
         } catch (e) { toast.error("保存失敗"); }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("本当に削除しますか？")) return;
+const handleDelete = async (id: number) => {
+        // 🚨 3. window.confirm を消して、自作の confirm に置き換え！
+        const isOk = await confirm({
+            title: "参考書を削除しますか？",
+            message: "この操作は取り消せません。本当によろしいですか？",
+            confirmText: "削除する",
+            isDestructive: true
+        });
+
+        if (!isOk) return;
+
         try {
             await api.delete(`/admin/textbooks/${id}`);
             toast.success("削除しました");
             fetchBooks();
-        } catch (e) { toast.error("削除失敗"); }
+        } catch (e) { 
+            toast.error("削除失敗"); 
+        }
     };
 
     // フィルタリング
