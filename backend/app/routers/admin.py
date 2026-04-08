@@ -343,9 +343,10 @@ def update_user(
         raise HTTPException(status_code=403, detail="Cannot edit users from other schools")
 
     for key, value in data.items():
-        if key == "password" and value: 
-            # ※pwd_context が未定義エラーにならないよう、ファイルの上のほうで import されているか確認してください
-            user.password = pwd_context.hash(value)
+        if key == "password": 
+            str_val = str(value).strip() if value else ""
+            if str_val and not str_val.startswith("$2b$") and not str_val.startswith("$2a$") and str_val != "********":
+                user.password = pwd_context.hash(str_val)
         elif hasattr(user, key) and key != "id": 
             # adminは他人のroleをdeveloperに引き上げることはできない等の保護（任意）
             if key == "role" and current_user.role == 'admin' and value == 'developer':
