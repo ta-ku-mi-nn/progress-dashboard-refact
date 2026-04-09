@@ -16,7 +16,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 def get_password_hash(password: str) -> str:
     """パスワードをハッシュ化する"""
-    return generate_password_hash(password)
+    hashed_bytes = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    return hashed_bytes.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """入力されたパスワードと、DBのハッシュ済みパスワードを比較する"""
