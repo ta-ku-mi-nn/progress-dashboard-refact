@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "./components/ui/dialog";
 import ChangePasswordForm from './components/ChangePasswordForm';
+import SupportChatbot from './components/SupportChatbot';
 
 export default function DashboardLayout() {
     const { user, logout } = useAuth();
@@ -135,6 +136,8 @@ export default function DashboardLayout() {
             <main className="flex-1 min-w-0 overflow-y-auto p-8 transition-all duration-300">
                 <Outlet />
             </main>
+
+            <SupportChatbot/>
         </div>
     );
 }

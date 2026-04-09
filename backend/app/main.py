@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.models import models 
 from app.db.database import engine
 from app.core.scheduler import start_scheduler
-from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup, developer, system_status, audit, csv_import, student_report, materials, attendance
+from app.routers import auth, external, students, admin, common, charts, dashboard, exams, routes, system, reports, backup, developer, system_status, audit, csv_import, student_report, materials, attendance, chat
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -45,6 +45,7 @@ app.include_router(csv_import.router, prefix=f"{settings.API_V1_STR}/csv_import"
 app.include_router(student_report.router, prefix=f"{settings.API_V1_STR}/student_report", tags={"student_report"})
 app.include_router(materials.router, prefix=f"{settings.API_V1_STR}/materials", tags={"materials"})
 app.include_router(attendance.router, prefix=f"{settings.API_V1_STR}/attendance", tags={"attendance"})
+app.include_router(chat.router, prefix=f"{settings.API_V1_STR}/chat", tags={"chat"})
 from app.routers import fix_db
 app.include_router(fix_db.router, prefix=settings.API_V1_STR, tags=["fix"])
 
