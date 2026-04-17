@@ -223,3 +223,38 @@ async def mark_notification_read(
         db.commit()
         
     return {"status": "success"}
+
+@router.get("/my-students")
+async def get_my_students_attendance(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """ログイン中の講師が担当する生徒の振替・欠席データを取得"""
+    
+    # 1. 担当している生徒の名前リストを取得
+    my_student_records = db.query(models.Student.name).join(
+        models.StudentInstructor, models.Student.id == models.StudentInstructor.student_id
+    ).filter(
+        models.StudentInstructor.user_id == current_user.id
+    ).all()
+    
+    my_student_names = [record[0] for record in my_student_records]
+    
+    if not my_student_names:
+        return {"transfers": [], "absences": []}
+
+    # 2. 担当生徒の未完了振替申請を取得
+    my_transfers = db.query(models.TransferRequest).filter(
+        models.TransferRequest.name.in_(my_student_names),
+        models.TransferRequest.is_completed == False
+    ).order_by(models.TransferRequest.id.desc()).all()
+
+    # 3. 担当生徒の欠席連絡を取得
+    my_absences = db.query(models.AbsenceReport).filter(
+        models.AbsenceReport.name.in_(my_student_names)
+    ).order_by(models.AbsenceReport.id.desc()).all()
+
+    return {
+        "transfers": my_transfers,
+        "absences": my_absences
+    }

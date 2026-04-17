@@ -6,7 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 // ChevronLeft, ChevronRight を追加（折りたたみボタン用）
-import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, Files, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Home, BookOpen, BarChart2, Settings, Map, ScrollText, MessagesSquare, Key, Wrench, Files, ChevronLeft, ChevronRight, File } from 'lucide-react';
 
 // Dialog コンポーネントをインポート
 import {
@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "./components/ui/dialog";
 import ChangePasswordForm from './components/ChangePasswordForm';
+import SupportChatbot from './components/SupportChatbot';
 
 export default function DashboardLayout() {
     const { user, logout } = useAuth();
@@ -31,6 +32,7 @@ export default function DashboardLayout() {
         { name: 'ダッシュボード', path: '/', icon: Home },
         { name: '過去問/模試/入試日程', path: '/past-exam', icon: BookOpen },
         { name: 'ルート表', path: '/root-table', icon: Map }, 
+        { name: '振替/欠席', path: '/Attendance', icon: File},
         // { name: '統計', path: '/statistics', icon: BarChart2 },
         { name: '教材検索/印刷', path: '/materials', icon: Files }, 
         { name: 'バグ報告/要望', path: '/bug-report', icon: MessagesSquare },
@@ -135,6 +137,8 @@ export default function DashboardLayout() {
             <main className="flex-1 min-w-0 overflow-y-auto p-8 transition-all duration-300">
                 <Outlet />
             </main>
+
+            {/* <SupportChatbot/> */}
         </div>
     );
 }

@@ -6,8 +6,9 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2, ChevronDown, Search, House } from 'lucide-react';
+import { Printer, Edit2, Clock, Target, TrendingUp, Award, Calendar, Loader2, ChevronDown, Search, House, FileText, Copy, Check } from 'lucide-react';
 
 // コンポーネント読み込み
 import ProgressChart from './ProgressChart';
@@ -46,6 +47,12 @@ export default function Dashboard() {
   const [editEikenGrade, setEditEikenGrade] = useState("");
   const [editEikenScore, setEditEikenScore] = useState("");
   const [editEikenDate, setEditEikenDate] = useState("");
+
+  const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
+  const [memoText, setMemoText] = useState("");
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
+
+  const [isCopied, setIsCopied] = useState(false);
 
   // ★追加: 印刷ダイアログ開閉ステート
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
@@ -159,6 +166,42 @@ export default function Dashboard() {
     }
   };
 
+  const handleCopyMemo = async () => {
+    try {
+      await navigator.clipboard.writeText(memoText);
+      setIsCopied(true);
+      // 2秒後に「コピーしました」の表示を元に戻す
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      alert("クリップボードへのコピーに失敗しました");
+    }
+  };
+
+  const handleOpenMemo = async () => {
+    if (!selectedStudentId) return;
+    setIsMemoModalOpen(true);
+    setMemoText(""); // 初期化
+    try {
+      const res = await api.get(`/students/${selectedStudentId}/memo`);
+      setMemoText(res.data.memo || "");
+    } catch (error) {
+      console.error("メモの取得に失敗しました", error);
+    }
+  };
+
+  const handleSaveMemo = async () => {
+    if (!selectedStudentId) return;
+    setIsSavingMemo(true);
+    try {
+      await api.patch(`/students/${selectedStudentId}/memo`, { memo: memoText });
+      setIsMemoModalOpen(false);
+    } catch (error) {
+      alert("メモの保存に失敗しました");
+    } finally {
+      setIsSavingMemo(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-[80vh] gap-4">
@@ -191,7 +234,10 @@ export default function Dashboard() {
                 }}
             />
           )}
-          
+          {/* ★追加: メモボタン */}
+          <Button variant="outline" onClick={handleOpenMemo}>
+            <FileText className="w-4 h-4 mr-2" /> メモ
+          </Button>
           {/* ★修正: 印刷ボタン (ダイアログを開く) */}
           <Button variant="outline" onClick={() => setIsPrintDialogOpen(true)}>
             <Printer className="w-4 h-4 mr-2" /> レポート出力
@@ -304,6 +350,41 @@ export default function Dashboard() {
           </div>
           <DialogFooter>
             <Button onClick={handleUpdateEiken}>更新</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ★追加: メモ編集モーダル (returnの一番下、他のDialogの隣等に配置) */}
+      <Dialog open={isMemoModalOpen} onOpenChange={setIsMemoModalOpen}>
+        <DialogContent className="sm:max-w-[800px] w-[95vw]">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>自分専用メモ</DialogTitle>
+            <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={handleCopyMemo}
+                className="mt-0 flex items-center gap-2"
+            >
+              {isCopied ? (
+                  <><Check className="w-4 h-4 text-green-600" /> コピー完了</>
+              ) : (
+                  <><Copy className="w-4 h-4" /> 一括コピー</>
+              )}
+            </Button>
+          </DialogHeader>
+          <div className="py-2">
+            <Textarea 
+              value={memoText} 
+              onChange={(e) => setMemoText(e.target.value)} 
+              placeholder="自分だけが見れるメモを入力してください..."
+              className="min-h-[50vh] md:min-h-[500px] text-base leading-relaxed resize-y"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMemoModalOpen(false)}>キャンセル</Button>
+            <Button onClick={handleSaveMemo} disabled={isSavingMemo}>
+              {isSavingMemo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "保存"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
