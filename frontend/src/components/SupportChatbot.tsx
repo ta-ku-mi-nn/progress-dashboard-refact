@@ -13,7 +13,7 @@ interface Message {
 export default function SupportChatbot() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'ai', text: 'こんにちは！システムの使い方はお困りですか？何でも質問してください。' }
+        { role: 'ai', text: 'こんにちは！システムの使い方はお困りですか？何でも質問してください。\n※本システムはβ版なので対応に不具合があることをご了承ください' }
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +51,7 @@ export default function SupportChatbot() {
                     <CardHeader className="bg-blue-600 text-white rounded-t-xl py-3 flex flex-row items-center justify-between">
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                             <Bot className="w-5 h-5" />
-                            AIサポートアシスタント
+                            AIサポートアシスタント(β版)
                         </CardTitle>
                         <button onClick={() => setIsOpen(false)} className="text-white hover:text-gray-200">
                             <X className="w-5 h-5" />

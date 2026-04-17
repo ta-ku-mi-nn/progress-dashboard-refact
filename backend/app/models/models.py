@@ -25,6 +25,7 @@ class Student(Base):
     target_level = Column(String)
     grade = Column(String)
     previous_school = Column(String)
+    memo = Column(Text, nullable=True)
 
     __table_args__ = (UniqueConstraint('school', 'name', name='_school_name_uc'),)
 
@@ -42,6 +43,7 @@ class StudentInstructor(Base):
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     is_main = Column(Integer, nullable=False, default=0)
+    memo = Column(Text, nullable=True)
 
     __table_args__ = (UniqueConstraint('student_id', 'user_id', name='_student_user_uc'),)
 

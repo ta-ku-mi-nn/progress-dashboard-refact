@@ -5,11 +5,12 @@ from app.db.database import get_db
 from app.routers import deps
 from app.crud import crud_student, crud_progress
 from app.schemas import schemas
-from app.models.models import User
+from app.models.models import User, Student, StudentInstructor
 from app.models.models import EikenResult
 from sqlalchemy import desc
 from datetime import datetime
 from pydantic import BaseModel
+from app.routers.deps import get_current_user
 
 router = APIRouter()
 
@@ -127,3 +128,59 @@ def update_student_eiken(
 
     db.commit()
     return {"message": "Eiken info updated"}
+
+# Pydanticスキーマの定義
+class MemoUpdate(BaseModel):
+    memo: str
+
+@router.get("/{student_id}/memo")
+async def get_student_memo(
+    student_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user) # ★ログインユーザーを取得
+):
+    """ログイン中講師の自分専用生徒メモを取得"""
+    # StudentInstructor テーブルから「この生徒」かつ「自分」のレコードを探す
+    student_link = db.query(StudentInstructor).filter(
+        StudentInstructor.student_id == student_id,
+        StudentInstructor.user_id == current_user.id
+    ).first()
+    
+    if not student_link:
+        return {"memo": ""} # 担当外などの場合はとりあえず空で返す
+        
+    return {"memo": student_link.memo or ""}
+
+@router.patch("/{student_id}/memo")
+async def update_student_memo(
+    student_id: int, 
+    req: MemoUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """ログイン中講師の自分専用生徒メモを更新"""
+    student_link = db.query(StudentInstructor).filter(
+        StudentInstructor.student_id == student_id,
+        StudentInstructor.user_id == current_user.id
+    ).first()
+    
+    # 担当登録がない場合の処理
+    if not student_link:
+        # ★修正: developer の場合のみ、自動的に紐付けレコードを作成する
+        if current_user.role == "developer":
+            student_link = StudentInstructor(
+                student_id=student_id,
+                user_id=current_user.id,
+                is_main=0,  # 開発者なのでメイン担当ではない設定
+                memo=req.memo
+            )
+            db.add(student_link)
+        else:
+            # developer以外で担当登録がない場合はエラーにする
+            raise HTTPException(status_code=403, detail="この生徒の担当に登録されていません")
+    else:
+        # 既にレコードがある場合はメモを更新
+        student_link.memo = req.memo
+    
+    db.commit()
+    return {"message": "Memo updated successfully", "memo": student_link.memo}

@@ -16,6 +16,7 @@ import DeveloperDashboard from './pages/DeveloperDashboard';
 import { Toaster } from 'sonner';
 import { SystemProvider, useSystem } from './contexts/SystemContext';
 import SystemBanner from './components/SystemBanner';
+import MyStudentsAttendance from './components/MyStudentsAttendance';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
@@ -91,6 +92,7 @@ const App: React.FC = () => {
                   <Route path="statistics" element={<Statistics />} />
                   <Route path="bug-report" element={<BugReport />} />
                   <Route path="changelog" element={<Changelog />} />
+                  <Route path="Attendance" element={<MyStudentsAttendance />} />
                   
                   {/* 管理者専用ページ */}
                   <Route path="admin" element={
